@@ -8,7 +8,8 @@ import pyhmmer
 from dna_features_viewer import GraphicFeature, GraphicRecord
 import matplotlib.pyplot as plt
 from time import gmtime, strftime
-from django.utils.timezone import now
+from collections import OrderedDict
+from operator import getitem
 
 from django import template
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -19,6 +20,7 @@ from django.views import generic
 from django.shortcuts import render, redirect
 from django.http import Http404
 from django.contrib import messages
+from django.utils.timezone import now
 
 from .forms import *
 from .models import *
@@ -342,12 +344,13 @@ def QuerySequencesDetails(request, sequence_id):
     try:
         context['sequence'] = Sequences.objects.get(pk=sequence_id)
     except Sequences.DoesNotExist:
-        raise Http404("Sequence ID does not exist")
+        context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
+        return render(request, 'home/query-sequences-details.html', context)
+        # raise Http404("Sequence ID does not exist")
 
     context["speciesname"] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = context['sequence'].taxonomy_id)][0]
 
     motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id)
-    vmotifs = Verifymotifs.objects.filter(sequence_id = context['sequence'].sequence_id)
 
     context["motifs"]  = {}
     for m in motifs:
@@ -371,6 +374,7 @@ def QuerySequencesDetails(request, sequence_id):
 
         context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroupparent"])
 
+    context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
     return render(request, 'home/query-sequences-details.html', context)
 
 
@@ -626,29 +630,35 @@ def QueryVerifyView(request, sequence_id):
         ncbigene_id = seq.gene.ncbigene_id
 
     # Retrive verifyMotifs
-    motifs = Verifymotifs.objects.filter(sequence_id = sequence_id)
+    motifs = Motifs.objects.filter(sequence_id = sequence_id)
+    verifymotifs = Verifymotifs.objects.filter(sequence_id = sequence_id)
     context["motifs"]  = {}
+    context["verifymotifs"]  = {}
 
-    for m in motifs:
-        context["motifs"][m] = {}
-        context["motifs"][m]['verifymotif_id'] = m.verifymotif_id
-        d = Domaingroups.objects.get(domaingroup_id = m.domaingroup_id)
+    for type, motifs in zip(['motifs', 'verifymotifs'], [motifs, verifymotifs]):
+        for m in motifs:
+            context[type][m] = {}
+            if type == "motifs":
+                context[type][m]['motif_id'] = m.motif_id
+            else:
+                context[type][m]['verifymotif_id'] = m.verifymotif_id
+            d = Domaingroups.objects.get(domaingroup_id = m.domaingroup_id)
 
-        if d.domaingroupparent_id == None:
-            context["motifs"][m]["domaingroupparent"] = m.motifname
-        elif ";" in d.domaingroupparent_id:
-            p_id = d.domaingroupparent_id.split(";")
-            context["motifs"][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = p_id[0]).domaingroupname +"/"+ Domaingroups.objects.get(domaingroup_id = p_id[1]).domaingroupname
-        else:
-            context["motifs"][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = d.domaingroupparent_id).domaingroupname
-        context["motifs"][m]["domaingroup"] = d.domaingroupname
-        context["motifs"][m]["ascii"] = m.asciioutput
+            if d.domaingroupparent_id == None:
+                context[type][m]["domaingroupparent"] = m.motifname
+            elif ";" in d.domaingroupparent_id:
+                p_id = d.domaingroupparent_id.split(";")
+                context[type][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = p_id[0]).domaingroupname +"/"+ Domaingroups.objects.get(domaingroup_id = p_id[1]).domaingroupname
+            else:
+                context[type][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = d.domaingroupparent_id).domaingroupname
+            context[type][m]["domaingroup"] = d.domaingroupname
+            context[type][m]["ascii"] = m.asciioutput
 
-        data = ET.fromstring(context["motifs"][m]["ascii"])
-        for x in data:
-            context["motifs"][m][x.tag] = x.text
-        context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-        context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context["motifs"][m]["domaingroupparent"])
+            data = ET.fromstring(context[type][m]["ascii"])
+            for x in data:
+                context[type][m][x.tag] = x.text
+            context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
+            context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroupparent"])
 
     if request.method == 'POST':
         form = InsertSequence(request.POST, instance=seq, initial={'gene': ncbigene_id, })
@@ -663,9 +673,17 @@ def QueryVerifyView(request, sequence_id):
 
         #Verify motifs if not verified yet
         for vm_id in request.POST.getlist('verifymotif_id'):
-            # Create motif from vm
-            # mark vm as active?
+
+            requestValue, vm_id = vm_id.split(":")
             vm = Verifymotifs.objects.get(verifymotif_id=vm_id)
+
+            if requestValue == 'delete':
+                # Delete VerifyMotif
+                vm.delete()
+                form.data['newChangelog'] += " %s %s - VerifyMotif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
+                continue
+
+            # Create motif from vm
             m = Motifs(sequence = seq,
                        motifname = vm.motifname,
                        startposition = vm.startposition,
@@ -674,15 +692,58 @@ def QueryVerifyView(request, sequence_id):
                        domaingroup = vm.domaingroup,
                        # motif_id = models.AutoField(primary_key=True),
                        gaps = vm.gaps,
-                       active = vm.active,
+                       active = 1,
                        method = vm.method,
                        motifrank = vm.verifymotifrank,
                        asciioutput = vm.asciioutput,
-                       binaryoutput = vm.binaryoutput
-                )
-            m.save()
-            vm.delete()
-            form.data['newChangelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
+                       binaryoutput = vm.binaryoutput)
+
+            if int(requestValue) == int(vm.active):
+
+                continue
+
+            elif requestValue == "0" or requestValue == "-1":
+
+                # Delete Motif if already exists
+                if vm.active == 1:
+                    for activeMotif in Motifs.objects.filter( sequence_id = vm.sequence_id ):
+                        if activeMotif.sequence_id == vm.sequence_id and activeMotif.asciioutput == vm.asciioutput:
+                            activeMotif.delete()
+
+                vm.active = int(requestValue)
+                vm.save()
+                form.data['newChangelog'] += " %s %s - VerifyMotif deactivated: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
+
+            elif requestValue == '1':
+
+                # Save active Motif if does not exist
+                activeMotifs = Motifs.objects.filter( sequence_id = vm.sequence_id )
+                if vm in activeMotifs:
+                    continue
+                else:
+                    m.save()
+                    form.data['newChangelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
+                vm.active = 1
+                vm.save()
+
+        for m_id in request.POST.getlist('motif_id'):
+            requestValue, m_id = m_id.split(":")
+            motif = Motifs.objects.get(motif_id=m_id)
+
+            if requestValue == 'delete':
+                # Delete VerifyMotif
+                for vm in Verifymotifs.objects.filter( sequence_id = motif.sequence_id ):
+                    if motif.sequence_id == vm.sequence_id and motif.asciioutput == vm.asciioutput:
+                        vm.active = 0
+                        vm.save()
+                motif.delete()
+                form.data['newChangelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
+                continue
+            elif int(requestValue) == int(motif.active):
+                continue
+            else:
+                motif.active = int(requestValue)
+                motif.save()
 
         # set mutable flag back
         form.data._mutable = _mutable

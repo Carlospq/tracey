@@ -31,16 +31,18 @@
                                     </tr>
                                     <tr>
                                         <td><a href="/query-motifs"><b><u>Query Motifs</u></b></a>:</td>
-                                        <td style="padding: 15px;">Explore your protein sequence for any possible motif found in Tracey.</td>
+                                        <td style="padding: 15px;">Explore your protein sequence for any possible motif stored in Tracey.</td>
                                     </tr>
-                                    <tr>
-                                        <td><a href="/query-insert"><b><u>Query Insert</u></b></a>:</td>
-                                        <td style="padding: 15px;">Add new sequences into Tracey.</td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="/query-verify"><b><u>Query Verify</u></b></a>:</td>
-                                        <td style="padding: 15px;">Verify new sequences and confirm Motifs.</td>
-                                    </tr>
+                                    {% if user.is_authenticated and user.is_staff %}
+                                        <tr>
+                                            <td><a href="/query-insert"><b><u>Query Insert</u></b></a>:</td>
+                                            <td style="padding: 15px;">Add new sequences into Tracey.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><a href="/query-verify"><b><u>Query Verify</u></b></a>:</td>
+                                            <td style="padding: 15px;">Verify new sequences and confirm Motifs.</td>
+                                        </tr>
+                                    {% endif %}
                                 </table>
                             </div>
                         </div>

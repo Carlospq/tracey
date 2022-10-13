@@ -200,22 +200,31 @@
 		</div>
 
 <hr>
-<input type="submit" value="Submit">
+<input class="mb-5" type="submit" value="Submit">
 
 {% if 'query-verify' in segment %}
 
 <div class="row mb-4 mt-4">
 		<div class="col-lg-12 col-sm-12">
 
+        <h4>Not verified motifs</h4>
+        <p> IMPORTANT: If "active" value is set to "1" Verifymotif will become active and new Mofit will be created. If set to -1 or 0 Verifymotif will become inactive and Motif linked to it will be deleted. If set to "delete" Verifymotif will be deleted an not accesible anymore </p>
+        <hr>
 				{% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
 
-				{% for m in motifs %}
+				{% for m in verifymotifs %}
 				<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
 				<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
 				<table class="detailTable">
 				<tr>
-						<td class="td-data" style="width: 2%;">
-								<input type="checkbox" id="{{ m.verifymotif_id }}" name='verifymotif_id' value="{{ m.verifymotif_id }}">
+						<td class="td-data" style="width: 5%;">
+                <select name="verifymotif_id" id="{{ m.verifymotif_id }}">
+                    <option value="-1:{{ m.verifymotif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
+                    <option value="0:{{ m.verifymotif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
+                    <option value="1:{{ m.verifymotif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
+                    <option value="delete:{{ m.verifymotif_id }}"> delete</option>
+                </select>
+								<!-- <input type="checkbox" id="{{ m.verifymotif_id }}" name='verifymotif_id' value="{{ m.verifymotif_id }}"> -->
 						</td>
 						<td class="td-data">
 								<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
@@ -223,11 +232,11 @@
 										<table class="detailTable">
 												<tr>
 														<td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
-														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
-														<td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
-														<td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
+														<td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
+														<td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
 														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
-														<td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+														<td class="td-data"><b>Functional Name: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
 												</tr>
 										</table>
 								<hr>
@@ -236,7 +245,7 @@
 										<table class="detailTable" style="table-layout: fixed;">
 												<tr>
 														<td class="td-header"><b></b></td>
-														<td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+														<td class="td-data"><img src="data:image/png;base64,{{ verifymotifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
 												</tr>
 												<tr>
 														<td class="td-header"><b>Sequence with motif: </b></td>
@@ -270,17 +279,17 @@
 																<div style="overflow-x:auto;">
 																		<table style="width:100%;">
 																			<tr>
-																					{% for leter in motifs|get_item:m|get_item:'consensus' %}
+																					{% for leter in verifymotifs|get_item:m|get_item:'consensus' %}
 																							<td style="text-align: left;">{{ leter }}</td>
 																					{% endfor %}
 																			</tr>
 																			<tr>
-																					{% for leter in motifs|get_item:m|get_item:'similarity' %}
+																					{% for leter in verifymotifs|get_item:m|get_item:'similarity' %}
 																							<td style="text-align: justify;">{{ leter }}</td>
 																					{% endfor %}
 																			</tr>
 																			<tr>
-																					{% for leter in motifs|get_item:m|get_item:'motif' %}
+																					{% for leter in verifymotifs|get_item:m|get_item:'motif' %}
 																							<td>{{ leter }}</td>
 																					{% endfor %}
 																			</tr>
@@ -298,7 +307,106 @@
 				</div>
 				</div>
 				{% endfor %}
+        <input class="mb-5" type="submit" value="Submit">
 
+        <h4>Verified motifs</h4>
+        <p>IMPORTANT: If "active" set to "delete" Motif will be deleted and Verifymotif linked to it will be set to "0". Setting it to any other value will have no effect on Verifymotifs</p>
+        <hr>
+        {% for m in motifs %}
+        <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+        <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+        <table class="detailTable">
+        <tr>
+            <td class="td-data" style="width: 5%;">
+                <select name='motif_id' id="{{ m.motif_id }}">
+                    <option value="-1:{{ m.motif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
+                    <option value="0:{{ m.motif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
+                    <option value="1:{{ m.motif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
+                    <option value="delete:{{ m.motif_id }}"> delete</option>
+                </select>
+                <!-- <input type="checkbox" id="{{ m.motif_id }}" name='motif_id' value="{{ m.motif_id }}"> -->
+            </td>
+            <td class="td-data">
+                <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+                <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+                    <table class="detailTable">
+                        <tr>
+                            <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+                            <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
+                            <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
+                            <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+                            <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
+                            <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+                        </tr>
+                    </table>
+                <hr>
+                </div>
+                <div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+                    <table class="detailTable" style="table-layout: fixed;">
+                        <tr>
+                            <td class="td-header"><b></b></td>
+                            <td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+                        </tr>
+                        <tr>
+                            <td class="td-header"><b>Sequence with motif: </b></td>
+                            <td class="td-data">
+                                <div style="overflow-x:auto;">
+
+                                    <table style="font-family: monospace; width: 100%; text-align: justify;">
+                                        <tr><td style="border: red;">
+                                        {% for leter in sequence.sequence %}
+                                            <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                        {% endfor %}
+                                        </td></tr>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+                    <table class="detailTable" style="table-layout: fixed;">
+                        <tr>
+                            <td class="td-header" style="table-layout: fixed;">
+                                <table style="table-layout: fixed; width:100%;">
+                                    <tr><td><b>Hmm-Consensus: </b></td></tr>
+                                    <tr><td><b>Similarity: </b></td></tr>
+                                    <tr><td><b>Found Motif: </b></td></tr>
+                                </table>
+                            </td>
+
+                            <td class="td-data" style="table-layout: fixed;">
+                                <div style="overflow-x:auto;">
+                                    <table style="width:100%;">
+                                      <tr>
+                                          {% for leter in motifs|get_item:m|get_item:'consensus' %}
+                                              <td style="text-align: left;">{{ leter }}</td>
+                                          {% endfor %}
+                                      </tr>
+                                      <tr>
+                                          {% for leter in motifs|get_item:m|get_item:'similarity' %}
+                                              <td style="text-align: justify;">{{ leter }}</td>
+                                          {% endfor %}
+                                      </tr>
+                                      <tr>
+                                          {% for leter in motifs|get_item:m|get_item:'motif' %}
+                                              <td>{{ leter }}</td>
+                                          {% endfor %}
+                                      </tr>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                </div>
+            </td>
+        </tr>
+
+        </table>
+        </div>
+        </div>
+        {% endfor %}
 		</div>
 </div>
 

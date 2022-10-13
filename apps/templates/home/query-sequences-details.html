@@ -41,7 +41,9 @@
                   <h1><strong> {{ sequence }} </strong></h1>
                   <hr>
               </div>
-
+              {% if log %}<p style="color: red;">{{ log }}</p>{% endif %}
+              {{ message }}
+              {% for error in form.errors %}{{error}}{% endfor %}
               <div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
 
                   <table class="detailTable">
