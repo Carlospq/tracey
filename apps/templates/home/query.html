@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Query {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Card frame -->
+        <div class="card border-0 shadow components-section">
+
+                <!-- Card body -->
+                <div class="col-12 mb-4">
+                    <div class="card-body">
+
+                        <div class="mb-6">
+                            <h1><strong> Queries on Tracey Database: </strong></h1>
+                            <p><i>Explore Tracey sequences.</i></p>
+                            <hr>
+                        </div>
+
+                        <div class="row mb-5">
+                            <div class="col-lg-12 col-sm-12">
+                                <table style="margin-left: auto; margin-right: auto">
+                                    <tr>
+                                        <td><a href="/query-sequences"><b><u>Query Sequences</u></b></a>:</td>
+                                        <td style="padding: 15px;">Retrieve protein sequences from Tracey based on a series of filters (e.g. species ("<i>Homo sapiens</i>"); domain group ("Qa")).</td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="/query-motifs"><b><u>Query Motifs</u></b></a>:</td>
+                                        <td style="padding: 15px;">Explore your protein sequence for any possible motif found in Tracey.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="/query-insert"><b><u>Query Insert</u></b></a>:</td>
+                                        <td style="padding: 15px;">Add new sequences into Tracey.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="/query-verify"><b><u>Query Verify</u></b></a>:</td>
+                                        <td style="padding: 15px;">Verify new sequences and confirm Motifs.</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- End Card body -->
+
+        </div>
+        <!-- End Card frame -->
+    </div>
+</div>
+
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

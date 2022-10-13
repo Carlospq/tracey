@@ -1,0 +1,308 @@
+<head>
+    <style type="text/css">
+    	  .detailTable{
+            table-layout: fixed;
+            width:100%;
+            border-collapse:collapse;
+            word-wrap: break-word;
+            word-break: break-word;
+    	  }
+        .detailTable td{
+            text-align: left;
+            padding-bottom: 5px;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .td-header {
+            width: 15%;
+            font-weight: bold;
+        }
+        .td-data {
+            width: 85%;
+        }
+    </style>
+</head>
+<form method='post' action='' name="motifForm" id="motifForm">
+		{% csrf_token %}
+
+		<!-- Row 1 -->
+		<div class="row mb-4">
+				<div class="col-lg-6 col-sm-6">
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												{{ form.sequenceshortname }}
+												{% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.aliases.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.aliases.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												{{ form.aliases }}
+												{% for error in form.errors.aliases %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.foreignannotation.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.foreignannotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												{{ form.foreignannotation }}
+												{% for error in form.errors.foreignannotation %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+				</div>
+				<div class="col-lg-6 col-sm-6 mb-1" style="display: inline">
+						<div class="row mb-1" style="height: 100%;">
+								<table><tr>
+										<td class="tdlabel">{{ form.sequence.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<div class="fieldWrapper">{{ form.sequence }}</div>
+												{% for error in form.errors.sequence %}<p class="perror"">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+				</div>
+		</div>
+
+		<!-- Row 2 -->
+		<div class="row mb-4">
+				<div class="col-lg-6 col-sm-6">
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.taxonomy.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.taxonomy.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												{{ form.taxonomy }}
+												{% for error in form.errors.taxonomy %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+						<div class="row mb-1">
+							<table><tr>
+									<td class="tdlabel">{{ form.sourcedatabase.label_tag }}</td>
+									<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sourcedatabase.help_text }}"> ? </abbr></td>
+									<td class="tdfield">
+											{{ form.sourcedatabase }}
+											{% for error in form.errors.sourcedatabase %}<p class="perror">{{ error }}</p>{% endfor %}
+									</td>
+							</tr></table>
+						</div>
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.gene.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.gene.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												{{ form.gene }}
+												{% for error in form.errors.gene %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+				</div>
+				<div class="col-lg-6 col-sm-6">
+						<div class="row mb-1" style="height: 100%">
+								<table><tr>
+										<td class="tdlabel">{{ form.annotation.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.annotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<div class="fieldWrapper">{{ form.annotation }}</div>
+												{% for error in form.errors.annotation %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+				</div>
+		</div>
+
+		<!-- Row 3 -->
+		<div class="row mb-4">
+				<div class="col-lg-6 col-sm-6">
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.sequencetype.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencetype.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<div class="fieldWrapper">{{ form.sequencetype }}</div>
+												{% for error in form.errors.sequencetype %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.sequencestatus.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencestatus.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<div class="fieldWrapper">{{ form.sequencestatus }}</div>
+												{% for error in form.errors.sequencestatus %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+						<div class="row mb-1">
+								<table><tr>
+										<td class="tdlabel">{{ form.private.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.private.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<div class="fieldWrapper">{{ form.private }}</div>
+												{% for error in form.errors.private %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+				</div>
+				<div class="col-lg-6 col-sm-6">
+						<div class="row mb-1" style="height: 100%">
+								<table><tr>
+										<td class="tdlabel">{{ form.sequencecomments.label_tag }}</td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencecomments.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<div class="fieldWrapper">{{ form.sequencecomments }}</div>
+												{% for error in form.errors.sequencecomments %}<p class="perror">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+						</div>
+				</div>
+		</div>
+		<!-- Row 3 -->
+		<div class="row mb-4">
+				<div class="col-lg-12 col-sm-12">
+						<div class="row mb-1">
+								{% if 'query-verify' in segment %}
+										<div class="col-lg-12 col-sm-12">
+												<div class="row mb-1" style="height: 100%">
+														<table>
+																<tr>
+																		<td class="tdlabel" style="width: 5.5%;">{{ form.newChangelog.label_tag }}</td>
+																		<td class="tdquestion"><abbr title="{{ form.newChangelog.help_text }}" style='color: blue; text-align: right;'> ? </abbr></td>
+																		<td class="tdfield" style="width: 100%;">
+																				<div class="fieldWrapper" style ="width: 100%">{{ form.newChangelog }}</div>
+																		</td>
+																</tr>
+																<tr>
+																		<td class="tdlabel" style="width: 5.5%;"> </td>
+																		<td class="tdquestion"> </td>
+																		<td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
+																				<div class="fieldWrapper";">{{ form.changelog }}</div>
+																				{% for error in form.errors.changelog %}<p class="perror">{{ error }}</p>{% endfor %}
+																		</td>
+																</tr>
+														</table>
+												</div>
+										</div>
+								{% endif %}
+						</div>
+				</div>
+		</div>
+
+<hr>
+<input type="submit" value="Submit">
+
+{% if 'query-verify' in segment %}
+
+<div class="row mb-4 mt-4">
+		<div class="col-lg-12 col-sm-12">
+
+				{% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
+
+				{% for m in motifs %}
+				<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+				<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+				<table class="detailTable">
+				<tr>
+						<td class="td-data" style="width: 2%;">
+								<input type="checkbox" id="{{ m.verifymotif_id }}" name='verifymotif_id' value="{{ m.verifymotif_id }}">
+						</td>
+						<td class="td-data">
+								<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+								<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+										<table class="detailTable">
+												<tr>
+														<td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
+														<td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
+														<td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
+														<td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+												</tr>
+										</table>
+								<hr>
+								</div>
+								<div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+										<table class="detailTable" style="table-layout: fixed;">
+												<tr>
+														<td class="td-header"><b></b></td>
+														<td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+												</tr>
+												<tr>
+														<td class="td-header"><b>Sequence with motif: </b></td>
+														<td class="td-data">
+																<div style="overflow-x:auto;">
+
+																		<table style="font-family: monospace; width: 100%; text-align: justify;">
+																				<tr><td style="border: red;">
+																				{% for leter in sequence.sequence %}
+																						<a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+																				{% endfor %}
+																				</td></tr>
+																		</table>
+																</div>
+														</td>
+												</tr>
+										</table>
+								</div>
+								<div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+										<table class="detailTable" style="table-layout: fixed;">
+												<tr>
+														<td class="td-header" style="table-layout: fixed;">
+																<table style="table-layout: fixed; width:100%;">
+																		<tr><td><b>Hmm-Consensus: </b></td></tr>
+																		<tr><td><b>Similarity: </b></td></tr>
+																		<tr><td><b>Found Motif: </b></td></tr>
+																</table>
+														</td>
+
+														<td class="td-data" style="table-layout: fixed;">
+																<div style="overflow-x:auto;">
+																		<table style="width:100%;">
+																			<tr>
+																					{% for leter in motifs|get_item:m|get_item:'consensus' %}
+																							<td style="text-align: left;">{{ leter }}</td>
+																					{% endfor %}
+																			</tr>
+																			<tr>
+																					{% for leter in motifs|get_item:m|get_item:'similarity' %}
+																							<td style="text-align: justify;">{{ leter }}</td>
+																					{% endfor %}
+																			</tr>
+																			<tr>
+																					{% for leter in motifs|get_item:m|get_item:'motif' %}
+																							<td>{{ leter }}</td>
+																					{% endfor %}
+																			</tr>
+																		</table>
+																</div>
+														</td>
+												</tr>
+										</table>
+								</div>
+								</div>
+						</td>
+				</tr>
+
+				</table>
+				</div>
+				</div>
+				{% endfor %}
+
+		</div>
+</div>
+
+<input type="submit" value="Submit">
+{% endif %}
+
+</form>

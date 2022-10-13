@@ -1,0 +1,126 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Home {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+        <div class="card border-0 shadow components-section">
+            <div class="col-12 mb-4">
+                <div class="card-body">
+
+                    <div style="padding-bottom: 5px;">
+
+                        <h1><strong> Tracey Database </strong></h1>
+                        <hr class="mb-3">
+
+
+
+                        <div class="row">
+                            <div class="col-12">
+                            <div class="row">
+                            <div class="col-6">
+                                <p><strong>Introduction to Tracey database:</strong><br>
+                                  This database is a collection of different family protein sequences, including
+                                    <a href="#" target="_blank" style="color: blue">SNARE</a>,
+                                    <a href="#" target="_blank" style="color: blue">AAA</a> and
+                                    <a href="#" target="_blank" style="color: blue">Rab</a>,
+                                    classified by HMM profiles. Data integrated as of DD/MM/YYYY.
+
+                                  <br><br>
+                                  A detailed description of the different protein families classification can be found in:
+
+                                  <div style="padding-left: 20px;">
+                                  <br><br><strong>SNARE:</strong><br>
+                                  <div style="padding-left: 20px;">
+                                      <b>Klöpper, T. H., Kienle, C. N., and Fasshauer, D.</b><br>
+                                      <i>An elaborate classification of SNARE proteins sheds light on the conservation of the eukaryotic endomembrane system</i><br>
+                                      Molecular Biology of the Cell, Vol. 18, 3463–3471, September 2007 (
+                                      <a href="https://pubmed.ncbi.nlm.nih.gov/17596510/" target="_blank" style="color: blue">PubMed</a> /
+                                      <a href="https://www.molbiolcell.org/doi/pdf/10.1091/mbc.e07-03-0193" target="_blank" style="color: blue">PDF</a>)<br><br>
+
+                                      <b>Klöpper, T. H., Kienle, C. N., and Fasshauer, D.</b><br>
+                                      <i>SNAREing the basis of multicellularity: Consequences of protein family expansion during evolution</i><br>
+                                      Molecular Biology and Evolution 2008; doi: 10.1093/molbev/msn151 (
+                                      <a href="https://pubmed.ncbi.nlm.nih.gov/18621745/" target="_blank" style="color: blue">PubMed</a> /
+                                      <a href="https://watermark.silverchair.com/msn151.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAsswggLHBgkqhkiG9w0BBwagggK4MIICtAIBADCCAq0GCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMGxtz8jLyLG4SQOdRAgEQgIICfhuWpTSVOSPLxAusRPP-H_ORk_AvUNZVaKs2voeCPaIHdfV2zBDUnxau2ImlXH87PQuYGP3oLklx7mBGFpebgeX7lCV5WEktc-qARV62-IjfXTUdLs7Lv-59BdeQbx4B_FzaF98S-B5C9aAcCJPfc8Q_iJ0xchKaeNXas7w6iru7ePomjxUeYuoyXr9gmqnxuWXykW4FCJiPsiedqXeS74u8ZC8V3pF_WPxVxZEGdUNCY8NLYhM8b4ZizyVUSOzcbPHktvJU3iXfoARmJt8MShi8s4f4K8MXe8iX4RTGyikb01EeU4jZNM9Pntss4ckNfbaHENQt1HEG3vi8bFXU19wvvi8fKCY74k3XxFcbW7xjFlNKlcjGIiyjoPCbMRKRbQpngSUqCQIe9iho-Vu57lJUKg53w8sH8gU77Wwd6c1Iy47ZYJJBoPchl8u6V2JkMl4xFtfJiWgRtnikatSTy3xIfKTOulXyww289YMenzcAbyn0WMMP0RjoI1Lnp_MXRhIhQu74Mo5X6wZUwJrux0OrZLAjN-hxQkoZczENAafQW18shHhd2AWHF7f3xbmOSwUANaStItQol4x7O-_kNiyT2i1m_JLhYVMu7EajY2IhnPmoP2JgS30naPjIP9Ob3aCWmLGpuyqjxwGmuYltnX0p1yIre9Y8cZqdksjbB6UuXIFNQaY7-bXEDjhnbHOqkWJPiDYr33WvPhanzbhLp0IqO-h2QMFzuqOIZYcZUBdMPHEsTwnxula2IQfPbvQmAG9e3h-jTJG15nd03SsfjJc1m2Z1_BVf4aLwVov2ssCcXeqIeSJsvmCDeN0uyKZQSCvVR2JExeL7Q1aq5ouP" target="_blank" style="color: blue">PDF</a>)<br><br>
+
+                                      <b>Kienle, N., Klöpper, T. H., and Fasshauer, D.</b><br>
+                                      <i>Phylogeny of the SNARE vesicle fusion machinery yields insights into the conservation of the secretory pathway in fungi</i><br>
+                                      BMC Evolutionary Biology 2009, 9:19 (
+                                      <a href="https://pubmed.ncbi.nlm.nih.gov/19166604/" target="_blank" style="color: blue">PubMed</a> /
+                                      <a href="https://bmcecolevol.biomedcentral.com/track/pdf/10.1186/1471-2148-9-19.pdf" target="_blank" style="color: blue">PDF</a>)<br><br>
+
+                                      <b>Kienle, N., Klöpper, T. H., and Fasshauer, D.</b><br>
+                                      <i>Differences in the SNARE evolution of fungi and metazoa</i><br>
+                                      Biochemical Society Transactions (2009) Volume 37, part 4 (
+                                      <a href="https://pubmed.ncbi.nlm.nih.gov/19614595/" target="_blank" style="color: blue">PubMed</a>)<br><br>
+
+                                  </div>
+                                  <br><strong>Rab:</strong><br><br>
+                                  <div style="padding-left: 20px;">
+                                      <b>Klöpper, T. H., Kienle, N., Fasshauer, D., and Munro S.</b><br>
+                                      <i>Untangling the evolution of Rab G proteins: implications of a comprehensive genomic analysis</i><br>
+                                      BMC Biology 2012, 10:71 (
+                                      <a href="https://pubmed.ncbi.nlm.nih.gov/22873208/" target="_blank" style="color: blue">PubMed</a> /
+                                      <a href="https://bmcbiol.biomedcentral.com/track/pdf/10.1186/1741-7007-10-71.pdf" target="_blank" style="color: blue">PDF</a>)
+                                  </div>
+                                  <br><strong>AAA:</strong><br><br>
+                                  <div style="padding-left: 20px;">
+                                      <b>Kienle, N., Klöpper, T. H., and Fasshauer, D.</b><br>
+                                      <i>Shedding light on the expansion and diversification of the Cdc48 protein family during the rise of the eukaryotic cell</i><br>
+                                      BMC Evolutionary Biology 2016, 16:215 (
+                                      <a href="https://pubmed.ncbi.nlm.nih.gov/27756227/" target="_blank" style="color: blue">PubMed</a> /
+                                      <a href="https://bmcecolevol.biomedcentral.com/track/pdf/10.1186/s12862-016-0790-1.pdf" target="_blank" style="color: blue">PDF</a>)
+                                  </div>
+                                  </div>
+
+                                  <br><br><br><b>Supplemental Information</b>
+                                  <br>Any supplemental information of publications can be downloaded from the Supplemental Data section of the above cited publication.
+                                  <br>To view the Nexus files in the Supplemental Data section you may use <a href="https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/algorithms-in-bioinformatics/software/splitstree/"
+                                  style="color: darkblue" target="_blank">SplitsTree</a>
+                            </div>
+
+                            <div class="col-6 mb-3" style="position: relative; height: 500px; border: grey solid 1px; border-radius: 25px; padding-left: auto; padding-right: auto;">
+
+                                <img class="mySlides vertical-center" src="static/assets/img/images/SNAREConformation.jpg" style="padding: 5px; max-height: 500px; position: absolute; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%);">
+                                <img class="mySlides vertical-center" src="static/assets/img/images/SNAREOverview.png" style="padding: 5px; max-height: 500px; position: absolute; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%);">
+                                <img class="mySlides vertical-center" src="static/assets/img/images/SNAREClassification.jpg" style="padding: 5px; max-height: 500px; position: absolute; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%);">
+                                <img class="mySlides vertical-center" src="static/assets/img/images/RabClassification.jpg" style="padding: 5px; max-height: 500px; position: absolute; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%);">
+
+                                <script>
+                                    var myIndex = 0;
+                                    carousel();
+
+                                    function carousel() {
+                                      var i;
+                                      var x = document.getElementsByClassName("mySlides");
+                                      for (i = 0; i < x.length; i++) {
+                                        x[i].style.display = "none";
+                                      }
+                                      myIndex++;
+                                      if (myIndex > x.length) {myIndex = 1}
+                                      x[myIndex-1].style.display = "block";
+                                      setTimeout(carousel, 3000); // Change image every 3 seconds
+                                    }
+                                </script>
+                            </div>
+                            </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

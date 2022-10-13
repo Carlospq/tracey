@@ -1,0 +1,186 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Sequence details {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+{% load template_filters %}
+
+<head>
+    <style type="text/css">
+    	  .detailTable{
+            table-layout: fixed;
+            width:100%;
+            border-collapse:collapse;
+            word-wrap: break-word;
+            word-break: break-word;
+    	  }
+        .detailTable td{
+            text-align: left;
+            padding-bottom: 5px;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .td-header {
+            width: 15%;
+            font-weight: bold;
+        }
+        .td-data {
+            width: 85%;
+        }
+    </style>
+</head>
+
+<div class="row mt-4">
+    <div class="container">
+        <div class="card border-0 shadow components-section">
+            <div class="card-body">
+
+              <div class="row mb-3">
+                  <h1><strong> {{ sequence }} </strong></h1>
+                  <hr>
+              </div>
+
+              <div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
+
+                  <table class="detailTable">
+                      <tr>
+                          <td class="td-header">Short name:</td>
+                          <td class="td-data">{{ sequence.sequenceshortname }}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">Aliases:</td>
+                          <td class="td-data">{% if sequence.aliases == "null" %}{% else %}{{ sequence.aliases }}{% endif %}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">Species:</td>
+                          <td class="td-data">{{ speciesname }}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">Status:</td>
+                          <td class="td-data">{{ sequence.sequencestatus }}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">dbxref:</td>
+                          <td class="td-data">{{ sequence.dbxref }}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">Source database:</td>
+                          <td class="td-data">{{ sequence.sourcedatabase }}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">Status:</td>
+                          <td class="td-data">{{ sequence.sequencestatus }}</td>
+                      </tr>
+                      <tr>
+                          <td class="td-header">Foreign annotation:</td>
+                          <td class="td-data">{{ sequence.foreignannotation }}</td> <!-- <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.foreignannotation }}</textarea> -->
+                      </tr>
+                      <tr>
+                          <td class="td-header">Sequence:</td>
+                          <td class="td-data">
+                              <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.sequence }}</textarea>
+                          </td>
+                      </tr>
+                      <tr>
+                          <td class="td-header"></td>
+                          <td class="td-data">
+                              <a href="/fastaFormat/{{sequence.sequence_id}}/" target="popup" onclick="window.open('/details/fastaFormat/{{sequence.sequence_id}}/','popup','width=600,height=300'); return false;" style="color: blue"> Fasta format </a>
+                          </td>
+                      </tr>
+                  </table>
+              </div>
+
+              <div class="row mb-3">
+                  <h4> Motif Data </h4>
+                  <hr>
+              </div>
+
+              {% for m in motifs %}
+              <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+              <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+                  <table class="detailTable">
+                      <tr>
+                          <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+                          <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
+                          <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
+                          <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+                          <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
+                          <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+                      </tr>
+                  </table>
+              <hr>
+              </div>
+              <div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+                  <table class="detailTable" style="table-layout: fixed;">
+                      <tr>
+                          <td class="td-header"><b></b></td>
+                          <td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+                      </tr>
+                      <tr>
+                          <td class="td-header"><b>Sequence with motif: </b></td>
+                          <td class="td-data">
+                              <div style="overflow-x:auto;">
+                                  <table style="font-family: monospace; width: 100%; text-align: justify;">
+                                      <tr><td>
+                                      {% for leter in sequence.sequence %}
+                                          <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                      {% endfor %}
+                                      </td></tr>
+                                  </table>
+                              </div>
+                          </td>
+                      </tr>
+                  </table>
+              </div>
+              <div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+                  <table class="detailTable" style="table-layout: fixed;">
+                      <tr>
+                          <td class="td-header" style="table-layout: fixed;">
+                              <table style="table-layout: fixed; width:100%;">
+                                  <tr><td><b>Hmm-Consensus: </b></td></tr>
+                                  <tr><td><b>Similarity: </b></td></tr>
+                                  <tr><td><b>Found Motif: </b></td></tr>
+                              </table>
+                          </td>
+
+                          <td class="td-data" style="table-layout: fixed;">
+                              <div style="overflow-x:auto;">
+                                  <table style="width:100%;">
+                                    <tr>
+                                        {% for leter in motifs|get_item:m|get_item:'consensus' %}
+                                            <td style="text-align: left;">{{ leter }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        {% for leter in motifs|get_item:m|get_item:'similarity' %}
+                                            <td style="text-align: justify;">{{ leter }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        {% for leter in motifs|get_item:m|get_item:'motif' %}
+                                            <td>{{ leter }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                  </table>
+                              </div>
+                          </td>
+                      </tr>
+                  </table>
+              </div>
+              </div>
+              {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

@@ -1,0 +1,187 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Query sequences results {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+{% load template_filters %}
+
+<head>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src='https://kit.fontawesome.com/a076d05399.js' crossorigin='anonymous'></script>
+    <style type="text/css">
+            .scrollingTable {
+                table-layout: fixed;
+                width: 100%;
+                overflow-y: auto;
+                word-wrap: break-word;
+                word-break: break-word;
+            }
+        	  .hoverTable{
+                table-layout: fixed;
+                width:100%;
+                border-collapse:collapse;
+                word-wrap: break-word;
+                word-break: break-word;
+        	  }
+        	   /* Define the default color for all the table rows */
+        	  .hoverTable tr{
+                border-collapse:collapse;
+                word-wrap: break-word;
+                word-break: break-word;
+            }
+            .hoverTable td{
+                border: 1px solid lightgrey;
+                text-align: center;
+                vertical-align: middle;
+                word-wrap: break-word;
+                word-break: break-word;
+            }
+        	  /* Define the hover highlight color for the table row */
+            .hoverTable tr:hover {
+                table-layout: fixed;
+                background-color: lightgrey;
+                word-wrap: break-word;
+                word-break: break-word;
+            }
+            tableHeader {
+                table-layout: fixed;
+                width:100%;
+                border-collapse:collapse;
+                word-wrap: break-word;
+                word-break: break-word;
+            }
+    </style>
+    <script type="text/javascript">
+        function makeTableScroll() {
+            // Constant retrieved from server-side via JSP
+            var maxRows = 10;
+
+            var table = document.getElementById('myTable');
+            var wrapper = table.parentNode;
+            var rowsInTable = table.rows.length;
+            var height = 0;
+            if (rowsInTable > maxRows) {
+                for (var i = 0; i < maxRows; i++) {
+                    height += table.rows[i].clientHeight;
+                }
+                wrapper.style.height = height + "px";
+            }
+        }
+        function sortTable(coln) {
+            var table, rows, switching, i, x, y, shouldSwitch;
+            table = document.getElementById("myTable");
+            button = document.getElementById("myTable");
+            switching = true;
+            /*Make a loop that will continue until
+            no switching has been done:*/
+            while (switching) {
+                //start by saying: no switching is done:
+                switching = false;
+                rows = table.rows;
+                /*Loop through all table rows (except the
+                first, which contains table headers):*/
+                for (i = 0; i < (rows.length - 1); i++) {
+                    //start by saying there should be no switching:
+                    shouldSwitch = false;
+                    /*Get the two elements you want to compare,
+                    one from current row and one from the next:*/
+                    x = rows[i].getElementsByTagName("TD")[coln];
+                    y = rows[i + 1].getElementsByTagName("TD")[coln];
+                    //check if the two rows should switch place:
+                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                        //if so, mark as a switch and break the loop:
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+                if (shouldSwitch) {
+                    /*If a switch has been marked, make the switch
+                    and mark that a switch has been done:*/
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
+            }
+        }
+        function toggle(source) {
+            checkboxes = document.getElementsByName('checkbox');
+            for(var i=0, n=checkboxes.length;i<n;i++) {
+                checkboxes[i].checked = source.checked;
+            }
+        }
+    </script>
+</head>
+<body onload="makeTableScroll();">
+
+<div class="row mt-4">
+    <div class="container">
+        <div class="card border-0 shadow components-section">
+
+            <div class="border-0" style="border-radius: 10px 10px 0px 0px;">
+                <table class="tableHeader border-0 table-flush" style="width:100%; height: 45px; border-radius: 10px 10px 0px 0px; background-color: #1F2937; color: white; table-layout: fixed; border-collapse: collapse; word-wrap: break-word; word-break: break-word;">
+                    <thead class="thead-dark" style="width:100%">
+                    <tr>
+                        <th class="border-bottom" scope="col" style="width:2%; text-align:center">
+                            <input type="checkbox" id="maincheck" name="maincheck" onClick="toggle(this)">
+                        </th>
+                        <th class="border-bottom" scope="col" style="width:8%; text-align: center;"> Short Name
+                            <button type="button" name="button" onclick="sortTable(0)" style="height: 15px; vertical-align: middle;">
+                                <i class='fas fa-angle-up' style='font-size:10px; vertical-align: super;'></i>
+                            </button>
+                        </th>
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="2">Aliases <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: super;'></i> </button> </th>
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="3">Species <button type="button" name="button" onclick="sortTable(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: super;'></i> </button> </th>
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="4">Active <button type="button" name="button" onclick="sortTable(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: super;'></i> </button> </th>
+                        <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="5">Foreign Annotation</th>
+                        <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="6">Sequence</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+            <form name="queryFasta" target="_blank" action="/query/fastaFormat/" method="post">
+            {% csrf_token %}
+            <div class="scrollingTable mb-3" style="border: 1px solid lightgrey;">
+                <table class="hoverTable sortable" id="myTable">
+                    {% for seq in sequences %}
+                        <tr>
+                            <td class="border-bottom" scope="col" style="width:2%;">
+                                <input type="checkbox" id="cb{{seq.sequence_id}}" name="checkbox" value='{{seq.sequence_id}}'>
+                            </td>
+                            <td style="width: 8%;">
+                                <a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a>
+                            </td>
+                            <td style="width: 10%;">{{ seq.aliases }}</td>
+                            <td style="width: 10%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+                            <td style="width: 10%;">{{ seq.sequencestatus }}</td>
+                            <td style="width: 30%;">
+                                <textarea style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
+                            </td>
+                            <td style="width: 30%;">
+                                <textarea style="resize: none; width:95%; vertical-align: middle;">{{ seq.sequence }}</textarea>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+      			</div>
+            <table style="width: 100%;">
+                <tr>
+                    <td style="width: 50%;"><p style="padding: 0.5rem;">This query retrived <b>{{ sequences|length }}</b> sequences.</p></td>
+                    <td style="width: 50%;"><p style="padding: 0.5rem; text-align: right">
+                        <a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" style="color: blue">Fasta format</a>
+                    </td>
+                </tr>
+            </table>
+            </form>
+
+        </div>
+		</div>
+</div>
+
+</body>
+
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

@@ -1,0 +1,73 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Query insert {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<style>
+
+  .tdlabel {
+    width: 13%;
+    vertical-align: top;
+    padding-left: 0.5em;
+  }
+  .tdquestion {
+    width: 2%;
+    padding-right: 5px;
+    text-align: right;
+    vertical-align: top;
+    color: blue;
+  }
+  .tdfield{
+    vertical-align: top;
+    width: 85%;
+    height: 100%;
+  }
+  .perror {
+    color: red;
+    verticañ-alignment: top;
+  }
+
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Card frame -->
+        <div class="card border-0 shadow components-section">
+
+            <!-- Card body -->
+            <div class="col-12 mb-4">
+                <div class="card-body">
+
+                    <div class="mb-5">
+                        <h1><strong> Insert sequence into database </strong></h1>
+                        <p><i>Add new sequence into Tracey database.</i></p>
+                        <hr>
+                    </div>
+
+                    <div class="row mb-4">
+                    <div class="col-sm-12">
+                        {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+                        {% include "layouts/sequenceForm.html" %}
+
+                    </div>
+                    </div>
+
+                    <!-- </form> -->
+
+                </div>
+            </div>
+            <!-- End Card body -->
+        </div>
+        <!-- Card frame -->
+    </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

@@ -1,0 +1,99 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Query verify {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<style>
+
+  .tdlabel {
+    width: 13%;
+    vertical-align: top;
+    padding-left: 0.5em;
+  }
+  .tdquestion {
+    width: 2%;
+    padding-right: 5px;
+    text-align: right;
+    vertical-align: top;
+    color: blue;
+  }
+  .tdfield{
+    vertical-align: top;
+    width: 85%;
+    height: 100%;
+  }
+  .perror {
+    color: red;
+    verticañ-alignment: top;
+  }
+
+  .detailTable{
+      table-layout: fixed;
+      width:100%;
+      border-collapse:collapse;
+      word-wrap: break-word;
+      word-break: break-word;
+  }
+  .detailTable td{
+      text-align: left;
+      padding-bottom: 5px;
+      word-wrap: break-word;
+      word-break: break-word;
+  }
+  .td-header {
+      width: 15%;
+      font-weight: bold;
+  }
+  .td-data {
+      width: 85%;
+  }
+
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Card frame -->
+        <div class="card border-0 shadow components-section">
+
+            <!-- Card body -->
+            <div class="col-12 mb-4">
+                <div class="card-body">
+
+                    <div class="mb-5">
+                        <h1><strong> Verify Motifs </strong></h1>
+                        <p><i>Verify and update sequences in Tracey.</i></p>
+                        <hr>
+                    </div>
+
+                    <div class="row mb-3">
+                    <div class="col-sm-12">
+                        {% if log %}<p style="color: red;">{{ log }}</p>{% endif %}
+                        {{ message }}
+                        {% for error in form.errors %}{{error}}{% endfor %}
+                        {% include "layouts/sequenceForm.html" %}
+                    </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- End Card body -->
+        </div>
+        <!-- Card frame -->
+    </div>
+</div>
+
+{% if message %}
+    <script>
+        alert('{{ message }}');
+    </script>
+{% endif %}
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
