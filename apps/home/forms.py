@@ -242,3 +242,41 @@ class InsertSequence(ModelForm):
             data = ''
 
         return data
+
+
+class MotifForm(forms.Form):
+
+    class Meta:
+        help_texts = {
+            '': ''
+        }
+
+    domainname = forms.CharField(
+                    label= "Domain name",
+                    required = False,
+                    widget = forms.Select()
+                )
+
+    domaingroup_rank = forms.CharField(
+                    label= "Domain group",
+                    required = False,
+                    widget = forms.Select()
+                )
+
+    domainsubgroup = forms.CharField(
+                    label= "Domain subgroup",
+                    required = False,
+                    widget = forms.Select()
+                )
+
+    shortname = forms.CharField(
+                    label= "shortname",
+                    required = False,
+                    widget = forms.Select()
+                )
+
+    taxonomy = forms.CharField(
+                    label= "taxonomy",
+                    required = False,
+                    widget = forms.Select()
+                )

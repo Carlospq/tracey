@@ -200,6 +200,9 @@ class Domains(models.Model):
         managed = False
         db_table = 'domains'
 
+    def __str__(self):
+        return self.domainname
+        
 
 class Falsepositives(models.Model):
     falsepositive_id = models.AutoField(db_column='falsePositive_id', primary_key=True)  # Field name made lowercase.

@@ -34,48 +34,96 @@
             <div class="col-12 mb-4">
                 <div class="card-body">
 
-                    <div class="mb-5">
+                    <div style="padding-bottom: 5px" >
                         <h1><strong> Verify Motifs </strong></h1>
                         <p><i>Verify and update sequences in Tracey.</i></p>
+                        <p style="color: red"> {% if error %} {{ error }} {% endif %} </p>
                         <hr>
                     </div>
 
-                    <div class="row mb-4">
-                    <div class="col-sm-12">
+                    <div class="col-12">
+                        <!-- Beggining of Form -->
+                        <form method='get' action='#resultsTable' name="MotifForm" id="MotifForm"
+                            data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+                            data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
+                        {% csrf_token %}
 
-                        <!-- Row 1 - Select sequence -->
-                        <div class="col-lg-12 col-sm-12">
-                            <table>
-                                <tr>
-                                    <td class="tdlabel">
-                                        <label for="verify"> Sequence status </label>
-                                    </td>
-                                    <td class="tdfield">
-                                        <select style="width: 100%;" name="sequencestatus" id="sequencestatus">
-                                            {% for stat in status %}
-                                                <option value= "{{ stat }}"> {{ stat }} </option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="tdlabel">
-                                        <label for="verify"> Private </label>
-                                    </td>
-                                    <td class="tdfield">
-                                        <select style="width: 100%;" name="private" id="private">
-                                            <option value= "{{ 1 }}" selected> Yes </option>
-                                            <option value= "{{ 0 }}"> No </option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            </table>
+                        <div class="row mb-4">
+
+                          <div class="col-4">
+                              <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}">Domain name</label>
+
+                              <select style="width: 100%" name="domainname" id="domainname" >
+                                  <option value=""> </option>
+                                  {% for val in domainnames %}
+                                      <option value= "{{ val }}"> {{ val }} </option>
+                                  {% endfor %}
+                              </select>
+                          </div>
+
+                          <div class="col-4">
+                              <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
+                              <select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank" >
+                                  <option value=""> </option>
+                                  {% for val in domaingroup_rank %}
+                                      <option value= "{{ val }}"> {{ val }} </option>
+                                  {% endfor %}
+                              </select>
+                          </div>
+
+                          <div class="col-4">
+                              <label style="vertical-align: top;" for="{{ form.domaingroup.id_for_label }}">Subgroup</label>
+                              <select style="width: 100%" name="domaingroup" id="domaingroup" >
+                                  <option value=""> </option>
+                                  {% for val in domaingroup %}
+                                      <option value= "{{ val }}"> {{ val }} </option>
+                                  {% endfor %}
+                              </select>
+                          </div>
+
                         </div>
+                        <div class="row mb-4">
+
+                            <div class="col-4">
+                                <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
+                                <select style="width: 100%" name="shortname" id="shortname" >
+                                    <option value=""> </option>
+                                    {% for val in shortnames %}
+                                        <option value= "{{ val }}"> {{ val }} </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-4">
+                                <label style="vertical-align: top;" for="{{ form.taxonomy.id_for_label }}">Taxonomy</label>
+                                <select style="width: 100%" name="taxonomy" id="taxonomy" >
+                                    <option value=""> </option>
+                                    {% for val in taxonomies %}
+                                        <option value= "{{ val }}"> {{ val }} </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                        </div>
+
+
+
+
+
+
+
+                        <div class="mb-4">
+                            <input type="submit" value="Update list">
+                        </div>
+                        </form>
+
                         <hr>
+                        <!-- List of matching sequences -->
+                        <div id="resultsTable">
+                            Here goes the table with matching sequences
+                        </div>
 
                     </div>
-                    </div>
-
                 </div>
             </div>
             <!-- End Card body -->
@@ -84,6 +132,69 @@
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script>
+    // Pues a verlas venir...
+    $(document).ready(function() {
+        $('.has-popover').popover({'trigger':'hover'});
+    });
+
+    // Don't reload site on submit
+    $(document).on('submit','#MotifForm',function(e){
+        e.preventDefault();
+        $.ajax({
+            type:'POST',
+            url:'{% url "query-verify-menu" %}',
+            data:
+            {
+                task:$("#domainname").val(),
+                csrfmiddlewaretoken:$('input[name=csrfmiddlewaretoken]').val()
+            },
+            success:function(){
+                  alert('Saved');
+                    }
+            })
+        });
+
+    // formField.reload on formField.change
+    $("#domainname").change(function () {
+      var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
+      var domainname = $(this).val();
+
+      $.ajax({
+        url: url,
+        data: {
+          'domainname': domainname
+        },
+
+        success: function (data) {
+          $("#domaingroup_rank").html(data);
+          $("#id_domaingroup_rank").html("");
+          // $('#domaingroup')[0].selectize.clear();
+        }
+      });
+    });
+
+    $("#domaingroup_rank").change(function () {
+      var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
+      var domaingroup_rank = $(this).val();
+
+      $.ajax({
+        url: url,
+        data: {
+          'domaingroup_rank': domaingroup_rank
+        },
+
+        success: function (data) {
+          $("#domaingroup").html(data);
+          $("#id_domaingroup").html("");
+          // $('#domainsubgroup')[0].selectize.clear();
+        }
+      });
+    });
+
+
+</script>
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->

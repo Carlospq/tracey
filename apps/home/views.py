@@ -588,9 +588,21 @@ def QueryInsertView(request):
 def QueryVerifyMenuView(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
     segment = request.path.split('/')[-1]
-    context = {'segment': segment,
-               'status': ['', 'dead', 'replaced NCBI', 'live', 'ignore', 'unknown', 'crystal structure', 'suppressed', 'replaced'],
-              }
+    form =  MotifForm()
+
+    context = {}
+    context['form'] = form
+    context['segment'] = segment
+    context['status'] = ['', 'dead', 'replaced NCBI', 'live', 'ignore', 'unknown', 'crystal structure', 'suppressed', 'replaced']
+    context['domainnames'] = ['AAA.aaa', 'AAA.nd', 'Arf', 'C2', 'Habc', 'LGL', 'MUN.d1', 'MUN.d2', 'NSR.cd', 'NSR.md', 'NSR.nd', 'Proppin', 'Qb.III', 'Qb.III.b', 'Qc.II', 'Qc.III', 'Qc.III.b', 'Qc.III.c', 'Ras', 'Rhomboid', 'Rint', 'SM.d1', 'SM.d2a', 'SM.d2b', 'SM.d3', 'SNAP', 'SNAP.b', 'SNAP.c', 'SNARE', 'Zw10']
+    context['shortnames'] = sorted(set([ t.sequenceshortname for t in Sequences.objects.all() ]))
+    context['taxonomies'] = sorted([ t.scientificname for t in Taxonomies.objects.all() ])
+
+    if request.method == 'POST':
+        form = MotifForm(request.POST)
+        if form.is_valid():
+            context['form'] = form
+            # return render(request, 'home/query-verify-menu.html', context)
 
     return render(request, 'home/query-verify-menu.html', context)
 
@@ -623,6 +635,11 @@ def QueryVerifyView(request, sequence_id):
         context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
         context['form'] = form
         return render(request, 'home/query-verify.html', context)
+
+    if 'deleteSequence' in request.POST:
+        # TODO: Rise a warning before accepting deletion
+        seq.delete()
+        return render(request, 'home/query-verify-menu.html')
 
     if seq.gene.ncbigene_id == '-1':
         ncbigene_id = 'not_specified:-1:%s'%(seq.gene.gene_id)
