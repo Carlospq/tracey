@@ -127,7 +127,6 @@ def get_sequences(query):
 #################
 
 # Home
-@login_required(login_url="/login/")
 def index(request):
     context = {'segment': 'index'}
 
@@ -138,7 +137,6 @@ def index(request):
 
 
 # Pages deprecated - template examples
-@login_required(login_url="/login/")
 def pages(request):
     context = {}
     # All resource paths end in .html.
@@ -146,7 +144,7 @@ def pages(request):
     try:
 
         load_template = request.path.split('/')[-1]
-
+        print(load_template)
         if load_template == 'admin':
             return HttpResponseRedirect(reverse('admin:index'))
         context['segment'] = load_template
@@ -541,6 +539,7 @@ def saveVerifyMotifs(sequence_id, hits):
                              binaryoutput = '')
             vm.save()
 
+@login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryInsertView(request):
 
@@ -584,6 +583,7 @@ def QueryInsertView(request):
 
 
 #Verify
+@login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryVerifyMenuView(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
@@ -608,6 +608,7 @@ def QueryVerifyMenuView(request):
 
 
 # Users
+@login_required(login_url="/noPermits.html")
 @staff_login_required
 def users(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
@@ -620,6 +621,7 @@ def users(request):
     return render(request, 'home/users.html', context)
 
 
+@login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryVerifyView(request, sequence_id):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
