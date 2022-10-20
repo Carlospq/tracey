@@ -48,7 +48,7 @@ def register_user(request):
             success = True
 
             if success:
-                return redirect(reverse('home'))
+                return redirect(reverse('login'))
 
         else:
             msg = 'Form is not valid'
