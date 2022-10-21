@@ -251,32 +251,79 @@ class MotifForm(forms.Form):
             '': ''
         }
 
+    # shortname = forms.CharField(
+    #                 label= "shortname",
+    #                 required = False,
+    #                 widget = forms.Select()
+    #             )
+
     domainname = forms.CharField(
-                    label= "Domain name",
+                    label= "Domain Name",
                     required = False,
-                    widget = forms.Select()
+                    initial = "",
+                    widget = forms.Select(choices = [("","")] + sorted([ (x.domainname, x.domainname) for x in Domains.objects.all() ]))
                 )
+    domainname.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
     domaingroup_rank = forms.CharField(
                     label= "Domain group",
                     required = False,
-                    widget = forms.Select()
+                    widget = forms.Select(choices = [("","")] + sorted([ (x.domaingroupname, x.domaingroupname) for x in Domaingroups.objects.all() if x.analysislevel == 2 ]))
                 )
+    domaingroup_rank.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
-    domainsubgroup = forms.CharField(
+    domaingroup = forms.CharField(
                     label= "Domain subgroup",
                     required = False,
-                    widget = forms.Select()
+                    widget = forms.Select(choices = [("","")] + sorted([ (x.domaingroupname, x.domaingroupname) for x in Domaingroups.objects.all() if x.analysislevel > 2 ]))
                 )
-
-    shortname = forms.CharField(
-                    label= "shortname",
-                    required = False,
-                    widget = forms.Select()
-                )
+    domaingroup.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
     taxonomy = forms.CharField(
-                    label= "taxonomy",
+                    label= "Taxonomy",
                     required = False,
-                    widget = forms.Select()
+                    widget = forms.Select(choices = [("","")] + sorted([ (t.scientificname, t.scientificname) for t in Taxonomies.objects.all() ]))
                 )
+    taxonomy.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+
+    status = forms.CharField(
+                    label= "Status",
+                    required = False,
+                    widget = forms.Select(choices = [("",""), ('crystal structure', 'crystal structure'), ('dead', 'dead'), ('ignore', 'ignore'), ('live', 'live'), ('replaced', 'replaced'), ('replaced NCBI', 'replaced NCBI'), ('suppressed', 'suppressed'), ('unknown', 'unknown')] )
+                )
+    status.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+
+    private = forms.CharField(
+                    label= "Status",
+                    required = False,
+                    widget = forms.Select(choices = [ ("",""), (0,0), (1,1)])
+                )
+    private.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+
+    def clean_domainname(self):
+        data = self.cleaned_data
+        domainname = data['domainname']
+        taxonomy = self.data.get('taxonomy')
+        if (not domainname and not taxonomy) or not data:
+            raise ValidationError("At least 'Domain name' or 'Taxonomy' fields are required")
+        return domainname
+
+    def clean_domaingrouprank(self):
+        return self.cleaned_data['domaingrouprank']
+
+    def clean_domainsubgroup(self):
+        return self.cleaned_data['domainsubgroup']
+
+    def clean_taxonomy(self):
+        data = self.cleaned_data
+        domainname = self.data.get('domainname')
+        taxonomy = data['taxonomy']
+        if (not domainname and not taxonomy) or not data:
+            raise ValidationError("At least 'Domain name' or 'Taxonomy' fields are required")
+        return taxonomy
+
+    def clean_status(self):
+        return self.cleaned_data['status']
+
+    def clean_private(self):
+        return self.cleaned_data['private']

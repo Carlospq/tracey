@@ -1,28 +1,92 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} UI Forms {% endblock %}
+{% block title %} Query verify meny {% endblock %}
 
 <!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}
-<style>
-  .tdlabel {
-    white-space: nowrap;
-    text-alignt: left;
-    vertical-align: middle;
-    padding: 0.5em;
-    border: red solid 1px;
-  }
-  .tdfield{
-    white: 100%;
-    text-align: center;
-    text-alignt: left;
-    padding: 0.5em;
-    border: blue solid 1px;
-  }
-</style>
-{% endblock stylesheets %}
-
+{% block stylesheets %}{% endblock stylesheets %}
 {% block content %}
+{% load template_filters %}
+
+<head>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src='https://kit.fontawesome.com/a076d05399.js' crossorigin='anonymous'></script>
+    <style type="text/css">
+        .scrollingTable {
+            table-layout: fixed;
+            width: 100%;
+            overflow-y: auto;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+    	  .hoverTable {
+            table-layout: fixed;
+            width:100%;
+            border-collapse:collapse;
+            word-wrap: break-word;
+            word-break: break-word;
+    	  }
+    	   /* Define the default color for all the table rows */
+    	  .hoverTable tr {
+            border-collapse: collapse;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .hoverTable td{
+            border: 1px solid lightgrey;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+    	  /* Define the hover highlight color for the table row */
+        .hoverTable tr:hover {
+            table-layout: fixed;
+            background-color: lightgrey;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        tableHeader {
+            table-layout: fixed;
+            width:100%;
+            border-collapse:collapse;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .tdlabel {
+          white-space: nowrap;
+          text-alignt: left;
+          vertical-align: middle;
+          padding: 0.5em;
+          border: red solid 1px;
+        }
+        .tdfield{
+          white: 100%;
+          text-align: center;
+          text-alignt: left;
+          padding: 0.5em;
+          border: blue solid 1px;
+        }
+    </style>
+    <script type="text/javascript">
+        function makeTableScroll() {
+            // Constant retrieved from server-side via JSP
+            var maxRows = 10;
+
+            var table = document.getElementById('resultsTable');
+            var wrapper = table.parentNode;
+            var rowsInTable = table.rows.length;
+            var height = 0;
+            if (rowsInTable > maxRows) {
+                for (var i = 0; i < maxRows; i++) {
+                    height += table.rows[i].clientHeight;
+                }
+                wrapper.style.height = height + "px";
+            }
+        }
+    </script>
+</head>
+<body onload="makeTableScroll();">
+
 
 <div class="row mt-4">
     <div class="container">
@@ -43,70 +107,49 @@
 
                     <div class="col-12">
                         <!-- Beggining of Form -->
-                        <form method='get' action='#resultsTable' name="MotifForm" id="MotifForm"
+                        <form method='post' action='#' name="MotifForm" id="MotifForm"
                             data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
                             data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
+                        <!-- ajax_load_verifyTable1 -->
                         {% csrf_token %}
 
                         <div class="row mb-4">
 
                           <div class="col-4">
                               <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}">Domain name</label>
-
-                              <select style="width: 100%" name="domainname" id="domainname" >
-                                  <option value=""> </option>
-                                  {% for val in domainnames %}
-                                      <option value= "{{ val }}"> {{ val }} </option>
-                                  {% endfor %}
-                              </select>
+                              <select name="domainname" id="domainname" style="width: 100%" >{% for val in MotifForm.domainname %}{{ val }}{% endfor %}</select>
+                              <p style="color: red">{% if MotifForm.domainname.errors %}{{ MotifForm.domainname.errors.as_text }}{% endif %}</p>
                           </div>
 
                           <div class="col-4">
                               <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
-                              <select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank" >
-                                  <option value=""> </option>
-                                  {% for val in domaingroup_rank %}
-                                      <option value= "{{ val }}"> {{ val }} </option>
-                                  {% endfor %}
-                              </select>
+                              <select name="domaingroup_rank" id="domaingroup_rank" style="width: 100%" >{% for val in MotifForm.domaingroup_rank %}{{ val }}{% endfor %}</select>
                           </div>
 
                           <div class="col-4">
                               <label style="vertical-align: top;" for="{{ form.domaingroup.id_for_label }}">Subgroup</label>
-                              <select style="width: 100%" name="domaingroup" id="domaingroup" >
-                                  <option value=""> </option>
-                                  {% for val in domaingroup %}
-                                      <option value= "{{ val }}"> {{ val }} </option>
-                                  {% endfor %}
-                              </select>
+                              <select name="domaingroup" id="domaingroup" style="width: 100%" >{% for val in MotifForm.domaingroup %}{{ val }}{% endfor %}</select>
                           </div>
 
                         </div>
                         <div class="row mb-4">
 
                             <div class="col-4">
-                                <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
-                                <select style="width: 100%" name="shortname" id="shortname" >
-                                    <option value=""> </option>
-                                    {% for val in shortnames %}
-                                        <option value= "{{ val }}"> {{ val }} </option>
-                                    {% endfor %}
-                                </select>
+                                <label style="vertical-align: top;" for="{{ form.taxonomy.id_for_label }}">Taxonomy</label>
+                                <select name="taxonomy" id="taxonomy" style="width: 100%" >{% for val in MotifForm.taxonomy %}{{ val }}{% endfor %}</select>
                             </div>
 
                             <div class="col-4">
-                                <label style="vertical-align: top;" for="{{ form.taxonomy.id_for_label }}">Taxonomy</label>
-                                <select style="width: 100%" name="taxonomy" id="taxonomy" >
-                                    <option value=""> </option>
-                                    {% for val in taxonomies %}
-                                        <option value= "{{ val }}"> {{ val }} </option>
-                                    {% endfor %}
-                                </select>
+                                <label style="vertical-align: top;" for="{{ form.status.id_for_label }}">Status</label>
+                                <select name="status" id="status" style="width: 100%" >{% for val in MotifForm.status %}{{ val }}{% endfor %}</select>
+                            </div>
+
+                            <div class="col-4">
+                                <label style="vertical-align: top;" for="{{ form.private.id_for_label }}">Private</label>
+                                <select name="private" id="private" style="width: 100%" >{% for val in MotifForm.private %}{{ val }}{% endfor %}</select>
                             </div>
 
                         </div>
-
-
 
 
 
@@ -119,9 +162,42 @@
 
                         <hr>
                         <!-- List of matching sequences -->
-                        <div id="resultsTable">
-                            Here goes the table with matching sequences
+                        <div class='mb-2'>Number of sequences: {{ log }}</div>
+                        <div class="border-0" style="border-radius: 10px 10px 0px 0px;">
+                            <table class="tableHeader border-0 table-flush" style="width:100%; height: 45px; border-radius: 10px 10px 0px 0px; background-color: #1F2937; color: white; table-layout: fixed; border-collapse: collapse; word-wrap: break-word; word-break: break-word;">
+                                <thead class="thead-dark" style="width:100%">
+                                <tr>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Short Name </th>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Aliases </th>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Species name </th>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Status </th>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="2"> Private </th>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="3"> dbxRef </th>
+                                    <th class="border-bottom" scope="col" style="width: 20%; text-align: center;" id="4"> Source database </th>
+                                    <th class="border-bottom" scope="col" style="width: 20%; text-align: center;" id="5"> Foreign Annotation</th>
+                                </tr>
+                                </thead>
+                            </table>
                         </div>
+                        <div class="scrollingTable mb-3" style="border: 1px solid lightgrey;">
+                            <table class="hoverTable sortable" id="resultsTable">
+                                {% for seq in sequences %}
+                                <tr class='clickable-row' data-href='/query-verify/{{ seq.sequence_id }}'>
+                                    <td style="width: 10%;">{{ seq.sequenceshortname }}</td>
+                                    <td style="width: 10%;">{{ seq.aliases }}</td>
+                                    <td style="width: 10%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+                                    <td style="width: 10%;">{{ seq.sequencestatus }}</td>
+                                    <td style="width: 10%;">{{ seq.private }}</td>
+                                    <td style="width: 10%;">{{ seq.dbxref }}</td>
+                                    <td style="width: 20%;">{{ seq.sourcedatabase }}</td>
+                                    <td style="width: 20%;">
+                                        <textarea style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                  			</div>
+
 
                     </div>
                 </div>
@@ -134,67 +210,83 @@
 
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <script>
+    // Table rows clickable
+    jQuery(document).ready(function($) {
+        $(".clickable-row").click(function() {
+            window.location = $(this).data("href");
+        });
+    });
+
     // Pues a verlas venir...
     $(document).ready(function() {
         $('.has-popover').popover({'trigger':'hover'});
     });
 
     // Don't reload site on submit
-    $(document).on('submit','#MotifForm',function(e){
-        e.preventDefault();
-        $.ajax({
-            type:'POST',
-            url:'{% url "query-verify-menu" %}',
-            data:
-            {
-                task:$("#domainname").val(),
-                csrfmiddlewaretoken:$('input[name=csrfmiddlewaretoken]').val()
-            },
-            success:function(){
-                  alert('Saved');
-                    }
-            })
-        });
+    // $(document).on('submit','#MotifForm',function(e){
+    //     e.preventDefault();
+    //     $.ajax({
+    //         type:'POST',
+    //         url:'{% url "query-verify-menu" %}',
+    //         data:
+    //         {
+    //             domainname: $("#domainname").val(),
+    //             domaingroup_rank: $("#domaingroup_rank").val(),
+    //             domaingroup: $("#domaingroup").val(),
+    //             taxonomy: $("#taxonomy").val(),
+    //             sequencestatus: $("#sequencestatus").val(),
+    //             private: $("#private").val(),
+    //             csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+    //             action: 'post'
+    //         },
+    //         success:function(){
+    //           alert('Saved');
+    //             }
+    //         })
+    //     });
 
     // formField.reload on formField.change
-    $("#domainname").change(function () {
-      var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
-      var domainname = $(this).val();
-
-      $.ajax({
-        url: url,
-        data: {
-          'domainname': domainname
-        },
-
-        success: function (data) {
-          $("#domaingroup_rank").html(data);
-          $("#id_domaingroup_rank").html("");
-          // $('#domaingroup')[0].selectize.clear();
-        }
-      });
-    });
-
-    $("#domaingroup_rank").change(function () {
-      var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
-      var domaingroup_rank = $(this).val();
-
-      $.ajax({
-        url: url,
-        data: {
-          'domaingroup_rank': domaingroup_rank
-        },
-
-        success: function (data) {
-          $("#domaingroup").html(data);
-          $("#id_domaingroup").html("");
-          // $('#domainsubgroup')[0].selectize.clear();
-        }
-      });
-    });
+    // $("#domainname").change(function () {
+    //   var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
+    //   var domainname = $(this).val();
+    //
+    //   $.ajax({
+    //     url: url,
+    //     data: {
+    //       'domainname': domainname
+    //     },
+    //
+    //     success: function (data) {
+    //       $("#domaingroup_rank").html(data);
+    //       $("#id_domaingroup_rank").html("");
+    //       $("#domaingroup").html("");
+    //       $("#id_domaingroup").html("");
+    //       // $('#domaingroup')[0].selectize.clear();
+    //     }
+    //   });
+    // });
+    //
+    // $("#domaingroup_rank").change(function () {
+    //   var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
+    //   var domaingroup_rank = $(this).val();
+    //
+    //   $.ajax({
+    //     url: url,
+    //     data: {
+    //       'domaingroup_rank': domaingroup_rank
+    //     },
+    //
+    //     success: function (data) {
+    //       $("#domaingroup").html(data);
+    //       $("#id_domaingroup").html("");
+    //       // $('#domainsubgroup')[0].selectize.clear();
+    //     }
+    //   });
+    // });
 
 
 </script>
+</body>
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
