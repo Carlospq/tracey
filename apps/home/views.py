@@ -73,7 +73,6 @@ def get_sequences(query):
         if element in [[''], '']:
             return False
         return True
-
     # Filter by Domaingroup
     if 'domaingroup_rank' in query and notEmpty(query['domaingroup_rank']):
         if 'domaingroup' in query and notEmpty(query['domaingroup']):
@@ -89,9 +88,12 @@ def get_sequences(query):
             children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
         domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
     else:
-        domainname = query['domainname'][0]
-        domain = Domains.objects.get(domainname = domainname)
-        domaingroups = Domaingroups.objects.filter(domain_id = domain.domain_id)
+        if not query['domainname'][0]:
+            domaingroups = Domaingroups.objects.all()
+        else:
+            domainname = query['domainname'][0]
+            domain = Domains.objects.get(domainname = domainname)
+            domaingroups = Domaingroups.objects.filter(domain_id = domain.domain_id)
 
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
     seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
@@ -107,7 +109,7 @@ def get_sequences(query):
             return context
         seqs = seqs.filter(foreignannotation = query['foreignannotation'][0])
 
-    if 'taxonomy_rank' in query and notEmpty(query['taxonomy_rank']):
+    if ('taxonomy_rank' in query and notEmpty(query['taxonomy_rank'])) or notEmpty(query['taxonomy']):
         if 'taxonomy' in query and notEmpty(query['taxonomy']):
             taxonomy = Taxonomies.objects.filter(scientificname__in = query['taxonomy'])
             taxonomy_childs = []
@@ -144,7 +146,6 @@ def pages(request):
     try:
 
         load_template = request.path.split('/')[-1]
-        print(load_template)
         if load_template == 'admin':
             return HttpResponseRedirect(reverse('admin:index'))
         context['segment'] = load_template
@@ -587,38 +588,26 @@ def QueryInsertView(request):
 @staff_login_required
 def QueryVerifyMenuView(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
-    segment = request.path.split('/')[-1]
-    form =  MotifForm()
 
-    context = {}
-    context['form'] = form
-    context['segment'] = segment
-    context['status'] = ['', 'dead', 'replaced NCBI', 'live', 'ignore', 'unknown', 'crystal structure', 'suppressed', 'replaced']
-    context['domainnames'] = ['AAA.aaa', 'AAA.nd', 'Arf', 'C2', 'Habc', 'LGL', 'MUN.d1', 'MUN.d2', 'NSR.cd', 'NSR.md', 'NSR.nd', 'Proppin', 'Qb.III', 'Qb.III.b', 'Qc.II', 'Qc.III', 'Qc.III.b', 'Qc.III.c', 'Ras', 'Rhomboid', 'Rint', 'SM.d1', 'SM.d2a', 'SM.d2b', 'SM.d3', 'SNAP', 'SNAP.b', 'SNAP.c', 'SNARE', 'Zw10']
-    context['shortnames'] = sorted(set([ t.sequenceshortname for t in Sequences.objects.all() ]))
-    context['taxonomies'] = sorted([ t.scientificname for t in Taxonomies.objects.all() ])
+    context = {'segment': request.path.split('/')[-1],
+               'sequences': Sequences.objects.none(),
+               'speciesname': {},
+               }
+
+    for seq in context['sequences']:
+        context['speciesname'][seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
 
     if request.method == 'POST':
         form = MotifForm(request.POST)
         if form.is_valid():
-            context['form'] = form
-            # return render(request, 'home/query-verify-menu.html', context)
+            context['sequences'] = get_sequences(dict(request.POST))
+            context['log'] = len(context['sequences'])
+            context['MotifForm'] = MotifForm(initial=form.cleaned_data)
+            print(form.cleaned_data)
+    else:
+        context['MotifForm'] =  MotifForm()
 
     return render(request, 'home/query-verify-menu.html', context)
-
-
-# Users
-@login_required(login_url="/noPermits.html")
-@staff_login_required
-def users(request):
-    user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
-    if request.user.is_authenticated:
-        user.last_login = now()
-        user.save()
-    segment = request.path.split('/')[-1]
-    context = {"segment": segment,
-               "users": AuthUser.objects.all()}
-    return render(request, 'home/users.html', context)
 
 
 @login_required(login_url="/noPermits.html")
@@ -781,3 +770,17 @@ def QueryVerifyView(request, sequence_id):
         context['form'] = InsertSequence(instance=seq, initial={'gene': ncbigene_id, })
 
     return render(request, 'home/query-verify.html', context)
+
+
+# Users
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def users(request):
+    user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
+    if request.user.is_authenticated:
+        user.last_login = now()
+        user.save()
+    segment = request.path.split('/')[-1]
+    context = {"segment": segment,
+               "users": AuthUser.objects.all()}
+    return render(request, 'home/users.html', context)
