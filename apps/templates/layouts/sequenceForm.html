@@ -200,8 +200,10 @@
 		</div>
 
 <hr>
-<input class="mb-5" type="submit" value="Submit">
-
+<div class="mb-5" style="width: 100%;">
+    <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="display: inline-block;">
+    <input type="submit" value="Submit" style="float: right;">
+</div>
 {% if 'query-verify' in segment %}
 
 <div class="row mb-4 mt-4">
@@ -232,7 +234,7 @@
 										<table class="detailTable">
 												<tr>
 														<td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
-														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
+														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
 														<td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
 														<td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
 														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>

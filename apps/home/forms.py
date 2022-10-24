@@ -94,6 +94,7 @@ class FamilyForm(forms.Form):
                                      'style': 'width: 100%; margin-top: 6px'})
 
 
+
 class InsertSequence(ModelForm):
 
     def __init__(self, *args, **kwargs):
@@ -243,6 +244,11 @@ class InsertSequence(ModelForm):
 
         return data
 
+    def clean_taxonomy(self):
+        scientificname = self.cleaned_data['taxonomy']
+        taxonomy = Taxonomies.objects.get(scientificname=scientificname)
+        return taxonomy
+
 
 class MotifForm(forms.Form):
 
@@ -303,9 +309,10 @@ class MotifForm(forms.Form):
     def clean_domainname(self):
         data = self.cleaned_data
         domainname = data['domainname']
-        taxonomy = self.data.get('taxonomy')
-        if (not domainname and not taxonomy) or not data:
-            raise ValidationError("At least 'Domain name' or 'Taxonomy' fields are required")
+        domaingroup_rank = self.data.get('domaingroup_rank')
+        domaingroup = self.data.get('domaingroup')
+        if (not domainname and not domaingroup_rank and not domaingroup) or not data:
+            raise ValidationError("At least 'Domain name', 'Domain group' or 'Subgroup' fields are required")
         return domainname
 
     def clean_domaingrouprank(self):
@@ -315,12 +322,7 @@ class MotifForm(forms.Form):
         return self.cleaned_data['domainsubgroup']
 
     def clean_taxonomy(self):
-        data = self.cleaned_data
-        domainname = self.data.get('domainname')
-        taxonomy = data['taxonomy']
-        if (not domainname and not taxonomy) or not data:
-            raise ValidationError("At least 'Domain name' or 'Taxonomy' fields are required")
-        return taxonomy
+        return self.cleaned_data['taxonomy']
 
     def clean_status(self):
         return self.cleaned_data['status']

@@ -68,14 +68,20 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
     return childs
 
 
-def get_sequences(query):
-    def notEmpty(element):
-        if element in [[''], '']:
+def get_sequences(query, verify=False):
+
+    def notEmpty(query, element):
+        try:
+            if query[element] in [[''], '', None]:
+                return False
+            else:
+                return True
+        except:
             return False
-        return True
+
     # Filter by Domaingroup
-    if 'domaingroup_rank' in query and notEmpty(query['domaingroup_rank']):
-        if 'domaingroup' in query and notEmpty(query['domaingroup']):
+    if 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
+        if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
             domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
             domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in = domaingroup_list)
             domaingroups_children  = get_childs(Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", childs=[])
@@ -98,19 +104,27 @@ def get_sequences(query):
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
     seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
+    if verify:
+        verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
+        verifyseqs = Sequences.objects.filter(sequence_id__in = verifymotifs.values('sequence_id'))
+        seqs = seqs | verifyseqs
+
     # Filter seqs if shortname/foreignAnnotation or taxonomy is provided
-    if 'shortname' in query and notEmpty(query['shortname']):
+    if 'shortname' in query and notEmpty(query, 'shortname'):
         seqs = seqs.filter(sequenceshortname__icontains = query['shortname'][0])
 
-    if 'foreignannotation' in query and notEmpty(query['foreignannotation']):
+    if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
+        seqs = seqs.filter(sequencestatus = query['sequencestatus'][0])
+
+    if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
         pattern = re.compile("^gi\|([0-9]+)$")
         if not pattern.match(query['foreignannotation'][0]):
             context = {'error': 'Foreign Annotation format is not correct. Plase use NCBI format.'}
             return context
         seqs = seqs.filter(foreignannotation = query['foreignannotation'][0])
 
-    if ('taxonomy_rank' in query and notEmpty(query['taxonomy_rank'])) or notEmpty(query['taxonomy']):
-        if 'taxonomy' in query and notEmpty(query['taxonomy']):
+    if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and not notEmpty(query, 'taxonomy_rank')):
+        if ('taxonomy' in query and notEmpty(query, 'taxonomy')):
             taxonomy = Taxonomies.objects.filter(scientificname__in = query['taxonomy'])
             taxonomy_childs = []
             taxonomy_childs_ = []
@@ -180,13 +194,13 @@ def load_taxonomy_rank(request):
 
 def load_domaingroups_rank1(request):
     domainname = request.GET.get('domainname')
+    domaingroup_rank = request.GET.get('domaingroup_rank')
     if domainname == '':
-        domainGroupNames = []
+        domainGroupNames = sorted([ x.domaingroupname for x in Domaingroups.objects.filter(analysislevel = 2) ])
     else:
         domain = Domains.objects.filter(domainname = domainname)
-        domainGroupNames = [x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel == 2 ]
-
-    return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames})
+        domainGroupNames = [ x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel == 2 ]
+    return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames, 'domaingroup_rank': domaingroup_rank})
 
 
 def load_sequenceshortnames(request):
@@ -213,20 +227,43 @@ def load_domaingroups_rank2(request):
 
             if int(parent_id) in domaingroupparent_id:
                 name_list = "-" * (int(domaingroup.analysislevel)-2) + domaingroup.domaingroupname
-                childs_list.append(name_list)
+                if domaingroup.analysislevel > 2:
+                    childs_list.append(name_list)
                 if Domaingroups.objects.filter(domaingroupparent_id=domaingroup.domaingroup_id):
                     get_names_list(domaingroup.domaingroup_id)
 
         return childs_list
 
     childs_list = []
+    domainname = request.GET.get('domainname')
     rank = request.GET.get('domaingroup_rank')
-    if rank == "":
-        childs_list = []
+    if not rank and not domainname:
+        childs_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
     else:
-        parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
-        childs_list = get_names_list(parent_id)
+        if rank:
+            parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
+            childs_list = get_names_list(parent_id)
+        else:
+            domain = Domains.objects.filter(domainname = domainname)
+            childs_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel > 2 ]
+
     return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': childs_list})
+
+
+def load_queryverifysequences(request):
+    context = {'sequences': get_sequences(dict(request.POST), verify = True)}
+
+    speciesname = {}
+    motifs = {}
+    for seq in context['sequences']:
+        speciesname[seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
+        motifs[seq.sequence_id] = ", ".join( set([x.motifname for x in Motifs.objects.filter(sequence_id=seq.sequence_id)]) )
+
+    context['speciesname'] = speciesname
+    context['motifs'] = motifs
+    context['log'] = len(context['sequences'])
+
+    return render(request, 'home/query-verify-update-sequences.html', context)
 
 
 def QuerySequences(request):
@@ -601,12 +638,11 @@ def QueryVerifyMenuView(request):
         form = MotifForm(request.POST)
         if form.is_valid():
             context['sequences'] = get_sequences(dict(request.POST))
-            context['log'] = len(context['sequences'])
             context['MotifForm'] = MotifForm(initial=form.cleaned_data)
-            print(form.cleaned_data)
     else:
         context['MotifForm'] =  MotifForm()
 
+    context['log'] = len(context['sequences'])
     return render(request, 'home/query-verify-menu.html', context)
 
 

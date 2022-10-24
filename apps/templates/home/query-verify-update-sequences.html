@@ -1,0 +1,67 @@
+<div class='mb-2' style="margin-left: 5px;">Number of sequences: {{ log }}</div>
+<table class="hoverTable sortable scrolling" id="resultsTable">
+		{% for seq in sequences %}
+		<tr class='clickable-row' data-href='/query-verify/{{ seq.sequence_id }}'>
+				<td style="width: 9%;">{{ seq.sequenceshortname }}</td>
+				<td style="width: 9%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+				<td style="width: 9%;">{{ motifs|get_item:seq.sequence_id }}</td>
+				<td style="width: 9%;">{{ seq.sequencestatus }}</td>
+				<td style="width: 5%;">{{ seq.verifymotifs_set.count }}</td>
+				<td style="width: 5%;">{{ seq.motifs_set.count }}</td>
+				<td style="width: 9%;">{{ seq.private }}</td>
+				<td style="width: 10%;">{{ seq.dbxref }}</td>
+				<td style="width: 15%;">{{ seq.sourcedatabase }}</td>
+				<td style="width: 20%;">
+						<textarea style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
+				</td>
+		</tr>
+		{% endfor %}
+</table>
+
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script>
+    // Table rows clickable
+    jQuery(document).ready(function($) {
+        $(".clickable-row").click(function() {
+            window.location = $(this).data("href");
+        });
+    });
+
+		// Sort table
+		function sortTable(coln) {
+				var table, rows, switching, i, x, y, shouldSwitch;
+				table = document.getElementById("resultsTable");
+				switching = true;
+				/*Make a loop that will continue until
+				no switching has been done:*/
+
+				while (switching) {
+						//start by saying: no switching is done:
+						switching = false;
+						rows = table.rows;
+						/*Loop through all table rows:*/
+						console.log(rows)
+						for (i = 0; i < (rows.length - 1); i++) {
+								//start by saying there should be no switching:
+								shouldSwitch = false;
+								/*Get the two elements you want to compare,
+								one from current row and one from the next:*/
+								x = rows[i].getElementsByTagName("TD")[coln];
+								y = rows[i + 1].getElementsByTagName("TD")[coln];
+								//check if the two rows should switch place:
+								if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+										//if so, mark as a switch and break the loop:
+										shouldSwitch = true;
+										break;
+								}
+						}
+						if (shouldSwitch) {
+								/*If a switch has been marked, make the switch
+								and mark that a switch has been done:*/
+								rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+								switching = true;
+						}
+				}
+		}
+</script>

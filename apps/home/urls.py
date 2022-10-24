@@ -40,6 +40,7 @@ urlpatterns = [
     path('ajax/load-domaingroups-rank1/', views.load_domaingroups_rank1, name='ajax_load_domaingroups_rank1'),
     path('ajax/load-domaingroups-rank2/', views.load_domaingroups_rank2, name='ajax_load_domaingroups_rank2'),
     path('ajax/load-sequenceshortnames/', views.load_sequenceshortnames, name='ajax_load_sequenceshortnames'),
+    path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),
