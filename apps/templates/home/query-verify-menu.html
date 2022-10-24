@@ -12,11 +12,13 @@
     <script src='https://kit.fontawesome.com/a076d05399.js' crossorigin='anonymous'></script>
     <style type="text/css">
         .scrollingTable {
+            max-height: 35em;
             table-layout: fixed;
             width: 100%;
             overflow-y: auto;
             word-wrap: break-word;
             word-break: break-word;
+            overflow: auto;
         }
     	  .hoverTable {
             table-layout: fixed;
@@ -162,18 +164,19 @@
 
                         <hr>
                         <!-- List of matching sequences -->
-                        <div class='mb-2'>Number of sequences: {{ log }}</div>
                         <div class="border-0" style="border-radius: 10px 10px 0px 0px;">
                             <table class="tableHeader border-0 table-flush" style="width:100%; height: 45px; border-radius: 10px 10px 0px 0px; background-color: #1F2937; color: white; table-layout: fixed; border-collapse: collapse; word-wrap: break-word; word-break: break-word;">
                                 <thead class="thead-dark" style="width:100%">
                                 <tr>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Short Name </th>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Aliases </th>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Species name </th>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;"> Status </th>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="2"> Private </th>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Short Name </th>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Species name </th>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Motifs </th>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Status </th>
+                                    <th class="border-bottom" scope="col" style="width: 5%; text-align: center;"> #VerifyMotifs <button type="button" name="button" onclick="sortTable(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: super;'></i> </button></th>
+                                    <th class="border-bottom" scope="col" style="width: 5%; text-align: center;"> #Motifs <button type="button" name="button" onclick="sortTable(5)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: super;'></i> </button></th>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;" id="2"> Private </th>
                                     <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="3"> dbxRef </th>
-                                    <th class="border-bottom" scope="col" style="width: 20%; text-align: center;" id="4"> Source database </th>
+                                    <th class="border-bottom" scope="col" style="width: 15%; text-align: center;" id="4"> Source database </th>
                                     <th class="border-bottom" scope="col" style="width: 20%; text-align: center;" id="5"> Foreign Annotation</th>
                                 </tr>
                                 </thead>
@@ -183,13 +186,15 @@
                             <table class="hoverTable sortable" id="resultsTable">
                                 {% for seq in sequences %}
                                 <tr class='clickable-row' data-href='/query-verify/{{ seq.sequence_id }}'>
-                                    <td style="width: 10%;">{{ seq.sequenceshortname }}</td>
-                                    <td style="width: 10%;">{{ seq.aliases }}</td>
-                                    <td style="width: 10%;">{{ speciesname|get_item:seq.sequence_id }}</td>
-                                    <td style="width: 10%;">{{ seq.sequencestatus }}</td>
-                                    <td style="width: 10%;">{{ seq.private }}</td>
+                                    <td style="width: 9%;">{{ seq.sequenceshortname }}</td>
+                                    <td style="width: 9%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+                                    <td style="width: 9%;">{{ motifs|get_item:seq.sequence_id }}</td>
+                                    <td style="width: 9%;">{{ seq.sequencestatus }}</td>
+                                    <td style="width: 5%;">{{ seq.private }}</td>
+                                    <td style="width: 5%;">{{ seq.private }}</td>
+                                    <td style="width: 9%;">{{ seq.private }}</td>
                                     <td style="width: 10%;">{{ seq.dbxref }}</td>
-                                    <td style="width: 20%;">{{ seq.sourcedatabase }}</td>
+                                    <td style="width: 15%;">{{ seq.sourcedatabase }}</td>
                                     <td style="width: 20%;">
                                         <textarea style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
                                     </td>
@@ -223,66 +228,95 @@
     });
 
     // Don't reload site on submit
-    // $(document).on('submit','#MotifForm',function(e){
-    //     e.preventDefault();
-    //     $.ajax({
-    //         type:'POST',
-    //         url:'{% url "query-verify-menu" %}',
-    //         data:
-    //         {
-    //             domainname: $("#domainname").val(),
-    //             domaingroup_rank: $("#domaingroup_rank").val(),
-    //             domaingroup: $("#domaingroup").val(),
-    //             taxonomy: $("#taxonomy").val(),
-    //             sequencestatus: $("#sequencestatus").val(),
-    //             private: $("#private").val(),
-    //             csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
-    //             action: 'post'
-    //         },
-    //         success:function(){
-    //           alert('Saved');
-    //             }
-    //         })
-    //     });
+    $(document).on('submit','#MotifForm',function(e){
+        e.preventDefault();
+        var domainname = $("#domainname").val();
+        var domaingroup_rank = $("#domaingroup_rank").val();
+        var domaingroup = $("#domaingroup").val();
+
+        // Data for domaingroup_rank field
+        $.ajax({
+          url: "{% url 'ajax_load_domaingroups_rank1' %}",
+          data: {
+            'domainname': domainname,
+            'domaingroup_rank': domaingroup_rank
+          },
+
+          success: function (data) {
+            $("#domaingroup_rank").html(data);
+            $("#id_domaingroup_rank").html("");
+          }
+        });
+
+        // Update sequences
+        $.ajax({
+            type:'POST',
+            url: "{% url 'ajax_load_queryverifysequences' %}",
+            data: {
+                domainname: $("#domainname").val(),
+                domaingroup_rank: $("#domaingroup_rank").val(),
+                domaingroup: $("#domaingroup").val(),
+                taxonomy: $("#taxonomy").val(),
+                sequencestatus: $("#status").val(),
+                private: $("#private").val(),
+                csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+                action: 'post'
+            },
+            success: function(data){
+              $("#resultsTable").html(data);
+                }
+            });
+        });
 
     // formField.reload on formField.change
-    // $("#domainname").change(function () {
-    //   var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
-    //   var domainname = $(this).val();
-    //
-    //   $.ajax({
-    //     url: url,
-    //     data: {
-    //       'domainname': domainname
-    //     },
-    //
-    //     success: function (data) {
-    //       $("#domaingroup_rank").html(data);
-    //       $("#id_domaingroup_rank").html("");
-    //       $("#domaingroup").html("");
-    //       $("#id_domaingroup").html("");
-    //       // $('#domaingroup')[0].selectize.clear();
-    //     }
-    //   });
-    // });
-    //
-    // $("#domaingroup_rank").change(function () {
-    //   var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
-    //   var domaingroup_rank = $(this).val();
-    //
-    //   $.ajax({
-    //     url: url,
-    //     data: {
-    //       'domaingroup_rank': domaingroup_rank
-    //     },
-    //
-    //     success: function (data) {
-    //       $("#domaingroup").html(data);
-    //       $("#id_domaingroup").html("");
-    //       // $('#domainsubgroup')[0].selectize.clear();
-    //     }
-    //   });
-    // });
+    $("#domainname").change(function () {
+      var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
+      var domainname = $(this).val();
+
+      $.ajax({
+        url: url,
+        data: {
+          'domainname': domainname
+        },
+
+        success: function (data) {
+          $("#domaingroup_rank").html(data);
+          $("#id_domaingroup_rank").html("");
+        }
+      });
+      $.ajax({
+        url: "{% url 'ajax_load_domaingroups_rank2' %}",
+        data: {
+          'domainname': domainname,
+          'domaingroup_rank': ''
+        },
+
+        success: function (data) {
+          $("#domaingroup").html(data);
+          $("#id_domaingroup").html("");
+        }
+      });
+    });
+
+    $("#domaingroup_rank").change(function () {
+      var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
+      var domainname = $("#domainname").val();
+      var domaingroup_rank = $(this).val();
+
+      $.ajax({
+        url: url,
+        data: {
+          'domainname': domainname,
+          'domaingroup_rank': domaingroup_rank
+        },
+
+        success: function (data) {
+          $("#domaingroup").html(data);
+          $("#id_domaingroup").html("");
+          // $('#domainsubgroup')[0].selectize.clear();
+        }
+      });
+    });
 
 
 </script>
