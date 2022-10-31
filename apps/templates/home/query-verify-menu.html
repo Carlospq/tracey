@@ -121,6 +121,7 @@
                               <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}">Domain name</label>
                               <select name="domainname" id="domainname" style="width: 100%" >{% for val in MotifForm.domainname %}{{ val }}{% endfor %}</select>
                               <p style="color: red">{% if MotifForm.domainname.errors %}{{ MotifForm.domainname.errors.as_text }}{% endif %}</p>
+                              <p style="color: red">{% if error %}{{ error }}{% endif %}</p>
                           </div>
 
                           <div class="col-4">

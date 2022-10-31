@@ -1,4 +1,10 @@
-<div class='mb-2' style="margin-left: 5px;">Number of sequences: {{ log }}</div>
+<div class='mb-2' style="margin-left: 5px; {% if error %}color: red;{% endif %}">
+		{% if error %}
+				{{error}}
+		{% else %}
+				Number of sequences: {{ log }}
+		{% endif %}
+</div>
 <table class="hoverTable sortable scrolling" id="resultsTable">
 		{% for seq in sequences %}
 		<tr class='clickable-row' data-href='/query-verify/{{ seq.sequence_id }}'>
