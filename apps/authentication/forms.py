@@ -6,6 +6,7 @@ Copyright (c) 2019 - present AppSeed.us
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from captcha.fields import CaptchaField
 
 
 class LoginForm(forms.Form):
@@ -13,17 +14,16 @@ class LoginForm(forms.Form):
         widget=forms.TextInput(
             attrs={
                 "placeholder": "Username",
-                "class": "form-control"
+                "class": "form-control",
             }
         ))
     password = forms.CharField(
         widget=forms.PasswordInput(
             attrs={
                 "placeholder": "Password",
-                "class": "form-control"
+                "class": "form-control",
             }
         ))
-
 
 class SignUpForm(UserCreationForm):
     username = forms.CharField(
@@ -54,7 +54,9 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    captcha = CaptchaField()
+    captcha.widget.attrs.update({'style': 'width: auto; margin: auto'})
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2')
+        fields = ('username', 'email', 'password1', 'password2', 'captcha')
