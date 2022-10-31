@@ -36,12 +36,27 @@ ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')
 ALLOWED_HOSTS        = ['dcsrs-tracey.ad.unil.ch', 'localhost', 'localhost:85', '127.0.0.1',               env('SERVER', default='127.0.0.1') ]
 CSRF_TRUSTED_ORIGINS = ['http://localhost:85', 'http://127.0.0.1', 'https://' + env('SERVER', default='127.0.0.1') ]
 
+# Captcha options
+CAPTCHA_CHALLENGE_FUNCT = 'captcha.helpers.math_challenge'
+CAPTCHA_LETTER_ROTATION = (-20, 20)
+CAPTCHA_NOISE_FUNCTIONS = ('captcha.helpers.noise_arcs','captcha.helpers.noise_dots',)
+#CAPTCHA_2X_IMAGE = True # this makes the image slightly more readable on e.g. HiDPI screens, but could also make the CAPTCHA potentially easier to break by a bot.
+
+# example of function for captcha
+# def random_digit_challenge():
+#     ret = u''
+#     for i in range(6):
+#         ret += str(random.randint(0,9))
+#     return ret, ret
+
+
 # Max GET/POST fields
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 20000
 
 # Application definition
 INSTALLED_APPS = [
     'apps.config.AppsConfig',
+    'captcha',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

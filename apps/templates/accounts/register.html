@@ -8,8 +8,8 @@
 {% block content %}
 
     <main>
-        <section class="vh-lg-100 mt-5 mt-lg-0 bg-soft d-flex align-items-center">
-            <div class="container">
+        <section class="mb-5 mt-lg-0 bg-soft d-flex align-items-center">
+            <div class="container mt-5">
                 <div class="row justify-content-center form-bg-image" data-background-lg="{{ ASSETS_ROOT }}/img/illustrations/signin.svg">
                     <div class="col-12 d-flex align-items-center justify-content-center">
                         <div class="bg-white shadow border-0 rounded border-light p-4 p-lg-5 w-100 fmxw-500">
@@ -29,6 +29,9 @@
                             <form method="post" action="" class="mt-4">
 
                                 {% csrf_token %}
+                                {% if form.username.errors or form.email.errors %}
+                                    <div class="mb-4"><span class="text-error" style="color: red;">User already exist or Email is not valid</span></div>
+                                {% endif %}
 
                                 <div class="form-group mb-4">
                                     <label for="email">Username</label>
@@ -38,7 +41,6 @@
                                         </span>
                                         {{ form.username }}
                                     </div>
-                                    <span class="text-error">{{ form.username.errors }}</span>
                                 </div>
 
                                 <!-- Form -->
@@ -50,7 +52,6 @@
                                         </span>
                                         {{ form.email }}
                                     </div>
-                                    <span class="text-error">{{ form.email.errors }}</span>
                                 </div>
                                 <!-- End of Form -->
                                 <div class="form-group">
@@ -64,7 +65,7 @@
                                             </span>
                                             {{ form.password1 }}
                                         </div>
-                                        <span class="text-error">{{ form.password1.errors }}</span>
+                                        <span class="text-error" style="color: red;">{{ form.password1.errors }}</span>
                                     </div>
                                     <div class="form-group mb-4">
                                         <label for="password">Password Confirmation</label>
@@ -74,7 +75,7 @@
                                             </span>
                                             {{ form.password2 }}
                                         </div>
-                                        <span class="text-error">{{ form.password2.errors }}</span>
+                                        <span class="text-error" style="color: red;">{{ form.password2.errors }}</span>
                                     </div>
 
                                     <!-- End of Form -->
@@ -87,9 +88,21 @@
                                         </div>
                                     </div> -->
                                 </div>
+
+                                <!-- Form | captcha level 1-->
+                                <div class="form-group mb-4">
+                                    <label for="captcha">Captcha</label>
+                                    <div class="input-group">
+                                        {{ form.captcha }}
+                                    </div>
+                                    <button class='mt-2 js-captcha-refresh'>Refresh captcha</button>
+                                    <span class="text-error" style="color: red;">{{ form.captcha.errors }}</span>
+                                </div>
+
                                 <div class="d-grid">
                                     <button type="submit" name="register" class="btn btn-gray-800">Sign UP</button>
                                 </div>
+
                             </form>
                             <br />
                             <!--
@@ -121,6 +134,15 @@
         </section>
     </main>
 
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script>
+  $('.js-captcha-refresh').click(function () {
+    $.getJSON("/captcha/refresh/", function (result) {
+        $('.captcha').attr('src', result['image_url']);
+        $('#id_captcha_0').val(result['key'])
+    });
+  });
+</script>
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
