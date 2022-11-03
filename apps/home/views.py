@@ -794,10 +794,28 @@ def QueryVerifyView(request, sequence_id):
 
             if requestValue == 'delete':
                 # Delete VerifyMotif
+                linked_vm = ''
                 for vm in Verifymotifs.objects.filter( sequence_id = motif.sequence_id ):
                     if motif.sequence_id == vm.sequence_id and motif.asciioutput == vm.asciioutput:
-                        vm.active = 0
-                        vm.save()
+                        linked_vm = vm
+                # If linked_vm set 'active' to 0 else create new linked_vm
+                if linked_vm:
+                    linked_vm.active = 0
+                else:
+                    linked_vm = Verifymotifs( sequence  = motif.sequence,
+                                              motifname = motif.motifname,
+                                              startposition = motif.startposition,
+                                              stopposition = motif.stopposition,
+                                              verifymotifcomments = motif.motifcomments,
+                                              domaingroup = motif.domaingroup,
+                                              gaps = motif.gaps,
+                                              active = 0,
+                                              method = motif.method,
+                                              verifymotifrank = motif.motifrank,
+                                              asciioutput = motif.asciioutput,
+                                              binaryoutput = motif.binaryoutput
+                                              )
+                linked_vm.save()
                 motif.delete()
                 form.data['newChangelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
                 continue
