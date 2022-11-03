@@ -22,6 +22,7 @@ class LoginForm(forms.Form):
             attrs={
                 "placeholder": "Password",
                 "class": "form-control",
+                "autocomplete": "off",
             }
         ))
 
@@ -44,14 +45,16 @@ class SignUpForm(UserCreationForm):
         widget=forms.PasswordInput(
             attrs={
                 "placeholder": "Password",
-                "class": "form-control"
+                "class": "form-control",
+                "autocomplete": "off",
             }
         ))
     password2 = forms.CharField(
         widget=forms.PasswordInput(
             attrs={
                 "placeholder": "Password check",
-                "class": "form-control"
+                "class": "form-control",
+                "autocomplete": "off",
             }
         ))
     captcha = CaptchaField()
