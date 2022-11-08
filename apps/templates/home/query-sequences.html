@@ -53,6 +53,12 @@
                                     {% endfor %}
                                 </select>
                             </div>
+
+                            <div class="col-lg-6 col-sm-6">
+                                <label style="vertical-align: top; width: 100%" for="sequencestatus"> Sequence status </label>
+                                <input type="checkbox" id="sequencestatus" name="sequencestatus" value="1" checked>
+                                <label for="sequencestatus"> Only active sequences</label>
+                            </div>
                         </div>
                         <hr>
 
@@ -64,6 +70,7 @@
                                 <!-- Shortname -->
                                 <div class="col-lg-6 col-sm-6">
                                     <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
+                                    <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>
                                     <select style="width: 100%" name="shortname" id="shortname" >
                                             <option value=""> </option>
                                         {% for val in shortnames %}
@@ -89,6 +96,7 @@
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
                                     <!-- taxonomy_rank -->
                                     <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
+                                    <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
                                     <select style="width: 100%" name="taxonomy_rank" id="taxonomy_rank">
                                             <option value= ""> </option>
                                         {% for val in taxonomy_ranks %}
@@ -106,6 +114,7 @@
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
                                     <!-- domainGroup_rank -->
                                     <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}"">Domain group</label>
+                                    <a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
                                     <select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank">
                                         <option value= ""> </option>
                                         {% for val in domaingroup_rank %}

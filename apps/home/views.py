@@ -115,7 +115,10 @@ def get_sequences(query, verify=False):
         if 'private' in query and notEmpty(query, 'private'):
             seqs = seqs.filter(private = query['private'][0])
     else:
-        seqs = seqs.filter(sequencestatus="live")
+        if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
+            seqs = seqs.filter(sequencestatus="live")
+        else:
+            seqs = seqs
 
     # Filter seqs if shortname/foreignAnnotation or taxonomy is provided
     if 'shortname' in query and notEmpty(query, 'shortname'):
@@ -311,6 +314,7 @@ def QuerySequences(request):
     if request.method == "GET":
         form = FamilyForm(request.GET)
         if form.is_valid():
+
             # If error on query request or query is empty
             if context['error']:
                 request.session['error'] = ''

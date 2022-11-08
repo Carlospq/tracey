@@ -108,13 +108,13 @@ class InsertSequence(ModelForm):
                      'taxonomy': '',
                      'private': '',
                      'aliases': '',
-                     'sourcedatabase': '',
+                     'sourcedatabase': 'Source from where sequence has been obtained',
                      'gene': '- If blank an empty instance of gene will be assigned to this sequence\n- "not_specified:-1:###" means an empty instance of Gene has been asigned to this sequence',
                      'sequencetype': '',
                      'changelog': '',
                      'newChangelog': 'Short and clear description of the modification',
                      'replacedby': '',
-                     'dbxref': ''}
+                     'dbxref': 'Sequence ID from source database. If "Source database" is specified then "dbxref" can not be empty.'}
 
         for f in self.fields:
             self.fields[f].help_text = helptexts[f]
@@ -141,7 +141,6 @@ class InsertSequence(ModelForm):
                  ]
 
     replacedby = forms.IntegerField(required=False, widget=forms.HiddenInput(), )
-    dbxref = forms.CharField(required=False, widget=forms.HiddenInput(), )
     ########################################################################################################################
     sequenceshortname = forms.CharField(required=True, label="Sequence shortname")
     sequenceshortname.widget.attrs.update({'rows': 1, 'style': 'width: 100%; resize: none; display:inline-block; vertical-align:middle;'})
@@ -160,6 +159,9 @@ class InsertSequence(ModelForm):
 
     sourcedatabase = forms.CharField(required=False, label="Source database")
     sourcedatabase.widget.attrs.update({'rows': 1, 'style': 'width: 100%; resize: none;'})
+
+    dbxref = forms.CharField(required=False, label="Database ref ID")
+    dbxref.widget.attrs.update({'rows': 1, 'style': 'width: 100%; resize: none;'})
 
     gene = forms.CharField(required=False, label='NCBI gene ID')
     gene.widget.attrs.update({'style': 'width: 100%; resize: none;'})
@@ -211,24 +213,32 @@ class InsertSequence(ModelForm):
             data = -1
         return data
 
+    def clean_sourcedatabase(self):
+        sourceDB = self.cleaned_data['sourcedatabase']
+        print('DB', sourceDB)
+        if sourceDB == None or sourceDB == "":
+            return ''
+        else:
+            return sourceDB
+
     def clean_dbxref(self):
-        dbxref = self.cleaned_data['dbxref']
         try:
-            sourceDB = self.cleaned_data['sourcedatabase']
-        except KeyError:
-            sourceDB = ""
+            dbxref = self.cleaned_data['dbxref']
+        except:
+            dbxref = ''
+        try:
+            sourceDB = self.data['sourcedatabase'][0]
+        except:
+            sourceDB = ''
 
         if dbxref == None or dbxref=="":
             if sourceDB == None or sourceDB == "":
-                try:
-                    new_dbxref = str(max([ int(x.dbxref) for x in Sequences.objects.filter(sourcedatabase="") ]) + 1)
-                except:
-                    new_dbxref = '1'
+                new_dbxref = ''
             else:
                 raise ValidationError("dbxref is required")
         else:
             if sourceDB == None or sourceDB == "":
-                raise ValidationError("sourceDB is required")
+                raise ValidationError("Source database is required")
             else:
                 if dbxref in set([x.dbxref for x in Sequences.objects.filter(sourcedatabase=sourceDB)]):
                     raise ValidationError("dbxref '%s' already exists in TRACEY for sourcedatabase '%s'"%(dbxref, sourceDB))
@@ -236,13 +246,6 @@ class InsertSequence(ModelForm):
                     new_dbxref = dbxref
 
         return new_dbxref
-
-    def clean_sourcedatabase(self):
-        sourceDB = self.cleaned_data['sourcedatabase']
-        if sourceDB == None or sourceDB == "":
-            data = ''
-
-        return data
 
     def clean_taxonomy(self):
         scientificname = self.cleaned_data['taxonomy']
