@@ -202,7 +202,7 @@ class Domains(models.Model):
 
     def __str__(self):
         return self.domainname
-        
+
 
 class Falsepositives(models.Model):
     falsepositive_id = models.AutoField(db_column='falsePositive_id', primary_key=True)  # Field name made lowercase.
@@ -442,7 +442,7 @@ class Sequences(models.Model):
     sequence = models.TextField(db_collation='latin1_swedish_ci')
     sequencestatus = models.TextField(db_column='sequenceStatus', db_collation='latin1_swedish_ci', blank=True, null=True)  # Field name made lowercase.
     sequencecomments = models.TextField(db_column='sequenceComments', db_collation='latin1_swedish_ci', blank=True, null=True)  # Field name made lowercase.
-    dbxref = models.CharField(max_length=25)
+    dbxref = models.CharField(max_length=25, blank=True, null=True)
     changelog = models.TextField(db_column='changeLog', db_collation='latin1_swedish_ci', blank=True, null=True)  # Field name made lowercase.
     taxonomy = models.ForeignKey('Taxonomies', models.DO_NOTHING, blank=True, null=True)
     private = models.PositiveIntegerField()
