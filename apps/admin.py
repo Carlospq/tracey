@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
+from django.apps import apps
 
 from .home.models import Sequences, Taxonomies
 
@@ -11,5 +12,9 @@ class CustomUserAdmin(UserAdmin):
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
 
-admin.site.register(Sequences)
-admin.site.register(Taxonomies)
+app = apps.get_app_config('apps')
+for model_name, model in app.models.items():
+    admin.site.register(model)
+
+# admin.site.register(Sequences)
+# admin.site.register(Taxonomies)

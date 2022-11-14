@@ -68,47 +68,71 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
     return childs
 
 
-def get_sequences(query):
-    def notEmpty(element):
-        if element in [[''], '']:
+def get_sequences(query, verify=False):
+
+    def notEmpty(query, element):
+        try:
+            if query[element] in [[''], '', None]:
+                return False
+            else:
+                return True
+        except:
             return False
-        return True
 
     # Filter by Domaingroup
-    if 'domaingroup_rank' in query and notEmpty(query['domaingroup_rank']):
-        if 'domaingroup' in query and notEmpty(query['domaingroup']):
-            domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
-            domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in = domaingroup_list)
-            domaingroups_children  = get_childs(Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", childs=[])
-            children_ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
-        else:
-            # Get all child domain groups of domaingroup_rank
-            domaingrouprank = Domaingroups.objects.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
-            domaingrouprank_children = get_childs(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", childs=[])
-            # domaingrouprank_childs = get_childs_raw(Domaingroups, "domaingroups", domaingrouprank, "domaingroup_id", "domaingroup_id", "domaingroupparent_id")
-            children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
+    if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
+        domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
+        domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in = domaingroup_list)
+        domaingroups_children  = get_childs(Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", childs=[])
+        children_ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
         domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
-    else:
+    elif 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
+        domaingrouprank = Domaingroups.objects.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
+        domaingrouprank_children = get_childs(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", childs=[])
+        # domaingrouprank_childs = get_childs_raw(Domaingroups, "domaingroups", domaingrouprank, "domaingroup_id", "domaingroup_id", "domaingroupparent_id")
+        children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
+        domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
+    elif 'domainname' in query and notEmpty(query, 'domainname'):
         domainname = query['domainname'][0]
         domain = Domains.objects.get(domainname = domainname)
         domaingroups = Domaingroups.objects.filter(domain_id = domain.domain_id)
+    else:
+        if verify:
+            context = {'error': "At least 'Domain name', 'Domain group' or 'Subgroup' fields are required"}
+            return context
+        else:
+            domaingroups = Domaingroups.objects.all()
 
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
     seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
+    if verify:
+        verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
+        verifyseqs = Sequences.objects.filter(sequence_id__in = verifymotifs.values('sequence_id'))
+        seqs = seqs | verifyseqs
+        if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
+            seqs = seqs.filter(sequencestatus = query['sequencestatus'][0])
+        if 'private' in query and notEmpty(query, 'private'):
+            seqs = seqs.filter(private = query['private'][0])
+    else:
+        if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
+            seqs = seqs.filter(sequencestatus="live")
+        else:
+            seqs = seqs
+
     # Filter seqs if shortname/foreignAnnotation or taxonomy is provided
-    if 'shortname' in query and notEmpty(query['shortname']):
+    if 'shortname' in query and notEmpty(query, 'shortname'):
         seqs = seqs.filter(sequenceshortname__icontains = query['shortname'][0])
 
-    if 'foreignannotation' in query and notEmpty(query['foreignannotation']):
+    if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
         pattern = re.compile("^gi\|([0-9]+)$")
         if not pattern.match(query['foreignannotation'][0]):
             context = {'error': 'Foreign Annotation format is not correct. Plase use NCBI format.'}
             return context
         seqs = seqs.filter(foreignannotation = query['foreignannotation'][0])
 
-    if 'taxonomy_rank' in query and notEmpty(query['taxonomy_rank']):
-        if 'taxonomy' in query and notEmpty(query['taxonomy']):
+    if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and not notEmpty(query, 'taxonomy_rank')):
+        if ('taxonomy' in query and notEmpty(query, 'taxonomy')):
             taxonomy = Taxonomies.objects.filter(scientificname__in = query['taxonomy'])
             taxonomy_childs = []
             taxonomy_childs_ = []
@@ -120,8 +144,11 @@ def get_sequences(query):
             taxonomy_childs_ids = [x.taxonomy_id for x in taxonomy_childs] + [x.taxonomy_id for x in taxonomy]
             seqs = seqs.filter(taxonomy_id__in = taxonomy_childs_ids)
         else:
-            context = {'error': 'At least one %s must be selected.' % (query['taxonomy_rank'][0])}
-            return context
+            if verify:
+                pass
+            else:
+                context = {'error': 'At least one %s must be selected.' % (query['taxonomy_rank'][0])}
+                return context
 
     return seqs
 #################
@@ -144,7 +171,6 @@ def pages(request):
     try:
 
         load_template = request.path.split('/')[-1]
-        print(load_template)
         if load_template == 'admin':
             return HttpResponseRedirect(reverse('admin:index'))
         context['segment'] = load_template
@@ -179,13 +205,13 @@ def load_taxonomy_rank(request):
 
 def load_domaingroups_rank1(request):
     domainname = request.GET.get('domainname')
+    domaingroup_rank = request.GET.get('domaingroup_rank')
     if domainname == '':
-        domainGroupNames = []
+        domainGroupNames = sorted([ x.domaingroupname for x in Domaingroups.objects.filter(analysislevel = 2) ])
     else:
         domain = Domains.objects.filter(domainname = domainname)
-        domainGroupNames = [x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel == 2 ]
-
-    return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames})
+        domainGroupNames = [ x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel == 2 ]
+    return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames, 'domaingroup_rank': domaingroup_rank})
 
 
 def load_sequenceshortnames(request):
@@ -212,20 +238,50 @@ def load_domaingroups_rank2(request):
 
             if int(parent_id) in domaingroupparent_id:
                 name_list = "-" * (int(domaingroup.analysislevel)-2) + domaingroup.domaingroupname
-                childs_list.append(name_list)
+                if domaingroup.analysislevel > 2:
+                    childs_list.append(name_list)
                 if Domaingroups.objects.filter(domaingroupparent_id=domaingroup.domaingroup_id):
                     get_names_list(domaingroup.domaingroup_id)
 
         return childs_list
 
     childs_list = []
+    domainname = request.GET.get('domainname')
     rank = request.GET.get('domaingroup_rank')
-    if rank == "":
-        childs_list = []
+    if not rank and not domainname:
+        childs_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
     else:
-        parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
-        childs_list = get_names_list(parent_id)
+        if rank:
+            parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
+            childs_list = get_names_list(parent_id)
+        else:
+            domain = Domains.objects.filter(domainname = domainname)
+            childs_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel > 2 ]
+
     return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': childs_list})
+
+
+def load_queryverifysequences(request):
+    sequences = get_sequences(dict(request.POST), verify = True)
+    if 'error' in sequences:
+        context = {'sequences': '',
+                   'error': sequences['error']}
+    else:
+        context = {'sequences': sequences}
+
+    if len(context['sequences']) > 0:
+        speciesname = {}
+        motifs = {}
+
+        for seq in context['sequences']:
+            speciesname[seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
+            motifs[seq.sequence_id] = ", ".join( set([x.motifname for x in Motifs.objects.filter(sequence_id=seq.sequence_id)]) )
+
+        context['speciesname'] = speciesname
+        context['motifs'] = motifs
+
+    context['log'] = len(context['sequences'])
+    return render(request, 'home/query-verify-update-sequences.html', context)
 
 
 def QuerySequences(request):
@@ -258,6 +314,7 @@ def QuerySequences(request):
     if request.method == "GET":
         form = FamilyForm(request.GET)
         if form.is_valid():
+
             # If error on query request or query is empty
             if context['error']:
                 request.session['error'] = ''
@@ -393,10 +450,18 @@ def QueryMotifsView(request):
               }
 
     if request.method == "POST":
-        context = dict(request.POST)
+        context['protseq'] = dict(request.POST)['protseq']
+        context['motifname'] = dict(request.POST)['motifname']
+
         if not context['protseq'][0]:
             context['error'] = 'Please provide a protein sequence to analyze.'
             return render(request, 'home/query-motifs.html', context)
+        elif len(context['protseq'][0]) > 2000:
+            context['error'] = 'Sequence is too long [max length = 2000 aa].'
+            return render(request, 'home/query-motifs.html', context)
+        else:
+            request.session['context'] = context
+            return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
     return render(request, 'home/query-motifs.html', context)
 
@@ -423,9 +488,22 @@ def getMotifPlot_fromPyhammer(hit, sequence):
 
 def motifScan(sequence, motifname):
 
+    hits_d = {}
+
+    #Check sequence format
+    count_gt = sequence.count(">")
+    count_nl = sequence.count("\n")
+    if count_gt >= 1:
+        hits_d['error'] = 'Fasta format is not valid for this search. Please remove the header of the sequence.'
+        return hits_d
+    elif count_nl >= 1:
+        hits_d['error'] = 'Sequence format is nos valid. Please provide only one sequence and check that there is no new line character and the end of the sequence.'
+        return hits_d
+
     alphabet = pyhmmer.easel.Alphabet.amino()
     background = pyhmmer.plan7.Background(alphabet)
     seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
+
     if motifname[0].upper() == "ALL":
         hmmDb = "./utils/hmmModels/MOTIFS.hmmDb"
     else:
@@ -435,7 +513,6 @@ def motifScan(sequence, motifname):
     pipeline = pyhmmer.plan7.Pipeline(hmm.read().alphabet)
     hits = pipeline.scan_seq(seq1, hmm)
 
-    hits_d = {}
     for h in hits:
         h_name = h.name.decode('UTF-8')
         hits_d[h_name] = {}
@@ -471,20 +548,35 @@ def motifScan(sequence, motifname):
 
 def QueryMotifsResultsView(request):
 
+    if 'context' in request.session:
+        context = request.session['context']
+        del request.session['context']
+    elif request.method == "POST":
+        context = dict(request.POST)
+    else:
+        context = dict(request.GET)
+
     segment = request.path.split('/')[-1]
-    context = dict(request.POST)
     context["segment"] = segment
     context["hits_d"] = motifScan(context["protseq"][0], context['motifname'])
     context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ])))
+    if not context['hits_d']:
+        context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
+    elif 'error' in context['hits_d']:
+        context['error_hits'] = context['hits_d']['error']
+        context['hits_d'] = {}
 
     if request.method == "POST":
-        # context = dict(request.POST)
+        context = dict(request.POST)
+        context['error_seq'] = ''
+        request.session['context'] = context
         if not context['protseq'][0]:
             context['error_seq'] = 'Please provide a protein sequence to analyze.'
+        if len(context['protseq'][0]) > 2000:
+            context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
+        if context['error_seq']:
             return render(request, 'home/query-motifs-results.html', context)
-        if not context['hits_d']:
-            context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
-            return render(request, 'home/query-motifs-results.html', context)
+        return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
     return render(request, 'home/query-motifs-results.html', context)
 
@@ -587,38 +679,28 @@ def QueryInsertView(request):
 @staff_login_required
 def QueryVerifyMenuView(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
-    segment = request.path.split('/')[-1]
-    form =  MotifForm()
 
-    context = {}
-    context['form'] = form
-    context['segment'] = segment
-    context['status'] = ['', 'dead', 'replaced NCBI', 'live', 'ignore', 'unknown', 'crystal structure', 'suppressed', 'replaced']
-    context['domainnames'] = ['AAA.aaa', 'AAA.nd', 'Arf', 'C2', 'Habc', 'LGL', 'MUN.d1', 'MUN.d2', 'NSR.cd', 'NSR.md', 'NSR.nd', 'Proppin', 'Qb.III', 'Qb.III.b', 'Qc.II', 'Qc.III', 'Qc.III.b', 'Qc.III.c', 'Ras', 'Rhomboid', 'Rint', 'SM.d1', 'SM.d2a', 'SM.d2b', 'SM.d3', 'SNAP', 'SNAP.b', 'SNAP.c', 'SNARE', 'Zw10']
-    context['shortnames'] = sorted(set([ t.sequenceshortname for t in Sequences.objects.all() ]))
-    context['taxonomies'] = sorted([ t.scientificname for t in Taxonomies.objects.all() ])
+    context = {'segment': request.path.split('/')[-1],
+               'sequences': Sequences.objects.none(),
+               'speciesname': {},
+               'MotifForm': MotifForm(),
+               }
 
-    if request.method == 'POST':
-        form = MotifForm(request.POST)
-        if form.is_valid():
-            context['form'] = form
-            # return render(request, 'home/query-verify-menu.html', context)
+    for seq in context['sequences']:
+        context['speciesname'][seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
 
+    # Form is passed to load_queryverifysequences view through Ajax function in template
+    # It is not being validated!
+    #
+    # if request.method == 'POST':
+    #     form = MotifForm(request.POST)
+    #     if form.is_valid():
+    #         print(dict(request.POST))
+    #         context['sequences'] = get_sequences(dict(request.POST), verify = True)
+    #         context['MotifForm'] = MotifForm(initial=form.cleaned_data)
+
+    context['log'] = len(context['sequences'])
     return render(request, 'home/query-verify-menu.html', context)
-
-
-# Users
-@login_required(login_url="/noPermits.html")
-@staff_login_required
-def users(request):
-    user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
-    if request.user.is_authenticated:
-        user.last_login = now()
-        user.save()
-    segment = request.path.split('/')[-1]
-    context = {"segment": segment,
-               "users": AuthUser.objects.all()}
-    return render(request, 'home/users.html', context)
 
 
 @login_required(login_url="/noPermits.html")
@@ -751,10 +833,28 @@ def QueryVerifyView(request, sequence_id):
 
             if requestValue == 'delete':
                 # Delete VerifyMotif
+                linked_vm = ''
                 for vm in Verifymotifs.objects.filter( sequence_id = motif.sequence_id ):
                     if motif.sequence_id == vm.sequence_id and motif.asciioutput == vm.asciioutput:
-                        vm.active = 0
-                        vm.save()
+                        linked_vm = vm
+                # If linked_vm set 'active' to 0 else create new linked_vm
+                if linked_vm:
+                    linked_vm.active = 0
+                else:
+                    linked_vm = Verifymotifs( sequence  = motif.sequence,
+                                              motifname = motif.motifname,
+                                              startposition = motif.startposition,
+                                              stopposition = motif.stopposition,
+                                              verifymotifcomments = motif.motifcomments,
+                                              domaingroup = motif.domaingroup,
+                                              gaps = motif.gaps,
+                                              active = 0,
+                                              method = motif.method,
+                                              verifymotifrank = motif.motifrank,
+                                              asciioutput = motif.asciioutput,
+                                              binaryoutput = motif.binaryoutput
+                                              )
+                linked_vm.save()
                 motif.delete()
                 form.data['newChangelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
                 continue
@@ -781,3 +881,17 @@ def QueryVerifyView(request, sequence_id):
         context['form'] = InsertSequence(instance=seq, initial={'gene': ncbigene_id, })
 
     return render(request, 'home/query-verify.html', context)
+
+
+# Users
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def users(request):
+    user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
+    if request.user.is_authenticated:
+        user.last_login = now()
+        user.save()
+    segment = request.path.split('/')[-1]
+    context = {"segment": segment,
+               "users": AuthUser.objects.all()}
+    return render(request, 'home/users.html', context)
