@@ -91,7 +91,7 @@
 
                                 <!-- Form | captcha level 1-->
                                 <div class="form-group mb-4">
-                                    <label for="captcha">Captcha</label>
+                                    <label for="captcha">Please solve the following operation:</label>
                                     <div class="input-group">
                                         {{ form.captcha }}
                                     </div>
@@ -134,7 +134,7 @@
         </section>
     </main>
 
-<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
   $('.js-captcha-refresh').click(function () {
     $.getJSON("/captcha/refresh/", function (result) {
