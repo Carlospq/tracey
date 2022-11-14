@@ -22,7 +22,7 @@
                         <hr>
                     </div>
 
-                    <form method='post' action='query-motifs-results' name="motifForm" id="motifForm">
+                    <form method='post' action='' name="motifForm" id="motifForm">
                     {% csrf_token %}
 
                     <div class="row mb-4">
@@ -36,7 +36,7 @@
                                 </select>
                             </div>
                         <div class="col-sm-12">
-                            <label style="vertical-align: top;"> Protein sequence: </label>
+                            <label style="vertical-align: top;"> Protein sequence (max length: 5000 aa): </label>
                             <textarea class="mb-3" type="text" id="protseq" name="protseq" style="width: 100%; height:100px; vertical-align: top; resize: none;"></textarea>
                             {% if error %}<p style="color: red">{{error}}</p>{% endif %}
                             <input type="submit" value="Scan">

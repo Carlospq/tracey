@@ -1,6 +1,10 @@
 <div style="width:100%; word-wrap: break-word; word-break: break-word;">
-	{% for seq in sequences %}
-			&gt;{{ seq.sequenceshortname }}<br>
-			{{ seq.sequence }}<br>
-	{% endfor %}
+	{% if sequences %}
+			{% for seq in sequences %}
+					&gt;{{ seq.sequenceshortname }}<br>
+					{{ seq.sequence }}<br>
+			{% endfor %}
+	{% else %}
+			0 sequences selected. Plase select at least 1 sequence to obtain the sequence in FASTA format.
+	{% endif %}
 </div>

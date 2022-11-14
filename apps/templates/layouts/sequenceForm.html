@@ -20,6 +20,10 @@
         .td-data {
             width: 85%;
         }
+        #deleteSequence:hover {
+          background-color: red;
+          border-radius: 0.3rem;
+        }
     </style>
 </head>
 <form method='post' action='' name="motifForm" id="motifForm">
@@ -31,7 +35,10 @@
 						<div class="row mb-1">
 								<table><tr>
 										<td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdquestion">
+                        <!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
+                        <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>
+                    </td>
 										<td class="tdfield">
 												{{ form.sequenceshortname }}
 												{% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
@@ -62,7 +69,7 @@
 				<div class="col-lg-6 col-sm-6 mb-1" style="display: inline">
 						<div class="row mb-1" style="height: 100%;">
 								<table><tr>
-										<td class="tdlabel">{{ form.sequence.label_tag }}</td>
+										<td class="tdlabel" style="padding-left: 25px;">{{ form.sequence.label_tag }}</td>
 										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
 										<td class="tdfield">
 												<div class="fieldWrapper">{{ form.sequence }}</div>
@@ -86,13 +93,23 @@
 										</td>
 								</tr></table>
 						</div>
-						<div class="row mb-1">
+            <div class="row mb-1">
 							<table><tr>
 									<td class="tdlabel">{{ form.sourcedatabase.label_tag }}</td>
 									<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sourcedatabase.help_text }}"> ? </abbr></td>
 									<td class="tdfield">
 											{{ form.sourcedatabase }}
 											{% for error in form.errors.sourcedatabase %}<p class="perror">{{ error }}</p>{% endfor %}
+									</td>
+							</tr></table>
+						</div>
+            <div class="row mb-1">
+							<table><tr>
+									<td class="tdlabel">{{ form.dbxref.label_tag }}</td>
+									<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.dbxref.help_text }}"> ? </abbr></td>
+									<td class="tdfield">
+											{{ form.dbxref }}
+											{% for error in form.errors.dbxref %}<p class="perror">{{ error }}</p>{% endfor %}
 									</td>
 							</tr></table>
 						</div>
@@ -110,7 +127,7 @@
 				<div class="col-lg-6 col-sm-6">
 						<div class="row mb-1" style="height: 100%">
 								<table><tr>
-										<td class="tdlabel">{{ form.annotation.label_tag }}</td>
+										<td class="tdlabel" style="padding-left: 25px;">{{ form.annotation.label_tag }}</td>
 										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.annotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
 										<td class="tdfield">
 												<div class="fieldWrapper">{{ form.annotation }}</div>
@@ -158,7 +175,7 @@
 				<div class="col-lg-6 col-sm-6">
 						<div class="row mb-1" style="height: 100%">
 								<table><tr>
-										<td class="tdlabel">{{ form.sequencecomments.label_tag }}</td>
+										<td class="tdlabel" style="padding-left: 25px;">{{ form.sequencecomments.label_tag }}</td>
 										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencecomments.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
 										<td class="tdfield">
 												<div class="fieldWrapper">{{ form.sequencecomments }}</div>
@@ -200,14 +217,19 @@
 		</div>
 
 <hr>
-<input class="mb-5" type="submit" value="Submit">
-
+<div class="mb-5" style="width: 100%; text-align: center;">
+    <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="float: left;">
+    {% if 'query-verify' in segment %}
+    <a href="query-verify"><input type="submit" id="deleteSequence" value="Delete sequence" name="deleteSequence" style="display: inline-block;" onclick="return confirm('Are you sure you want to delete sequence {{ sequence.sequenceshortname }}?')"></a>
+    {% endif %}
+    <input type="submit" value="Submit" style="float: right;">
+</div>
 {% if 'query-verify' in segment %}
 
 <div class="row mb-4 mt-4">
 		<div class="col-lg-12 col-sm-12">
 
-        <h4>Not verified motifs</h4>
+        <h4>Not verified motifs ({{ verifymotifs|length }})</h4>
         <p> IMPORTANT: If "active" value is set to "1" Verifymotif will become active and new Mofit will be created. If set to -1 or 0 Verifymotif will become inactive and Motif linked to it will be deleted. If set to "delete" Verifymotif will be deleted an not accesible anymore </p>
         <hr>
 				{% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
@@ -232,7 +254,7 @@
 										<table class="detailTable">
 												<tr>
 														<td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
-														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
+														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
 														<td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
 														<td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
 														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
@@ -309,8 +331,8 @@
 				{% endfor %}
         <input class="mb-5" type="submit" value="Submit">
 
-        <h4>Verified motifs</h4>
-        <p>IMPORTANT: If "active" set to "delete" Motif will be deleted and Verifymotif linked to it will be set to "0". Setting it to any other value will have no effect on Verifymotifs</p>
+        <h4>Verified motifs ({{ motifs|length }})</h4>
+        <p>IMPORTANT: If "active" set to "delete" Motif will be deleted and Verifymotif linked to it will be set to "0". If no Verifymotif linked to Motif then a new Verifymotive will be created. Setting "active" to any other value will have no effect on Verifymotifs</p>
         <hr>
         {% for m in motifs %}
         <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
