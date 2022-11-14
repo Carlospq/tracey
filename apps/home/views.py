@@ -450,10 +450,18 @@ def QueryMotifsView(request):
               }
 
     if request.method == "POST":
-        context = dict(request.POST)
+        context['protseq'] = dict(request.POST)['protseq']
+        context['motifname'] = dict(request.POST)['motifname']
+
         if not context['protseq'][0]:
             context['error'] = 'Please provide a protein sequence to analyze.'
             return render(request, 'home/query-motifs.html', context)
+        elif len(context['protseq'][0]) > 2000:
+            context['error'] = 'Sequence is too long [max length = 2000 aa].'
+            return render(request, 'home/query-motifs.html', context)
+        else:
+            request.session['context'] = context
+            return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
     return render(request, 'home/query-motifs.html', context)
 
@@ -480,9 +488,22 @@ def getMotifPlot_fromPyhammer(hit, sequence):
 
 def motifScan(sequence, motifname):
 
+    hits_d = {}
+
+    #Check sequence format
+    count_gt = sequence.count(">")
+    count_nl = sequence.count("\n")
+    if count_gt >= 1:
+        hits_d['error'] = 'Fasta format is not valid for this search. Please remove the header of the sequence.'
+        return hits_d
+    elif count_nl >= 1:
+        hits_d['error'] = 'Sequence format is nos valid. Please provide only one sequence and check that there is no new line character and the end of the sequence.'
+        return hits_d
+
     alphabet = pyhmmer.easel.Alphabet.amino()
     background = pyhmmer.plan7.Background(alphabet)
     seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
+
     if motifname[0].upper() == "ALL":
         hmmDb = "./utils/hmmModels/MOTIFS.hmmDb"
     else:
@@ -492,7 +513,6 @@ def motifScan(sequence, motifname):
     pipeline = pyhmmer.plan7.Pipeline(hmm.read().alphabet)
     hits = pipeline.scan_seq(seq1, hmm)
 
-    hits_d = {}
     for h in hits:
         h_name = h.name.decode('UTF-8')
         hits_d[h_name] = {}
@@ -528,20 +548,35 @@ def motifScan(sequence, motifname):
 
 def QueryMotifsResultsView(request):
 
+    if 'context' in request.session:
+        context = request.session['context']
+        del request.session['context']
+    elif request.method == "POST":
+        context = dict(request.POST)
+    else:
+        context = dict(request.GET)
+
     segment = request.path.split('/')[-1]
-    context = dict(request.POST)
     context["segment"] = segment
     context["hits_d"] = motifScan(context["protseq"][0], context['motifname'])
     context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ])))
+    if not context['hits_d']:
+        context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
+    elif 'error' in context['hits_d']:
+        context['error_hits'] = context['hits_d']['error']
+        context['hits_d'] = {}
 
     if request.method == "POST":
-        # context = dict(request.POST)
+        context = dict(request.POST)
+        context['error_seq'] = ''
+        request.session['context'] = context
         if not context['protseq'][0]:
             context['error_seq'] = 'Please provide a protein sequence to analyze.'
+        if len(context['protseq'][0]) > 2000:
+            context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
+        if context['error_seq']:
             return render(request, 'home/query-motifs-results.html', context)
-        if not context['hits_d']:
-            context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
-            return render(request, 'home/query-motifs-results.html', context)
+        return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
     return render(request, 'home/query-motifs-results.html', context)
 
