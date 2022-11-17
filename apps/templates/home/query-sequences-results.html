@@ -202,14 +202,8 @@
                     {% endfor %}
                 </table>
       			</div>
-            <table style="width: 100%;">
-                <tr>
-                    <td style="width: 50%;"><p style="padding: 0.5rem;">This query retrived <b>{{ sequences|length }}</b> sequences.</p></td>
-                    <td style="width: 50%;"><p style="padding-right: 2%; text-align: right;">
-                        <a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" style="color: blue">Fasta format</a>
-                    </td>
-                </tr>
-            </table>
+            <p style="padding-left: 1rem;">This query retrived <b>{{ sequences|length }}</b> sequences.</p>
+            <p style="padding-left: 1rem;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" style="color: blue">Fasta format</a> </p>
             </form>
 
         </div>
