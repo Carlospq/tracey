@@ -7,14 +7,13 @@ CS    no
 MAP   yes
 COM   /usr/local/bin/hmmbuild -F --hand --amino /data/nkienle/data/ij/snarePipe/main/Rint/classification/taxonomy/hmms/Rint.hmm /data/nkienle/data/ij/snarePipe/main/Rint/motif/Rint.hmmIn
 COM   /usr/local/bin/hmmcalibrate /data/nkienle/data/ij/snarePipe/main/Rint/classification/taxonomy/hmms/Rint.hmm
-COM   /usr/local/bin/hmmcalibrate /data/nkienle/data/ij/snarePipe/main/Rint/classification/taxonomy/hmms/Rint.hmmDb
 NSEQ  130
 DATE  Fri Feb 19 16:32:34 2010
 CKSUM 8855
 XT      -8455     -4  -1000  -1000  -8455     -4  -8455     -4 
 NULT      -4  -8455
 NULE     595  -1558     85    338   -294    453  -1158    197    249    902  -1085   -142    -21   -313     45    531    201    384  -1998   -644 
-EVD   -274.816650   0.100731
+EVD   -272.859772   0.107225
 HMM        A      C      D      E      F      G      H      I      K      L      M      N      P      Q      R      S      T      V      W      Y    
          m->m   m->i   m->d   i->m   i->i   d->m   d->d   b->m   m->e
           -85      *  -4128

@@ -3,6 +3,7 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
+import os
 import xml.etree.ElementTree as ET
 import pyhmmer
 from dna_features_viewer import GraphicFeature, GraphicRecord
@@ -69,15 +70,6 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
 
 
 def get_sequences(query, verify=False):
-
-    def notEmpty(query, element):
-        try:
-            if query[element] in [[''], '', None]:
-                return False
-            else:
-                return True
-        except:
-            return False
 
     # Filter by Domaingroup
     if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
@@ -151,6 +143,15 @@ def get_sequences(query, verify=False):
                 return context
 
     return seqs
+
+def notEmpty(query, element):
+    try:
+        if query[element] in [[''], '', None]:
+            return False
+        else:
+            return True
+    except:
+        return False
 #################
 
 # Home
@@ -249,7 +250,7 @@ def load_domaingroups_rank2(request):
     domainname = request.GET.get('domainname')
     rank = request.GET.get('domaingroup_rank')
     if not rank and not domainname:
-        childs_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
+        childs_list = []#[ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
     else:
         if rank:
             parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
@@ -446,7 +447,7 @@ def DetailsSequencesFastaFormat(request, sequence_id):
 def QueryMotifsView(request):
     segment = request.path.split('/')[-1]
     context = {"segment": segment,
-               "motifs": sorted(list(set([ x.motifname for x in Motifs.objects.all() ])))
+               "motifs": sorted(list( set([ x.domainname for x in Domains.objects.all() ]) ))
               }
 
     if request.method == "POST":
@@ -504,14 +505,24 @@ def motifScan(sequence, motifname):
     background = pyhmmer.plan7.Background(alphabet)
     seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
-    if motifname[0].upper() == "ALL":
-        hmmDb = "./utils/hmmModels/MOTIFS.hmmDb"
-    else:
-        hmmDb = "./utils/hmmModels/%s/%s.hmmDb"%(motifname[0].upper(), motifname[0].upper())
-    hmm =  pyhmmer.plan7.HMMFile(hmmDb)
+    # if motifname[0].upper() == "ALL":
+    #     hmmDb = "./utils/hmmModels/MOTIFS.hmmDb"
+    # else:
+    #     hmmDb = "./utils/hmmModels/%s/%s.hmmDb"%(motifname[0].upper(), motifname[0].upper())
+    # hmm =  pyhmmer.plan7.HMMFile(hmmDb)
 
-    pipeline = pyhmmer.plan7.Pipeline(hmm.read().alphabet)
-    hits = pipeline.scan_seq(seq1, hmm)
+    M = motifname[0].upper()
+    if M == "ALL":
+        hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
+    else:
+        hmms = []
+        for f in os.listdir('utils/hmmModels/%s'%(M)):
+            with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(M, f)) as hmm_file:
+                hmm = hmm_file.read()
+                hmms.append(hmm)
+
+    pipeline = pyhmmer.plan7.Pipeline(pyhmmer.easel.Alphabet.amino())
+    hits = pipeline.scan_seq(seq1, hmms)
 
     for h in hits:
         h_name = h.name.decode('UTF-8')
@@ -534,7 +545,7 @@ def motifScan(sequence, motifname):
                      'env_from': d.env_from,
                      'env_to': d.env_to,
                      'length': d.env_to - d.env_from,
-                     'alignment': d.alignment,
+                     'alignment': str(d.alignment),
                      'dg': dg.domaingroupname,
                      'dg_parent': dg_parent,
                      'domain': domain,
@@ -550,33 +561,53 @@ def QueryMotifsResultsView(request):
 
     if 'context' in request.session:
         context = request.session['context']
+        # context['motifname'] = dict(request.POST)['motifname']
         del request.session['context']
     elif request.method == "POST":
+    # if request.method == "POST":
         context = dict(request.POST)
     else:
         context = dict(request.GET)
 
     segment = request.path.split('/')[-1]
     context["segment"] = segment
-    context["hits_d"] = motifScan(context["protseq"][0], context['motifname'])
     context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ])))
+    context["hits_d"] = {}
+
+    if notEmpty(context, 'protseq'):
+        if len(context['protseq'][0]) > 2000:
+            context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
+        elif len(context['protseq'][0]) == 0:
+            context['error_seq'] = 'Please provide a protein sequence to analyze.'
+        else:
+            context["hits_d"] = motifScan(context["protseq"][0], context['motifname'])
+    else:
+        context['error_seq'] = ''
+
     if not context['hits_d']:
+        if not 'motifname' in context:
+            context['motifname'] = ['%EmptyMotifname%']
         context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
     elif 'error' in context['hits_d']:
         context['error_hits'] = context['hits_d']['error']
         context['hits_d'] = {}
+        # return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
     if request.method == "POST":
-        context = dict(request.POST)
         context['error_seq'] = ''
-        request.session['context'] = context
-        if not context['protseq'][0]:
+        # context['protseq'] = [request.POST['protseq']]
+        # context['motifname'] = [request.POST['motifname']]
+        # context['csrfmiddlewaretoken'] = request.POST['csrfmiddlewaretoken']
+        # request.session['context'] = context
+        try:
+            if len(context['protseq'][0]) > 2000:
+                context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
+            elif len(context['protseq'][0]) == 0:
+                context['error_seq'] = 'Please provide a protein sequence to analyze.'
+        except:
             context['error_seq'] = 'Please provide a protein sequence to analyze.'
-        if len(context['protseq'][0]) > 2000:
-            context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
-        if context['error_seq']:
-            return render(request, 'home/query-motifs-results.html', context)
-        return HttpResponseRedirect(reverse('query-motifs-results'), context)
+
+
 
     return render(request, 'home/query-motifs-results.html', context)
 
