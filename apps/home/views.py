@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from time import gmtime, strftime
 from collections import OrderedDict
 from operator import getitem
+from Bio.Blast.Applications import NcbiblastpCommandline
 
 from django import template
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -505,12 +506,6 @@ def motifScan(sequence, motifname):
     background = pyhmmer.plan7.Background(alphabet)
     seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
-    # if motifname[0].upper() == "ALL":
-    #     hmmDb = "./utils/hmmModels/MOTIFS.hmmDb"
-    # else:
-    #     hmmDb = "./utils/hmmModels/%s/%s.hmmDb"%(motifname[0].upper(), motifname[0].upper())
-    # hmm =  pyhmmer.plan7.HMMFile(hmmDb)
-
     M = motifname[0].upper()
     if M == "ALL":
         hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
@@ -545,7 +540,7 @@ def motifScan(sequence, motifname):
                      'env_from': d.env_from,
                      'env_to': d.env_to,
                      'length': d.env_to - d.env_from,
-                     'alignment': str(d.alignment),
+                     'alignment': d.alignment,
                      'dg': dg.domaingroupname,
                      'dg_parent': dg_parent,
                      'domain': domain,
@@ -662,6 +657,46 @@ def saveVerifyMotifs(sequence_id, hits):
                              binaryoutput = '')
             vm.save()
 
+
+def common_name(list, sn):
+    arr = {}
+    for name in list:
+        l = len(name)
+        for i in range(l):
+            for j in range(l+1):
+                if j <= i: continue
+                subname = name[i:j].replace("_", "")
+                if len(subname) < 3 or subname == "ref": continue
+                if not subname in arr:
+                    arr[subname] = 1
+                else:
+                    arr[subname] += 1
+
+    sorted_arr = sorted(arr.items(), key=lambda x:-x[1])
+    top = [ sn+"_"+x[0] for x in sorted_arr if x[1]/len(list)>=0.5 ]
+    common_names = []
+    for i in range(len(top)):
+        unique = True
+        for j in range(len(top)):
+            if i == j: continue
+            if top[i] in top[j]: unique = False
+        if unique and top[i] not in common_names: common_names.append(top[i])
+    return common_names
+
+
+def suggested_names(shortname, sequence):
+    blastp_path = 'utils/ncbi-blast-2.13.0+/bin/blastp'
+    file_path = 'utils/ncbi-blast-2.13.0+/query_vm.fasta'
+    sn = shortname.split("_")[0]
+    with open(file_path, 'w') as fasta_file:
+        fasta_file.write( '>'+shortname+'\n'+sequence )
+    blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 6)
+    stdout, stderr = blastp_cline()
+    shortnames = [ y[1].split("|")[0] for y in [ x.split("\t") for x in stdout.split("\n") if len(x) > 1 ] if float(y[2]) > 95]
+    suggestedNames = common_name(shortnames, sn)
+    return suggestedNames
+
+
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryInsertView(request):
@@ -720,18 +755,58 @@ def QueryVerifyMenuView(request):
     for seq in context['sequences']:
         context['speciesname'][seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
 
-    # Form is passed to load_queryverifysequences view through Ajax function in template
-    # It is not being validated!
-    #
-    # if request.method == 'POST':
-    #     form = MotifForm(request.POST)
-    #     if form.is_valid():
-    #         print(dict(request.POST))
-    #         context['sequences'] = get_sequences(dict(request.POST), verify = True)
-    #         context['MotifForm'] = MotifForm(initial=form.cleaned_data)
-
     context['log'] = len(context['sequences'])
     return render(request, 'home/query-verify-menu.html', context)
+
+
+@login_required(login_url="/noPermits.html")
+def QueryVerifyBlastView(request, db, vm_id):
+    vm = Verifymotifs.objects.get(pk=int(vm_id))
+    sequence = vm.sequence.sequence
+    vm_sequence = sequence[vm.startposition-1:vm.stopposition]
+    context = {'db': db,
+               'vm_id': vm_id,
+               'name_motif': "_".join([ vm.sequence.sequenceshortname, vm.motifname ]),
+               'motif_length': len(vm_sequence),
+               'blast_error': '',
+               'blast_result': '',
+               'header': ['query acc.ver', 'subject acc.ver', '% identity', 'alignment length', 'mismatches', 'gap opens', 'q. start', 'q. end', 's. start', 's. end', 'evalue', 'bit score']}
+    context['fasta_sequence'] = '>'+context['name_motif']+"\n%s"%(vm_sequence)
+
+    file_path = 'utils/ncbi-blast-2.13.0+/query_vm.fasta'
+    if db == 'TRACEY':
+
+        blastp_path = 'utils/ncbi-blast-2.13.0+/bin/blastp'
+        with open(file_path, 'w') as fasta_file:
+            fasta_file.write( context['fasta_sequence'] )
+
+        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 6)
+        stdout, stderr = blastp_cline()
+
+        if stderr:
+            context['blast_error'] = stderr
+        else:
+            context['blast_result'] = [x.split("\t") for x in [line for line in stdout.split("\n") ]]
+
+    elif db == 'NCBI':
+
+        ncbi_url = 'https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome&QUERY=%s'%(context['fasta_sequence'])
+        return HttpResponseRedirect(ncbi_url)
+        # return redirect('http://blast.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=put&DATABASE=nr&PROGRAM=blastp&QUERY=GTDHTERRGRIYIQAHIDRDVLIVLVRDAKNLVPMDPNGLSDPYVKLKLIPDPKSESKQKTKTIKCSLNPEWNETFRFQLKESDKDRRLSVEIWDWDLTSRNDFMGSLSFGISELQKASVDGWFKLLSQEEGEYFNVPVP')
+        # from Bio.Blast.NCBIWWW import qblast
+                # Protein databases
+                # - env_nr
+                # - nr
+                # - pataa
+                # - pdbaa
+                # - refseq_protein
+                # - swissprot
+        # context['result'] = qblast('blastp', 'nr', file_path, url_base='https://blast.ncbi.nlm.nih.gov/Blast.cgi', format_type='Tabular')  #https://ncbi.github.io/blast-cloud/dev/api.html
+
+    else:
+        context['blast_error'] = 'An error ocurred while choosing database..'
+
+    return render(request, 'home/query-verify-blast.html', context)
 
 
 @login_required(login_url="/noPermits.html")
@@ -766,6 +841,9 @@ def QueryVerifyView(request, sequence_id):
     verifymotifs = Verifymotifs.objects.filter(sequence_id = sequence_id)
     context["motifs"]  = {}
     context["verifymotifs"]  = {}
+
+    suggestedNames = suggested_names(seq.sequenceshortname, seq.sequence)
+    context['suggestedNames'] = ",    ".join(suggestedNames)
 
     for type, motifs in zip(['motifs', 'verifymotifs'], [motifs, verifymotifs]):
         for m in motifs:
