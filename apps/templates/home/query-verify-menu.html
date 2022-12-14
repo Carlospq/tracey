@@ -170,10 +170,10 @@
                         </div>
 
                         <div class="col-1 mb-4" style="display: flex;">
-                            <div style="float: left;  width: 50%; margin-top: auto; margin-bottom: auto; height: 35px; display:flex; align-items: center;">
+                            <div style="margin-top: auto; margin-bottom: auto; height: 35px; display:flex; align-items: center;">
                                 <input type="submit" value="Update list">
                             </div>
-                            <div id="loader" style="float: right; width: 50%; padding-left: 10px; margin-right: auto; display: none">
+                            <div id="loader" style="padding-left: 10px; margin-right: auto; display: none;">
                                 <div class="loader" ></div>
                             </div>
                         </div>
@@ -186,35 +186,59 @@
                                 <thead class="thead-dark" style="width:100%">
                                 <tr>
                                     <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Short Name
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(0)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(0)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
                                     <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Species name
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(1)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(1)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
                                     <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Motifs
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
                                     <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Status
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
                                     <th class="border-bottom" scope="col" style="width: 7%; text-align: center;"> #VerifyMotifs
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
                                     <th class="border-bottom" scope="col" style="width: 7%; text-align: center;"> #Motifs
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(5)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(5)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 5%; text-align: center;" id="2"> Private
+                                    <th class="border-bottom" scope="col" style="width: 5%; text-align: center; white-space: nowrap;" id="2"> Private
+                                        <div style="display: block">
                                         <button type="button" name="button" onclick="sortTable(6)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                                         <button type="button" name="button" onclick="sortDown(6)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="3"> dbxRef </th>
-                                    <th class="border-bottom" scope="col" style="width: 15%; text-align: center;" id="4"> Source database </th>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="3"> dbxRef
+                                        <div style="display: block">
+                                        <button type="button" name="button" onclick="sortTable(7)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        <button type="button" name="button" onclick="sortDown(7)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
+                                    </th>
+                                    <th class="border-bottom" scope="col" style="width: 15%; text-align: center;" id="4"> Source database
+                                        <div style="display: block">
+                                        <button type="button" name="button" onclick="sortTable(8)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        <button type="button" name="button" onclick="sortDown(8)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                        </div>
+                                    </th>
                                     <th class="border-bottom" scope="col" style="width: 20%; text-align: center;" id="5"> Foreign Annotation</th>
                                 </tr>
                                 </thead>

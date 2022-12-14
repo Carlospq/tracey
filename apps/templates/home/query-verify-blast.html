@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+</head>
+
+<body><div style="width:100%; word-wrap: break-word; word-break: break-word;">
+
+		<div class='mb-5'>
+				<p style="font-size: 24px; padding: 5px;"> {{ name_motif }}: BLAST results agaings {{ db }}.</p>
+				<p style="font-size: 18px; padding: 5px;"> Length of motif: {{ motif_length }}aa</p>
+		<div>
+		<hr>
+		{% if blast_error %}{{ blast_error}}<hr>{% endif %}
+		{{ result }}
+		<table>
+				<tr>
+						{% for h in header %}
+				    		<th>{{ h }}</th>
+						{% endfor %}
+			  </tr>
+				{% for line in blast_result %}
+				<tr>
+						{% for f in line %}
+    				<td>{{ f }}</td>
+						{% endfor %}
+				</tr>
+				{% endfor %}
+		</table>
+
+</div></body>

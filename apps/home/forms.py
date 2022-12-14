@@ -142,7 +142,7 @@ class InsertSequence(ModelForm):
 
     replacedby = forms.IntegerField(required=False, widget=forms.HiddenInput(), )
     ########################################################################################################################
-    sequenceshortname = forms.CharField(required=True, label="Sequence shortname")
+    sequenceshortname = forms.CharField(required=True, label="Shortname")
     sequenceshortname.widget.attrs.update({'rows': 1, 'style': 'width: 100%; resize: none; display:inline-block; vertical-align:middle;'})
 
     aliases = forms.CharField(required = False, label="Alias")

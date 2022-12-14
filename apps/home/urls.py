@@ -34,6 +34,7 @@ urlpatterns = [
     # Verify
     path('query-verify', views.QueryVerifyMenuView, name='query-verify-menu'),
     path('query-verify/<int:sequence_id>', views.QueryVerifyView, name='query-verify'),
+    path('query-verify/traceyBLAST/<str:db>/<int:vm_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
 
     # Ajax views
     path('ajax/load-taxonomy-rank/', views.load_taxonomy_rank, name='ajax_load_taxonomy_rank'),
