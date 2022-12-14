@@ -119,11 +119,11 @@
                       <tr>
                           <td class="td-header"><b>Sequence with motif: </b></td>
                           <td class="td-data">
-                              <div style="overflow-x:auto;">
+                              <div class="mt-2 mb-3" style="overflow-x:auto;">
                                   <table style="font-family: monospace; width: 100%; text-align: justify;">
                                       <tr><td>
                                       {% for leter in sequence.sequence %}
-                                          <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                          <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %}; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</a>
                                       {% endfor %}
                                       </td></tr>
                                   </table>
@@ -148,17 +148,17 @@
                                   <table style="width:100%;">
                                     <tr>
                                         {% for leter in motifs|get_item:m|get_item:'consensus' %}
-                                            <td style="text-align: left;">{{ leter }}</td>
+                                            <td style="text-align: left; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
                                         {% endfor %}
                                     </tr>
                                     <tr>
                                         {% for leter in motifs|get_item:m|get_item:'similarity' %}
-                                            <td style="text-align: justify;">{{ leter }}</td>
+                                            <td style="text-align: justify; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
                                         {% endfor %}
                                     </tr>
                                     <tr>
                                         {% for leter in motifs|get_item:m|get_item:'motif' %}
-                                            <td>{{ leter }}</td>
+                                            <td style="text-align: justify; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
                                         {% endfor %}
                                     </tr>
                                   </table>

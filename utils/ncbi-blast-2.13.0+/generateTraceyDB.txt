@@ -1,0 +1,46 @@
+# Download BLAST from https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
+https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.13.0+-x64-linux.tar.gz
+tar -xvf ncbi-blast-2.13.0+-x64-linux.tar.gz
+
+# Generate TRACEY blast database
+> first generate a fasta with all TRACEY sequences
+python manage.py shell < ./utils/ncbi-blast-2.13.0+/generateTraceyDB.py
+> second generate database from TRACEY fasta
+./utils/ncbi-blast-2.13.0+/bin/makeblastdb -in ./utils/ncbi-blast-2.13.0+/tracey.fasta -parse_seqids -dbtype prot -out ./utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp
+> (Optional) Delete tracey.fasta
+rm ./utils/ncbi-blast-2.13.0+/tracey.fasta
+
+# To run blast from terminal:
+./utils/ncbi-blast-2.13.0+/bin/blastp -db ./utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp -query ./utils/ncbi-blast-2.13.0+/test.fasta -out results.0 -outfmt 0
+
+# To run blast from python
+from Bio.Blast.Applications import NcbiblastnCommandline 
+blastn_cline = NcbiblastnCommandline(query = "search.fasta", db = "alun", outfmt = 6, out = "results.xml") 
+stdout, stderr = blastn_cline()
+
+*** Formatting options
+ -outfmt <String>
+   alignment view options:
+     0 = Pairwise,
+     1 = Query-anchored showing identities,
+     2 = Query-anchored no identities,
+     3 = Flat query-anchored showing identities,
+     4 = Flat query-anchored no identities,
+     5 = BLAST XML,
+     6 = Tabular,
+     7 = Tabular with comment lines,
+     8 = Seqalign (Text ASN.1),
+     9 = Seqalign (Binary ASN.1),
+    10 = Comma-separated values,
+    11 = BLAST archive (ASN.1),
+    12 = Seqalign (JSON),
+    13 = Multiple-file BLAST JSON,
+    14 = Multiple-file BLAST XML2,
+    15 = Single-file BLAST JSON,
+    16 = Single-file BLAST XML2,
+    18 = Organism Report
+
+
+
+
+https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=put&DATABASE=swissprot_v5&PROGRAM=blastp&QUERY='>seq1 KDHFMDDFFHQVEEIRNSIDKITQYVEEVKKNHSIILSAPNPEGKIKEELEDLNKEIKKTANKIRAKLKAIEQSFDQDESGNRTSVDLRIRRTQHSVLSRKFVEAMAEYNEAQTLFRERSKGRIQRQLEIT'
