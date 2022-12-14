@@ -673,14 +673,14 @@ def common_name(list, sn):
                     arr[subname] += 1
 
     sorted_arr = sorted(arr.items(), key=lambda x:-x[1])
-    top = [ sn+"_"+x[0] for x in sorted_arr if x[1]/len(list)>=0.5 ]
+    top = [ x[0] for x in sorted_arr if x[1]/len(list)>=0.5 ]
     common_names = []
     for i in range(len(top)):
         unique = True
         for j in range(len(top)):
             if i == j: continue
             if top[i] in top[j]: unique = False
-        if unique and top[i] not in common_names: common_names.append(top[i])
+        if unique and top[i] not in common_names: common_names.append(sn+"_"+top[i])
     return common_names
 
 
@@ -692,7 +692,7 @@ def suggested_names(shortname, sequence):
         fasta_file.write( '>'+shortname+'\n'+sequence )
     blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 6)
     stdout, stderr = blastp_cline()
-    shortnames = [ y[1].split("|")[0] for y in [ x.split("\t") for x in stdout.split("\n") if len(x) > 1 ] if float(y[2]) > 95]
+    shortnames = [ y[1].split("|")[0][y[1].find('_')+1:] for y in [ x.split("\t") for x in stdout.split("\n") if len(x) > 1 ] if float(y[2]) > 95]
     suggestedNames = common_name(shortnames, sn)
     return suggestedNames
 
@@ -760,21 +760,26 @@ def QueryVerifyMenuView(request):
 
 
 @login_required(login_url="/noPermits.html")
-def QueryVerifyBlastView(request, db, vm_id):
-    vm = Verifymotifs.objects.get(pk=int(vm_id))
-    sequence = vm.sequence.sequence
-    vm_sequence = sequence[vm.startposition-1:vm.stopposition]
-    context = {'db': db,
-               'vm_id': vm_id,
-               'name_motif': "_".join([ vm.sequence.sequenceshortname, vm.motifname ]),
-               'motif_length': len(vm_sequence),
+def QueryVerifyBlastView(request, db, query_id):
+    if db[-1] == 'm':
+        query = Verifymotifs.objects.get(pk=int(query_id))
+        query_sequence = query.sequence.sequence[query.startposition-1:query.stopposition]
+        shortname = "_".join([ query.sequence.sequenceshortname, query.motifname ])
+    elif db[-1] == 's':
+        query = Sequences.objects.get(pk=int(query_id))
+        query_sequence = query.sequence
+        shortname = query.sequenceshortname
+    context = {'db': db[:-1],
+               'query_id': query_id,
+               'name': shortname,
+               'motif_length': len(query_sequence),
                'blast_error': '',
                'blast_result': '',
                'header': ['query acc.ver', 'subject acc.ver', '% identity', 'alignment length', 'mismatches', 'gap opens', 'q. start', 'q. end', 's. start', 's. end', 'evalue', 'bit score']}
-    context['fasta_sequence'] = '>'+context['name_motif']+"\n%s"%(vm_sequence)
+    context['fasta_sequence'] = '>'+context['name']+"\n%s"%(query_sequence)
 
     file_path = 'utils/ncbi-blast-2.13.0+/query_vm.fasta'
-    if db == 'TRACEY':
+    if context['db'] == 'TRACEY':
 
         blastp_path = 'utils/ncbi-blast-2.13.0+/bin/blastp'
         with open(file_path, 'w') as fasta_file:
@@ -788,7 +793,7 @@ def QueryVerifyBlastView(request, db, vm_id):
         else:
             context['blast_result'] = [x.split("\t") for x in [line for line in stdout.split("\n") ]]
 
-    elif db == 'NCBI':
+    elif context['db'] == 'NCBI':
 
         ncbi_url = 'https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome&QUERY=%s'%(context['fasta_sequence'])
         return HttpResponseRedirect(ncbi_url)
