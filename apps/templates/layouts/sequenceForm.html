@@ -222,6 +222,7 @@
 										</div>
 								{% endif %}
 						</div>
+            {% if 'query-verify' in segment %}
             <div class="row" style="display: flex; align-items: center;">
                 <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST sequence:</p></div>
                 <div class="col-4" style="padding: 0;">
@@ -231,6 +232,7 @@
                     <a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts NCBI </a>
                 </div>
             </div>
+            {% endif %}
 				</div>
 		</div>
 

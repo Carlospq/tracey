@@ -73,6 +73,7 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
 def get_sequences(query, verify=False):
 
     # Filter by Domaingroup
+    # Gets all domaingroups (and their children) matching query 'domaingroup(s)'
     if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
         domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
         domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in = domaingroup_list)
@@ -96,13 +97,15 @@ def get_sequences(query, verify=False):
         else:
             domaingroups = Domaingroups.objects.all()
 
+    # Filter sequences using domaingroups obtained in previous step
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
     seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
     if verify:
+        # Adds sequences with Verifymotifs matching query 'domaingroups'
         verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
         verifyseqs = Sequences.objects.filter(sequence_id__in = verifymotifs.values('sequence_id'))
-        seqs = seqs | verifyseqs
+        seqs = seqs | verifyseqs # OR operator for querysets
         if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
             seqs = seqs.filter(sequencestatus = query['sequencestatus'][0])
         if 'private' in query and notEmpty(query, 'private'):
@@ -736,7 +739,7 @@ def QueryInsertView(request):
             context["form"] = form
             return render(request, 'home/query-insert.html', context)
 
-    context["form"] = InsertSequence()
+    context["form"] = InsertSequence(initial={'status': 'live'})
     return render(request, 'home/query-insert.html', context)
 
 
@@ -750,7 +753,7 @@ def QueryVerifyMenuView(request):
     context = {'segment': request.path.split('/')[-1],
                'sequences': Sequences.objects.none(),
                'speciesname': {},
-               'MotifForm': MotifForm(),
+               'MotifForm': MotifForm(initial={'status': 'live'}),
                'taxonomy_ranks': taxonomy_ranks
                }
 
