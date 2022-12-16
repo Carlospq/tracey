@@ -172,7 +172,7 @@ class InsertSequence(ModelForm):
     sequencetype = forms.ChoiceField(required=True, label='Sequence type', choices=([('protein','Protein'), ('dna','DNA'), ('rna','RNA'), ('unknown','Unknown')]), initial="Protein")
     sequencetype.widget.attrs.update({'style': 'height: 100%; width: 100%; resize: none;'})
 
-    sequencestatus = forms.ChoiceField(required=False, label='Sequence status',  initial='',
+    sequencestatus = forms.ChoiceField(required=False, label='Sequence status',  initial='live',
                                        choices=( [('',''), ('suppressed','suppresed'), ('dead', 'dead'), ('live', 'live'), ('crystal structure', 'crystal structure'), ('replaced NCBI', 'replaced NCBI'), ('ignore', 'ignore'), ('replaced', 'replaced'), ('unknown', 'uknown')] ))
     sequencestatus.widget.attrs.update({'style': 'height: 100%; width: 100%; resize: none;'})
 
@@ -293,7 +293,7 @@ class MotifForm(forms.Form):
                     required = False,
                     widget = forms.Select()
                 )
-                
+
     taxonomy = MultipleChoiceFieldNoValidation(
                     initial=123,
                     label= "Taxonomy",
@@ -305,7 +305,7 @@ class MotifForm(forms.Form):
     status = forms.CharField(
                     label= "Status",
                     required = False,
-                    widget = forms.Select(choices = [("",""), ('crystal structure', 'crystal structure'), ('dead', 'dead'), ('ignore', 'ignore'), ('live', 'live'), ('replaced', 'replaced'), ('replaced NCBI', 'replaced NCBI'), ('suppressed', 'suppressed'), ('unknown', 'unknown')] )
+                    widget = forms.Select(choices = [("",""), ('crystal structure', 'crystal structure'), ('dead', 'dead'), ('ignore', 'ignore'), ('live', 'live'), ('replaced', 'replaced'), ('replaced NCBI', 'replaced NCBI'), ('suppressed', 'suppressed'), ('unknown', 'unknown')])
                 )
     status.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
