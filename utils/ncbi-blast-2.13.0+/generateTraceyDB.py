@@ -1,6 +1,6 @@
 from apps.home.models import *
 
-sequences = Sequences.objects.all()
+sequences = Sequences.objects.filter(sequencestatus = 'live')
 with open('utils/ncbi-blast-2.13.0+/tracey.fasta', 'w') as f:
     for seq in sequences:
         foreignannotation = seq.foreignannotation.split(" ")[0].strip()
