@@ -745,15 +745,14 @@ def QueryInsertView(request):
 @staff_login_required
 def QueryVerifyMenuView(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
+    taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
 
     context = {'segment': request.path.split('/')[-1],
                'sequences': Sequences.objects.none(),
                'speciesname': {},
                'MotifForm': MotifForm(),
+               'taxonomy_ranks': taxonomy_ranks
                }
-
-    for seq in context['sequences']:
-        context['speciesname'][seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
 
     context['log'] = len(context['sequences'])
     return render(request, 'home/query-verify-menu.html', context)
