@@ -288,12 +288,19 @@ class MotifForm(forms.Form):
                 )
     domaingroup.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
-    taxonomy = forms.CharField(
+    taxonomy_rank = forms.CharField(
                     label= "Taxonomy",
                     required = False,
-                    widget = forms.Select(choices = [("","")] + sorted([ (t.scientificname, t.scientificname) for t in Taxonomies.objects.all() ]))
+                    widget = forms.Select()
                 )
-    taxonomy.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+                
+    taxonomy = MultipleChoiceFieldNoValidation(
+                    initial=123,
+                    label= "Taxonomy",
+                    required = False,
+                )
+    taxonomy.widget.attrs.update({'size': 7,
+                                  'style': 'width: 100%; margin-top: 6px'})
 
     status = forms.CharField(
                     label= "Status",
