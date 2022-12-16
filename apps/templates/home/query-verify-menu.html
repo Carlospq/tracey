@@ -125,6 +125,7 @@
                     <div class="col-12">
                         <!-- Beggining of Form -->
                         <form method='post' action='#' name="MotifForm" id="MotifForm"
+                            data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
                             data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
                             data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                         <!-- ajax_load_verifyTable1 -->
@@ -150,11 +151,21 @@
                           </div>
 
                         </div>
-                        <div class="row mb-4">
-
-                            <div class="col-4">
-                                <label style="vertical-align: top;" for="{{ form.taxonomy.id_for_label }}">Taxonomy</label>
-                                <select name="taxonomy" id="taxonomy" style="width: 100%" >{% for val in MotifForm.taxonomy %}{{ val }}{% endfor %}</select>
+                        <div class="row mb-4" style="height: 100%">
+                            <div class="fieldWrapper col-lg-4 col-sm-4">
+                                <!-- taxonomy_rank -->
+                                <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
+                                <select style="width: 100%" name="taxonomy_rank" id="taxonomy_rank">
+                                    <option value= ""> </option>
+                                    {% for val in taxonomy_ranks %}
+                                        <option value= "{{ val }}"> {{ val.capitalize }} </option>
+                                    {% endfor %}
+                                </select>
+                                <!-- taxa -->
+                                <div class="fieldWrapper">
+                                    {{ MotifForm.taxonomy }}
+                                </div>
+                                <p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
                             </div>
 
                             <div class="col-4">
@@ -274,6 +285,22 @@
         $('.has-popover').popover({'trigger':'hover'});
     });
 
+    // Load taxonomy rank
+    $("#taxonomy_rank").change(function () {
+      var url = $("#MotifForm").attr("data-load-taxonomy-rank-url");  // get the url of the `load_cities` view
+      var taxonomy_rank = $(this).val();                               // get the selected country ID from the HTML input
+
+      $.ajax({                                 // initialize an AJAX request
+        url: url,                              // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
+        data: {
+          'taxonomy_rank': taxonomy_rank       // add the country id to the GET parameters
+        },
+        success: function (data) {             // `data` is the return of the `load_cities` view function
+          $("#id_taxonomy").html(data);        // replace the contents of the city input with the data that came from the server
+        }
+      });
+    });
+
     // Don't reload site on submit
     $(document).on('submit','#MotifForm',function(e){
         // Loading animation
@@ -297,6 +324,7 @@
           }
         });
 
+        $.ajaxSetup({traditional: true});
         // Update sequences
         $.ajax({
             type:'POST',
@@ -305,7 +333,7 @@
                 domainname: $("#domainname").val(),
                 domaingroup_rank: $("#domaingroup_rank").val(),
                 domaingroup: $("#domaingroup").val(),
-                taxonomy: $("#taxonomy").val(),
+                taxonomy: $("#id_taxonomy").val(),
                 sequencestatus: $("#status").val(),
                 private: $("#private").val(),
                 csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
