@@ -56,7 +56,7 @@
     <script type="text/javascript">
         function makeTableScroll() {
             // Constant retrieved from server-side via JSP
-            var maxRows = 10;
+            var maxRows = 15;
 
             var table = document.getElementById('myTable');
             var wrapper = table.parentNode;
@@ -203,7 +203,19 @@
                 </table>
       			</div>
             <p style="padding-left: 1rem;">This query retrived <b>{{ sequences|length }}</b> sequence(s).</p>
-            <p style="padding-left: 1rem;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" style="color: blue">Fasta format</a> </p>
+            <div class="row mt-4 mb-4" style="padding-left: 1rem;">
+                <!-- <p style="padding-left: 1rem; width: 100%;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" value=1 style="color: blue">Fasta format</a> </p> -->
+                <input type="submit" value="Fasta format" name="fasta" style="margin-left: 1rem; width: 150px;" />
+                <!-- <p style="padding-left: 1rem; width: 100%;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" value=2 style="color: blue">Multiple Sequence Alignment</a> </p> -->
+                {% if is_staff %}
+                <input type="submit" value="Multi Alignment" name="multialignment" style="margin-left: 12rem; width: 150px;" />
+                <select name="hmmModel" id="hmmModel" style="margin-left: 1rem; width: 150px;">
+                  {% for hmm in hmmModels %}
+                  <option value="{{ hmm }}">{{hmm}}</option>
+                  {% endfor %}
+                </select>
+                {% endif %}
+            </div>
             </form>
 
         </div>
