@@ -101,20 +101,18 @@ def get_sequences(query, verify=False):
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
     seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
-    if verify:
+    if verify and query['onlyverified'][0] == 'false':
         # Adds sequences with Verifymotifs matching query 'domaingroups'
         verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
         verifyseqs = Sequences.objects.filter(sequence_id__in = verifymotifs.values('sequence_id'))
         seqs = seqs | verifyseqs # OR operator for querysets
-        if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
-            seqs = seqs.filter(sequencestatus = query['sequencestatus'][0])
-        if 'private' in query and notEmpty(query, 'private'):
-            seqs = seqs.filter(private = query['private'][0])
-    else:
-        if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
-            seqs = seqs.filter(sequencestatus="live")
-        else:
-            seqs = seqs
+
+    if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
+        status = ['live' if query['sequencestatus'][0] == '1' else query['sequencestatus'][0]][0]
+        seqs = seqs.filter(sequencestatus = status)
+
+    if 'private' in query and notEmpty(query, 'private'):
+        seqs = seqs.filter(private = query['private'][0])
 
     # Filter seqs if shortname/foreignAnnotation or taxonomy is provided
     if 'shortname' in query and notEmpty(query, 'shortname'):
@@ -363,19 +361,56 @@ def QuerySequencesResults(request):
     context["sequences"] = sequences
     context["speciesname"] = speciesname
     context["segment"] = segment
+    context["is_staff"] = request.user.is_staff
+    hmmMoldes = []
+    for d in os.listdir('utils/hmmModels/'):
+        if not os.path.isdir('utils/hmmModels/%s'%(d)): continue
+        for f in os.listdir('utils/hmmModels/%s'%(d)):
+            hmmMoldes.append(f.split('.hmm')[0])
 
+    context["hmmModels"] = hmmMoldes
     return render(request, 'home/query-sequences-results.html', context)
 
 
 def QuerySequencesFastaFormat(request):
     if request.method == 'POST':
         boxes = request.POST.getlist('checkbox')
+
     try:
         sequences = Sequences.objects.filter(pk__in=boxes)
     except Sequences.DoesNotExist:
         raise Http404("Sequences does not exist")
 
-    return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
+    if 'fasta' in request.POST:
+        return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
+    elif 'multialignment' in request.POST:
+        if len(sequences) < 2:
+            return render(request, 'home/query-sequences-multialignment.html', {'names': []})
+        # Do HMMalignment with sequences
+        # 1.Get hmm file
+        for d in os.listdir('utils/hmmModels/'):
+            if not os.path.isdir('utils/hmmModels/%s'%(d)): continue
+            for f in os.listdir('utils/hmmModels/%s'%(d)):
+                if request.POST['hmmModel'][0] in f:
+                    with pyhmmer.plan7.HMMFile("./utils/hmmModels/%s/%s"%(d,f)) as hmm_file:
+                        hmm = hmm_file.read()
+        # 2.Convert sequences into iterable of digitalsequences
+        alphabet = pyhmmer.easel.Alphabet.amino()
+        background = pyhmmer.plan7.Background(alphabet)
+        digitalsequences = [pyhmmer.easel.TextSequence(name=bytes(seq.sequenceshortname, 'utf-8'), sequence=seq.sequence).digitize(alphabet) for seq in sequences]
+        # 3.MSA
+        MSA = pyhmmer.hmmer.hmmalign(hmm, digitalsequences, digitize=False)
+        names = [ name.decode("utf-8") for name in MSA.names ]
+        zippedLists = {}
+        for i in range(len(names)):
+            alignment = [*MSA.alignment[i]] # splits alignment into list for each character in the alignment
+            upperList = []
+            for n in alignment:
+                upperList.append([ 1 if n.isupper() else 0 ][0])
+            zippedLists[names[i]] = zip(alignment, upperList)
+        return render(request, 'home/query-sequences-multialignment.html', {'names': names, 'zippedLists': zippedLists})
+    else:
+        return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
 
 
 # Query details
@@ -431,7 +466,7 @@ def QuerySequencesDetails(request, sequence_id):
         for x in data:
             context["motifs"][m][x.tag] = x.text
         context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-
+        context["motifs"][m]["length"] = m.stopposition - m.startposition + 1
         context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroupparent"])
 
     context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
@@ -648,8 +683,8 @@ def saveVerifyMotifs(sequence_id, hits):
         for d in motifInfo['domains']:
             vm = Verifymotifs(sequence_id = sequence_id,
                              motifname = motif,
-                             startposition = d['env_from'],
-                             stopposition = d['env_to'],
+                             startposition = d['env_from']+1,
+                             stopposition = d['env_to']-1,
                              verifymotifcomments = '',
                              domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id,
                              gaps = countGaps(d['alignment'].target_sequence),
@@ -870,6 +905,7 @@ def QueryVerifyView(request, sequence_id):
                 context[type][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = d.domaingroupparent_id).domaingroupname
             context[type][m]["domaingroup"] = d.domaingroupname
             context[type][m]["ascii"] = m.asciioutput
+            context[type][m]["length"] = m.stopposition - m.startposition + 1
 
             data = ET.fromstring(context[type][m]["ascii"])
             for x in data:
