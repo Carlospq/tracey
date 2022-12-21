@@ -279,7 +279,7 @@
 														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
 														<td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
 														<td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
-														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
+														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ verifymotifs|get_item:m|get_item:'length' }})</td>
 														<td class="td-data"><b>Functional Name: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
 												</tr>
 										</table>
@@ -367,7 +367,7 @@
         <input class="mb-5" type="submit" value="Submit">
 
         <h4>Verified motifs ({{ motifs|length }})</h4>
-        <p>IMPORTANT: If "active" set to "delete" Motif will be deleted and Verifymotif linked to it will be set to "0". If no Verifymotif linked to Motif then a new Verifymotive will be created. Setting "active" to any other value will have no effect on Verifymotifs</p>
+        <p>IMPORTANT: If "active" value is set to "delete" then Motif will be deleted and the "active" value of the Verifymotif linked to it will be set to "0". If no Verifymotif linked to Motif then a new Verifymotive will be created. Setting "active" value to any other value will have no effect on Verifymotifs</p>
         <hr>
         {% for m in motifs %}
         <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
@@ -392,7 +392,7 @@
                             <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
                             <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
                             <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
-                            <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }}</td>
+                            <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length' }})</td>
                             <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
                         </tr>
                     </table>

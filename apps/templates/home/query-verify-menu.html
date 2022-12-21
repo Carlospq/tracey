@@ -180,12 +180,23 @@
 
                         </div>
 
-                        <div class="col-1 mb-4" style="display: flex;">
-                            <div style="margin-top: auto; margin-bottom: auto; height: 35px; display:flex; align-items: center;">
-                                <input type="submit" value="Update list">
+                        <div class="col-1 mb-4" style="width: 100%;">
+                            <div class="row" style="height: 100%;">
+                            <div class="fieldWrapper col-lg-4 col-sm-4" style="display: flex;">
+                                <div style="margin-top: auto; margin-bottom: auto; height: 35px; display:flex; align-items: center;">
+                                    <input type="submit" value="Update list">
+                                </div>
+                                <div id="loader" style="padding-left: 10px; margin-right: auto; display: none;">
+                                    <div class="loader" ></div>
+                                </div>
                             </div>
-                            <div id="loader" style="padding-left: 10px; margin-right: auto; display: none;">
-                                <div class="loader" ></div>
+                            </div>
+                            <div class="row mb-4" style="height: 100%;">
+                            <div class="fieldWrapper col-lg-4 col-sm-4">
+                                <!-- <label style="vertical-align: top; width: 100%" for="sequencestatus"> Sequence status </label> -->
+                                <input type="checkbox" id="onlyverified" name="onlyverified" value="1" checked>
+                                <label for="sequencestatus"> Only verified sequences</label>
+                            </div>
                             </div>
                         </div>
                         </form>
@@ -308,6 +319,7 @@
         var domainname = $("#domainname").val();
         var domaingroup_rank = $("#domaingroup_rank").val();
         var domaingroup = $("#domaingroup").val();
+        var onlyverified = document.getElementById("onlyverified").checked;
         document.getElementById("loader").style.display = "flex";
 
         // Data for domaingroup_rank field
@@ -335,6 +347,7 @@
                 domaingroup: $("#domaingroup").val(),
                 taxonomy: $("#id_taxonomy").val(),
                 sequencestatus: $("#status").val(),
+                onlyverified: onlyverified,
                 private: $("#private").val(),
                 csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
                 action: 'post'
