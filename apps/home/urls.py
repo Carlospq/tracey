@@ -11,8 +11,8 @@ urlpatterns = [
     # The home page
     path('', views.index, name='home'),
 
-    # Users
-    path('users.html', views.users, name='users'),
+    # Features
+    path('features.html', views.features, name='features'),
 
     # Query
     path('query', views.QueryView, name='query'),
@@ -37,12 +37,16 @@ urlpatterns = [
     path('query-verify/traceyBLAST/<str:db>m/<int:query_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
     path('query-verify/traceyBLAST/<str:db>s/<int:query_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
 
+    # Taxonomy update results
+    path('update_taxonomy_results', views.read_update_taxonomy_results, name='read_update_taxonomy_results'),
+
     # Ajax views
     path('ajax/load-taxonomy-rank/', views.load_taxonomy_rank, name='ajax_load_taxonomy_rank'),
     path('ajax/load-domaingroups-rank1/', views.load_domaingroups_rank1, name='ajax_load_domaingroups_rank1'),
     path('ajax/load-domaingroups-rank2/', views.load_domaingroups_rank2, name='ajax_load_domaingroups_rank2'),
     path('ajax/load-sequenceshortnames/', views.load_sequenceshortnames, name='ajax_load_sequenceshortnames'),
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
+    path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),

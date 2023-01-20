@@ -1,0 +1,194 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Users {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+
+<head>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src='{{ ASSETS_ROOT }}/js/a076d05399.js' crossorigin='anonymous'></script>
+    <style type="text/css">
+            .loader {
+              border: 8px solid #f3f3f3;
+              border-radius: 50%;
+              border-top: 8px solid #3498db;
+              width: 35px;
+              height: 35px;
+              -webkit-animation: spin 2s linear infinite; /* Safari */
+              animation: spin 2s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(720deg); }
+            }
+            .features-container {
+              width: 100%;
+              height: 100%;
+              text-align: justify;
+              -ms-text-justify: distribute-all-lines;
+              text-justify: distribute-all-lines;
+              min-width: 400px;
+              padding: 0 5% 0 5%;
+            }
+            .stretch {
+              width: 100%;
+              display: inline-block;
+              font-size: 0;
+              line-height: 0
+            }
+            .feature-card {
+              vertical-align: top;
+              display: inline-block;
+              *display: inline;
+              zoom: 1;
+              width: 20%;
+              min-width: 400px;
+              height: 600px;
+              border-radius: 10px 10px 0px 0px;
+              margin-bottom: 25px;
+            }
+            .feature-header {
+              height: 15%;
+              padding-top: 25px;
+              font-size: 26px;
+              color: white;
+              text-align: center;
+              word-wrap: break-word;
+              word-break: break-word;
+              background: #1F2937 !important;
+              border-radius: 10px 10px 0px 0px;
+              border: #1F2937 solid 2px;
+            }
+            .feature-body {
+              border: #1F2937 solid 2px;
+              height: 85%;
+              font-size: 18px;
+              color: #1F2937;
+              text-align: center;
+              word-wrap: break-word;
+              word-break: break-word;
+              background: lightgrey;
+              padding: 20px;
+            }
+            .feature-body .feature-body-main {
+              display: block;
+              height: 380px;
+              font-size: 19px;
+            }
+            .feature-body .feature-body-main p, .feature-body .feature-body-footer p {
+              margin: 0;
+            }
+            .feature-body .feature-body-footer {
+              height: 60px;
+              font-size: 14px;
+              padding: 0;
+            }
+            .feature-body #loader {
+              height: 45px;
+              background: transparent;
+            }
+            a {
+              color: blue;
+            }
+    </style>
+</head>
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Card frame -->
+        <div class="card border-0 shadow components-section">
+
+                <!-- Card body -->
+                <div class="col-12 mb-4">
+                    <div class="card-body">
+
+                        <div class="mb-5">
+                            <h1><strong> TRACEY Features </strong></h1>
+                            <p><i>Interactive management of TRACEY database.</i></p>
+                            <hr>
+                        </div>
+
+
+                        <div class="features-container">
+                            <div class="feature-card">
+                                <div class="feature-header">Update Taxonomies</div>
+                                <div class="feature-body">
+                                    <form method='post' action='#' name="UpdateTaxonomyForm" id="UpdateTaxonomyForm">
+                                    {% csrf_token %}
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">TRACEY taxonomies will be updated with current NCBI information.</p>
+                                        <p style="margin-bottom: 15px;">The most recent NCBI taxonomy data will be downloaded and compared against Tracey Taxonomies. New NCBI taxonomies will be created in TRACEY if neceessary.</p>
+                                        <img src="{{ASSETS_ROOT}}/img/images/UpdateTaxonomy.png" style="margin: auto; margin-top: 10px; width: 300px; height: 150px; border-radius: 10px 10px 10px 10px;">
+                                        <p style="font-size: 13px;"> Check last update results <a href="update_taxonomy_results" target="_blank">here</a></p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        <input type="submit" value="Update Taxonomy" name='update_taxonomy' id='update_taxonomy'>
+                                        <i><p class="p-footer" id='taxonomy_last_update'>Last update on: {{last_taxonomy_update}}</p></i>
+                                    </div>
+                                    <div class="progress-bar" style="background: transparent;">
+                                        <div id="loader" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                            <div class="loader"></div>
+                                        </div>
+                                        <div id="loader_msg" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                    </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-header">Build Phylogenetic Tree</div>
+                                <div class="feature-body"> This section will be updated in the future...</div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-header">Generate HMM models</div>
+                                <div class="feature-body"> This section will be updated in the future...</div>
+                            </div>
+                            <span class="stretch"></span>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- End Card body -->
+
+        </div>
+        <!-- End Card frame -->
+    </div>
+</div>
+</body>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script>
+
+    $(document).on('submit','#UpdateTaxonomyForm', function(e){
+        // Loading animation
+        e.preventDefault();
+        var taxonomy_last_update = document.getElementById("taxonomy_last_update").innerHTML;
+        var loader = document.getElementById("loader");
+        var msg = document.getElementById("loader_msg");
+        document.getElementById("taxonomy_last_update").innerHTML = "This can take several minutes...";
+        loader.style.display = "flex";
+        msg.style.display = "none";
+
+        $.ajax({
+          url: "{% url 'ajax_update_taxonomy' %}",
+          data: {
+            'taxonomy_last_update': taxonomy_last_update,
+          },
+
+          success: function (data) {
+            $("#loader_msg").html(data);
+            document.getElementById("taxonomy_last_update").innerHTML = "Last update on: Today";
+            loader.style.display = "none";
+            msg.style.display = "flex";
+          }
+        });
+    });
+
+</script>
+{% endblock javascripts %}
