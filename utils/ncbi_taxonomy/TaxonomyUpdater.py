@@ -169,7 +169,7 @@ def update_taxonomy(taxonomy, ncbi, report_file='', update_type=''):
         if updated_fields:
             taxonomy.taxonomycomments = taxonomy.taxonomycomments+'; %s - automatically Updated by TaxonomyUpdater: updated fields = %s'%(str(time_now), ", ".join(updated_fields))
             if report_file:
-                report_file.write("UPDATED Taxonomy (id:%s): %s\n updated fields - %s"%(taxonomy.taxonomy_id, taxonomy.scientificname, ", ".join(updated_fields)))
+                report_file.write("UPDATED Taxonomy (id:%s): %s\n updated fields - %s\n"%(taxonomy.taxonomy_id, taxonomy.scientificname, ", ".join(updated_fields)))
     # MISSING IDs
     else:
         if report_file:

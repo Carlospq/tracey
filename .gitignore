@@ -5,4 +5,5 @@ utils/ncbi-blast-2.13.0+/traceyBLASTdb
 utils/ncbi-blast-2.13.0+/tracey.fasta
 utils/ncbi-blast-2.13.0+/query_vm.fasta
 utils/ncbi_taxonomy/taxdmp
-utils/ncbi_taxonomy/TRACEY_names.newick
+utils/ncbi_taxonomy/TRACEY_*
+utils/ncbi_taxonomy/.Rhistory

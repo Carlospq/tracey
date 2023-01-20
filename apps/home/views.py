@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import pyhmmer
 from dna_features_viewer import GraphicFeature, GraphicRecord
 import matplotlib.pyplot as plt
+import datetime
 from time import gmtime, strftime
 from collections import OrderedDict
 from operator import getitem
@@ -26,6 +27,7 @@ from django.utils.timezone import now
 
 from .forms import *
 from .models import *
+from utils.ncbi_taxonomy import TaxonomyUpdater
 
 from django import template
 
@@ -1035,15 +1037,35 @@ def QueryVerifyView(request, sequence_id):
     return render(request, 'home/query-verify.html', context)
 
 
-# Users
+# TRACEY Features
 @login_required(login_url="/noPermits.html")
 @staff_login_required
-def users(request):
+def features(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
     if request.user.is_authenticated:
         user.last_login = now()
         user.save()
+
+    last_taxonomy_update = open('utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt', 'r').readlines()[0].split("(Date: ")[1].split(" ")[0][:-1]
+    last_taxonomy_update = ['Today' if last_taxonomy_update == str(datetime.datetime.now().date()) else last_taxonomy_update][0]
     segment = request.path.split('/')[-1]
     context = {"segment": segment,
-               "users": AuthUser.objects.all()}
-    return render(request, 'home/users.html', context)
+               # "users": AuthUser.objects.all(),
+               "last_taxonomy_update": last_taxonomy_update,
+               }
+    return render(request, 'home/features.html', context)
+
+
+def update_taxonomy(request):
+    if dict(request.GET)['taxonomy_last_update'] == ['Last update on: Today']:
+        return HttpResponse('Taxonomy already up to date.')
+    else:
+        outcome = TaxonomyUpdater.update_tracey_taxonomies()
+        return HttpResponse(outcome)
+
+
+def read_update_taxonomy_results(request):
+    f = open('utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt', 'r')
+    file_content = f.read()
+    f.close()
+    return HttpResponse(file_content, content_type="text/plain")
