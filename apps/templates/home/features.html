@@ -129,17 +129,39 @@
                                         <i><p class="p-footer" id='taxonomy_last_update'>Last update on: {{last_taxonomy_update}}</p></i>
                                     </div>
                                     <div class="progress-bar" style="background: transparent;">
-                                        <div id="loader" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                        <div id="loader_taxonomy" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
                                             <div class="loader"></div>
                                         </div>
-                                        <div id="loader_msg" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                        <div id="loader_msg_taxonomy" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
                                     </div>
                                     </form>
                                 </div>
                             </div>
                             <div class="feature-card">
                                 <div class="feature-header">Build Phylogenetic Tree</div>
-                                <div class="feature-body"> This section will be updated in the future...</div>
+                                <div class="feature-body">
+                                    <form method='post' action='#' name="UpdateTreeForm" id="UpdateTreeForm">
+                                    {% csrf_token %}
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Reconstructs tree of life using all taxonomies in TRACEY.</p>
+                                        <p style="margin-bottom: 15px;">This tree will follow the current NCBI phylogeny.</p>
+                                        <img src="{{ASSETS_ROOT}}/img/images/treeoflife.png" style="margin: auto; margin-top: 10px; width: 200px; height: 200px; border-radius: 10px 10px 10px 10px;">
+                                        <p style="font-size: 13px;"> Download current tree (<a href="{% url 'download_file' 'TRACEY_phylogeneticTree.newick' %}">newick</a>/
+                                                                                            <a href="{% url 'download_file' 'TRACEY_phylogeneticTree.pdf' %}">PDF</a>)
+                                        </p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        <input type="submit" value="Update Tree" name='update_tree' id='update_tree'>
+                                        <i><p class="p-footer" id='tree_last_update'>Last update on: {{last_tree_update}}</p></i>
+                                    </div>
+                                    <div class="progress-bar" style="background: transparent;">
+                                        <div id="loader_tree" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                            <div class="loader"></div>
+                                        </div>
+                                        <div id="loader_msg_tree" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                    </div>
+                                    </form>
+                                </div>
                             </div>
                             <div class="feature-card">
                                 <div class="feature-header">Generate HMM models</div>
@@ -169,9 +191,9 @@
         // Loading animation
         e.preventDefault();
         var taxonomy_last_update = document.getElementById("taxonomy_last_update").innerHTML;
-        var loader = document.getElementById("loader");
-        var msg = document.getElementById("loader_msg");
-        document.getElementById("taxonomy_last_update").innerHTML = "This can take several minutes...";
+        var loader = document.getElementById("loader_taxonomy");
+        var msg = document.getElementById("loader_msg_taxonomy");
+        document.getElementById("taxonomy_last_update").innerHTML = "This can take several (~10) minutes...";
         loader.style.display = "flex";
         msg.style.display = "none";
 
@@ -182,8 +204,34 @@
           },
 
           success: function (data) {
-            $("#loader_msg").html(data);
+            $("#loader_msg_taxonomy").html(data);
             document.getElementById("taxonomy_last_update").innerHTML = "Last update on: Today";
+            loader.style.display = "none";
+            msg.style.display = "flex";
+          }
+        });
+    });
+
+    $(document).on('submit','#UpdateTreeForm', function(e){
+        // Loading animation
+        e.preventDefault();
+        var tree_last_update = document.getElementById("tree_last_update").innerHTML;
+        var loader = document.getElementById("loader_tree");
+        var msg = document.getElementById("loader_msg_tree");
+        document.getElementById('update_tree').style.display = 'none';
+        document.getElementById("tree_last_update").innerHTML = "This can take several (~10) minutes...";
+        loader.style.display = "flex";
+        msg.style.display = "none";
+
+        $.ajax({
+          url: "{% url 'ajax_update_tree' %}",
+          data: {
+            'tree_last_update': tree_last_update,
+          },
+
+          success: function (data) {
+            $("#loader_msg_tree").html(data);
+            document.getElementById("tree_last_update").innerHTML = "Last update on: Today";
             loader.style.display = "none";
             msg.style.display = "flex";
           }

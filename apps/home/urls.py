@@ -11,12 +11,15 @@ urlpatterns = [
     # The home page
     path('', views.index, name='home'),
 
+    # Download  files
+    path('download/<str:filename>', views.download_file, name='download_file'),
+
     # Features
     path('features.html', views.features, name='features'),
 
     # Query
     path('query', views.QueryView, name='query'),
-
+    
     # Sequences
     path('query-sequences', views.QuerySequences, name='query-sequences'),
     path('query-sequences-results', views.QuerySequencesResults, name='query-sequences-results'),
@@ -47,6 +50,7 @@ urlpatterns = [
     path('ajax/load-sequenceshortnames/', views.load_sequenceshortnames, name='ajax_load_sequenceshortnames'),
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
     path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
+    path('ajax/ajax-update-tree/', views.update_tree, name='ajax_update_tree'),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),
