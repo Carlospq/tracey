@@ -58,6 +58,7 @@ def update_tracey_tree(taxa = taxa):
             for x,y in zip([x[0]for x in tax_phylo], [x[1]for x in tax_phylo]):
                 if x == taxa:
                     tax_group = y
+            if tax_group == 'Unclassified': continue
             tax_ids[tdTag_id] = new_tag+"|"+tax_group
 
     active_ids = list(tax_ids.keys())
