@@ -6,8 +6,10 @@ Copyright (c) 2019 - present AppSeed.us
 import os
 import xml.etree.ElementTree as ET
 import pyhmmer
-from dna_features_viewer import GraphicFeature, GraphicRecord
 import matplotlib.pyplot as plt
+import datetime
+import mimetypes
+from dna_features_viewer import GraphicFeature, GraphicRecord
 from time import gmtime, strftime
 from collections import OrderedDict
 from operator import getitem
@@ -26,6 +28,8 @@ from django.utils.timezone import now
 
 from .forms import *
 from .models import *
+from utils.ncbi_taxonomy import TaxonomyUpdater
+from utils.ncbi_taxonomy import TreeUpdater
 
 from django import template
 
@@ -38,7 +42,7 @@ def get_childs(model, parent, parent_id, child_parent_id, childs=[], search_type
     filter = variable_column + '__' + search_type
     cs = model.objects.none()
     for p in parent:
-        if getattr(p, parent_id) == 4:
+        if getattr(p, parent_id) == 4 and isinstance(p, Domaingroups):
             cs = cs.union(model.objects.filter( **{ variable_column+"__icontains" : ";4" }))
         else:
             cs = cs.union(model.objects.filter( **{ filter: getattr(p, parent_id) }))
@@ -1035,15 +1039,92 @@ def QueryVerifyView(request, sequence_id):
     return render(request, 'home/query-verify.html', context)
 
 
-# Users
+# TRACEY Features
 @login_required(login_url="/noPermits.html")
 @staff_login_required
-def users(request):
+def features(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
     if request.user.is_authenticated:
         user.last_login = now()
         user.save()
+
+    taxonomy_file = 'utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt'
+    tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
+    if os.path.isfile(taxonomy_file):
+        last_taxonomy_update = open(taxonomy_file, 'r').readlines()[0].split("(Date: ")[1].split(" ")[0][:-1]
+        last_taxonomy_update = ['Today' if last_taxonomy_update == str(datetime.datetime.now().date()) else last_taxonomy_update][0]
+    else:
+        last_taxonomy_update = 'Last update not found'
+    if os.path.isfile(tree_file):
+        if open(tree_file, 'r').readlines()[0] == "In progress":
+            last_tree_update = "In progress"
+        else:
+            last_tree_update = str(datetime.datetime.fromtimestamp(os.stat(tree_file).st_mtime)).split(" ")[0]
+            last_tree_update = ['Today' if last_tree_update == str(datetime.datetime.now().date()) else last_tree_update][0]
+    else:
+        last_tree_update = 'Last update not found'
     segment = request.path.split('/')[-1]
     context = {"segment": segment,
-               "users": AuthUser.objects.all()}
-    return render(request, 'home/users.html', context)
+               # "users": AuthUser.objects.all(),
+               "last_taxonomy_update": last_taxonomy_update,
+               "last_tree_update": last_tree_update,
+               }
+    return render(request, 'home/features.html', context)
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def update_taxonomy(request):
+    if dict(request.GET)['taxonomy_last_update'] == ['Last update on: Today']:
+        return HttpResponse('Taxonomy already up to date.')
+    else:
+        outcome = TaxonomyUpdater.update_tracey_taxonomies()
+        return HttpResponse(outcome)
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def update_tree(request):
+    if dict(request.GET)['tree_last_update'] == ['Last update on: Today']:
+        return HttpResponse('Tree already up to date.')
+    else:
+        outcome = TreeUpdater.update_tracey_tree()
+        return HttpResponse(outcome)
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def read_update_taxonomy_results(request):
+    f = open('utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt', 'r')
+    file_content = f.read()
+    f.close()
+    return HttpResponse(file_content, content_type="text/plain")
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def download_file(request, filename=''):
+    if filename != '':
+        # Define Django project base directory
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Define the full file path
+        if 'Tree' in filename:
+            filepath = 'utils/ncbi_taxonomy/' + filename
+        else:
+            filepath = BASE_DIR + ''
+        # Open the file for reading content
+        try:
+            path = open(filepath, 'rb')
+        except FileNotFoundError:
+            return HttpResponse('<br>File not found')
+        # Set the mime type
+        mime_type, _ = mimetypes.guess_type(filepath)
+        # Set the return value of the HttpResponse
+        response = HttpResponse(path, content_type=mime_type)
+        # Set the HTTP header for sending to browser
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        # Return the response value
+        return response
+    else:
+        # Load the template
+        return HttpResponse()
