@@ -1,0 +1,147 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Phylogenetic Trees {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<style type="text/css">
+  .selectionpanel {
+    position: relative;
+    height: 900px;
+  }
+  .plotarea {
+    position: relative;
+    background: lightgrey;
+    border: black solid 1px;
+    height: 900px;
+    border-radius: 15px;
+    text-align: center;
+  }
+  .bottom {
+    position: absolute;
+    bottom: 0;
+    right: 45%;
+  }
+  .taxonomy_rank_2 {
+    width: 100%;
+    margin-top: 15px;
+    height: 200px;
+  }
+  #taxonomy_rank_2 {
+    width: 100%;
+    height: 100%;
+  }
+  #treeplot {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 100%;
+    border: none;
+    outline: none;
+  }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Tab panes -->
+        <div class="card border-0 shadow components-section">
+
+            <!-- Tree page -->
+            <div class="col-12 mb-4">
+                <div class="card-body">
+                    <div style="padding-bottom: 5px" >
+                        <h1><strong> Phylogenetic Trees </strong></h1>
+                        <p><i> Explore phylogenetic trees of TRACEY taxonoies. </i></p>
+                        <p style="color: red"> {% if error %}{% if '0 sequences' in error %} {{ error }} {% endif %}{% endif %} </p>
+                        <hr>
+                    </div>
+
+                    <!-- Beggining of Form -->
+                    <form method='post' action='' name="TreeForm" id="TreeForm"
+                        data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
+                        plot-url="{% url 'ajax_plot_phylogenetic_tree' %}">
+                    {% csrf_token %}
+
+                    <div class="row mb-5">
+
+                        <!-- Selection Panel -->
+                        <div class="col-lg-3 col-sm-3 selectionpanel">
+                            <label style="vertical-align: top;"> Taxonomy </label>
+                            <!-- TaxonomyRank1 -->
+                            <select style="width: 100%" name="taxonomy_rank" id="taxonomy_rank">
+                                {% for val in taxonomies %}
+                                    <option value= "{{ val }}" "{% if taconomy_rank == val %} selected {% endif %}"> {{ val|title }} </option>
+                                {% endfor %}
+                            </select>
+                            <!-- TaxonomyRank2 -->
+                            <div class="taxonomy_rank_2">
+                                <select name="taxonomy_rank_2" id="taxonomy_rank_2" multiple>
+                                </select>
+                            </div>
+                            <!-- Submit -->
+                            <div class="bottom">
+                                <input type="button" value="Plot tree" onclick="plotTree()">
+                            </div>
+                        </div>
+                        <!-- Plot area -->
+                        <div class="col-lg-9 col-sm-9 plotarea" id="plotarea">
+                            <img id="treeplot" src="" alt="">
+                        </div>
+
+                    </div>
+                    </form>
+                    <!-- End Form -->
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script>
+    function plotTree(){
+      $.ajaxSetup({traditional: true});
+      var url = $("#TreeForm").attr("plot-url");
+      var taxonomy_rank  = $("#taxonomy_rank").val();
+      var taxonomy_rank_2 = $("#taxonomy_rank_2").val();
+
+      $.ajax({
+        url: url,
+        data: {
+          'taxonomy_rank': taxonomy_rank,
+          'taxonomy_rank_2': taxonomy_rank_2
+        },
+        success: function (data) {
+          $("#plotarea").html(data);
+        }
+      });
+
+    };
+
+    // Load taxonomy rank
+    $("#taxonomy_rank").change(function ( e ) {
+      var url = $("#TreeForm").attr("data-load-taxonomy-rank-url");  // get the url of the `load_cities` view
+      var taxonomy_rank = $(this).val();                               // get the selected country ID from the HTML input
+
+      $.ajax({                                 // initialize an AJAX request
+        url: url,                              // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
+        data: {
+          'taxonomy_rank': taxonomy_rank       // add the country id to the GET parameters
+        },
+        success: function (data) {             // `data` is the return of the `load_cities` view function
+          $("#taxonomy_rank_2").html(data);        // replace the contents of the city input with the data that came from the server
+        }
+      });
+    });
+
+</script>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
