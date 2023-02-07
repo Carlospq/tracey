@@ -74,7 +74,11 @@
                             <!-- TaxonomyRank1 -->
                             <select style="width: 100%" name="taxonomy_rank" id="taxonomy_rank">
                                 {% for val in taxonomies %}
+<<<<<<< HEAD
                                     <option value= "{{ val }}" "{% if taxonomy_rank == val %} selected {% endif %}"> {{ val|title }} </option>
+=======
+                                    <option value= "{{ val }}" "{% if taconomy_rank == val %} selected {% endif %}"> {{ val|title }} </option>
+>>>>>>> 2e67aa65e8d62d835056178ff26debaaa2eb9a05
                                 {% endfor %}
                             </select>
                             <!-- TaxonomyRank2 -->
