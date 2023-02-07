@@ -19,13 +19,16 @@ urlpatterns = [
 
     # Query
     path('query', views.QueryView, name='query'),
-    
+
     # Sequences
     path('query-sequences', views.QuerySequences, name='query-sequences'),
     path('query-sequences-results', views.QuerySequencesResults, name='query-sequences-results'),
     path('query/fastaFormat/', views.QuerySequencesFastaFormat, name='query-sequences-fasta'),
     path('query-sequences/<int:sequence_id>/details/', views.QuerySequencesDetails, name='query-sequences-details'),
     path('details/fastaFormat/<int:sequence_id>/', views.DetailsSequencesFastaFormat, name='details-sequences-fasta'),
+
+    # Trees
+    path('trees', views.TreesView, name='trees'),
 
     # Motifs
     path('query-motifs', views.QueryMotifsView, name='query-motifs'),
@@ -51,6 +54,7 @@ urlpatterns = [
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
     path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
     path('ajax/ajax-update-tree/', views.update_tree, name='ajax_update_tree'),
+    path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"), 
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),

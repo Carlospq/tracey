@@ -4,11 +4,14 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 import os
-import xml.etree.ElementTree as ET
-import pyhmmer
-import matplotlib.pyplot as plt
-import datetime
+import time, datetime
+import subprocess
 import mimetypes
+import pyhmmer
+import xml.etree.ElementTree as ET
+import matplotlib.pyplot as plt
+import pandas as pd
+from random import randrange
 from dna_features_viewer import GraphicFeature, GraphicRecord
 from time import gmtime, strftime
 from collections import OrderedDict
@@ -72,6 +75,17 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
             childs.append(entity)
 
     return childs
+
+
+# def get_parents(model, instance, instance_id, instance_parent_id, parents=[]):
+#     if getattr(instance, instance_id) != getattr(instance, instance_parent_id): # if instance is not root...
+#         parent = model.objects.get( **{ instance_id: getattr(instance, instance_parent_id) } )
+#         parents.append( [getattr(instance, 'taxonomyrank'), getattr(instance, 'scientificname'), getattr(instance, instance_id)] )
+#         get_parents(model, parent, instance_id, instance_parent_id, parents=parents)
+#     else:
+#         parents.append( [getattr(instance, 'taxonomyrank'), getattr(instance, 'scientificname'), getattr(instance, instance_id)] )
+#         return parents
+#     return parents
 
 
 def get_sequences(query, verify=False):
@@ -737,6 +751,87 @@ def suggested_names(shortname, sequence):
     shortnames = [ y[1].split("|")[0][y[1].find('_')+1:] for y in [ x.split("\t") for x in stdout.split("\n") if len(x) > 1 ] if float(y[2]) > 95]
     suggestedNames = common_name(shortnames, sn)
     return suggestedNames
+
+
+def TreesView(request):
+    segment = request.path.split('/')[-1]
+    taxonomies = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus']
+    context = {'segment': segment,
+               'taxonomies': taxonomies}
+
+    return render(request, 'home/trees.html', context)
+
+
+def plotTrees(request):
+    # Clean old tree files/plots
+    filePath = 'apps/static/assets/img/tmpTrees/'
+    fileslist = os.listdir(filePath)
+    current_time = time.time()
+    minutes = 5
+    for fileName in fileslist:
+        file_time = os.stat(filePath+fileName).st_mtime
+        if(current_time - file_time > minutes*60):
+            os.remove(filePath+fileName)
+
+    # Start new plot
+    data = dict(request.GET)
+    colname = data['taxonomy_rank'][0]
+    values = data['taxonomy_rank_2']
+    df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+
+    # Get TRACEY Taxonomy_ids to be ploted and transform to NCBI ids
+    if values:
+        taxonomy_ids = df[df[colname].isin(values)].index.values
+    else:
+        taxonomy_ids = df[df[colname] != "-"].index.values
+
+    active_ids = [ str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids) ]
+    clean_ids = 1
+    while clean_ids:
+        bashCommand = ['/home/cpulidoq/.cargo/bin/fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
+        runout = subprocess.run(bashCommand, capture_output=True)
+        if runout.stderr==b'':
+            tree = str(runout.stdout.decode("utf-8")).strip().replace('"', "")
+            clean_ids = 0
+        else:
+            wrong_id = re.search(r"(\b\d+)", str(runout.stderr)).group(1)
+            active_ids.remove(wrong_id)
+
+    # Find all NCBI_IDs in the newick tree
+    matches = re.finditer('\d+', tree)
+    ranges = [ [match.start(), match.end()] for match in matches]
+    ranges.sort(key=lambda k: (k[0], -k[1]), reverse=True)
+
+    # Replace found NCBI_IDs with its scientific_name
+    c=0
+    for r in ranges:
+        c += 1
+        start = r[0]
+        end = r[1]
+        tax_id = tree[start:end]
+        try:
+            t = Taxonomies.objects.get(ncbi_taxonomy_id=tax_id)
+            tax_name = t.scientificname + "|" + df.loc[t.taxonomy_id][colname]
+        except:
+            tax_name = 'unknown'
+        tree = tree[:start] + tax_name + tree[end:]
+
+    # Get username
+    try:
+        user = AuthUser.objects.get(pk=request.session['_auth_user_id']).username
+    except:
+        user = 'guest'
+
+    # Save newick tree (this file will be deleted within R script)
+    treeFileName = '%s_%s.newick'%(user, str(randrange(100)))
+    with open('apps/static/assets/img/tmpTrees/'+treeFileName, 'w') as fo:
+        fo.write(str(tree))
+
+    # Plotting Tree with R script
+    bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + values
+    subprocess.run(bashCommand)
+
+    return render(request, 'home/treeplot.html', {'treeplot': treeFileName+'.png'})
 
 
 @login_required(login_url="/noPermits.html")
