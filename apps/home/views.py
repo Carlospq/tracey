@@ -776,7 +776,10 @@ def plotTrees(request):
     # Start new plot
     data = dict(request.GET)
     colname = data['taxonomy_rank'][0]
-    values = data['taxonomy_rank_2']
+    if 'taxonomy_rank_2' in data:
+        values = data['taxonomy_rank_2']
+    else:
+        values = []
     df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
 
     # Get TRACEY Taxonomy_ids to be ploted and transform to NCBI ids
@@ -811,7 +814,8 @@ def plotTrees(request):
         tax_id = tree[start:end]
         try:
             t = Taxonomies.objects.get(ncbi_taxonomy_id=tax_id)
-            tax_name = t.scientificname + "|" + df.loc[t.taxonomy_id][colname]
+            tscientificname = t.scientificname.replace("'", "")
+            tax_name = tscientificname + "|" + df.loc[t.taxonomy_id][colname]
         except:
             tax_name = 'unknown'
         tree = tree[:start] + tax_name + tree[end:]
