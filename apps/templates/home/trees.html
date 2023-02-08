@@ -1,0 +1,278 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Phylogenetic Trees {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<script src='{{ ASSETS_ROOT }}/js/a076d05399.js' crossorigin='anonymous'></script>
+<style type="text/css">
+  .selectionpanel {
+    position: relative;
+    height: 320px;
+  }
+  .zoomarea {
+    margin-top: 20px;
+    height: 560px;
+    border-radius: 15px;
+    border: black solid 1px;
+  }
+  .plotarea {
+    position: relative;
+    border: black solid 1px;
+    height: 900px;
+    border-radius: 15px;
+    text-align: center;
+    padding: 0;
+  }
+  .bottom {
+    position: absolute;
+    bottom: 0;
+    right: 45%;
+  }
+  .taxonomy_rank_2 {
+    width: 100%;
+    margin-top: 15px;
+    height: 200px;
+  }
+  #taxonomy_rank_2 {
+    width: 100%;
+    height: 100%;
+  }
+  #treeplot {
+    height: 899px;
+    width: 900px;
+    border: black solid 1px;
+    outline: none;
+  }
+  #plotarea {
+    height: 900px;
+    width: 900px;
+    margin: auto;
+  }
+  * {box-sizing: border-box;}
+  .img-zoom-container {
+    position: relative;
+  }
+  .img-zoom-lens {
+    position: absolute;
+    border: 1px solid #d4d4d4;
+    /*set the size of the lens:*/
+    width: 300px;
+    height: 300px;
+  }
+  .img-zoom-result {
+    /*set the size of the result div:*/
+    width: auto;
+    height: 560px;
+  }
+  .loader {
+    border: 8px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 8px solid #3498db;
+    width: 35px;
+    height: 35px;
+    animation: spin 2s infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(720deg); }
+  }
+  .vertical-center {
+    margin: 0;
+    position: absolute;
+    left: 47%;
+    top: 50%;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+  }
+</style>
+<script>
+  function imageZoom(imgID, resultID) {
+    var img, lens, result, cx, cy;
+    img = document.getElementById(imgID);
+    result = document.getElementById(resultID);
+    if(img==null) {
+      return; //stop the execution of function if img is null
+    }
+    /* Get margin size of plotarea */
+    marginsize = ($('#plotarea').outerWidth(true) - $('#plotarea').outerWidth())/2;
+    /* Create lens: */
+    lens = document.createElement("DIV");
+    lens.setAttribute("class", "img-zoom-lens");
+    /* Insert lens: */
+    img.parentElement.insertBefore(lens, img);
+    /* Calculate the ratio between result DIV and lens: */
+    cx = result.offsetWidth / lens.offsetWidth;
+    cy = result.offsetWidth / lens.offsetHeight;
+    /* Set background properties for the result DIV */
+    result.style.backgroundImage = "url('" + img.src + "')";
+    result.style.backgroundSize = (img.width * cx) + "px " + (img.height * cy) + "px";
+    /* Execute a function when someone moves the cursor over the image, or the lens: */
+    lens.addEventListener("mousemove", moveLens);
+    img.addEventListener("mousemove", moveLens);
+    /* And also for touch screens: */
+    lens.addEventListener("touchmove", moveLens);
+    img.addEventListener("touchmove", moveLens);
+    function moveLens(e) {
+      var pos, x, y;
+      /* Prevent any other actions that may occur when moving over the image */
+      e.preventDefault();
+      /* Get the cursor's x and y positions: */
+      pos = getCursorPos(e);
+      /* Calculate the position of the lens: */
+      x = pos.x - (lens.offsetWidth / 2);
+      y = pos.y - (lens.offsetHeight / 2);
+      /* Prevent the lens from being positioned outside the image: */
+      if (x > img.width - lens.offsetWidth) {x = img.width - lens.offsetWidth;}
+      if (x < 0) {x = 0;}
+      if (y > img.height - lens.offsetHeight) {y = img.height - lens.offsetHeight;}
+      if (y < 0) {y = 0;}
+      /* Set the position of the lens: */
+      lens.style.left = x + marginsize +"px";
+      lens.style.top = y + "px";
+      /* Display what the lens "sees": */
+      result.style.backgroundPosition = "-" + (x * cx) + "px -" + (y * cy) + "px";
+    }
+    function getCursorPos(e) {
+      var a, x = 0, y = 0;
+      e = e || window.event;
+      /* Get the x and y positions of the image: */
+      a = img.getBoundingClientRect();
+      /* Calculate the cursor's x and y coordinates, relative to the image: */
+      x = e.pageX - a.left;
+      y = e.pageY - a.top;
+      /* Consider any page scrolling: */
+      x = x - window.pageXOffset;
+      y = y - window.pageYOffset;
+      return {x : x, y : y};
+    }
+  }
+</script>
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Tab panes -->
+        <div class="card border-0 shadow components-section">
+
+            <!-- Tree page -->
+            <div class="col-12 mb-4">
+                <div class="card-body">
+                    <div style="padding-bottom: 5px" >
+                        <h1><strong> Phylogenetic Trees </strong></h1>
+                        <p><i> Explore phylogenetic trees of TRACEY taxonoies. </i></p>
+                        <p style="color: red"> {% if error %}{% if '0 sequences' in error %} {{ error }} {% endif %}{% endif %} </p>
+                        <hr>
+                    </div>
+
+                    <!-- Beggining of Form -->
+                    <form method='post' action='' name="TreeForm" id="TreeForm"
+                        data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
+                        plot-url="{% url 'ajax_plot_phylogenetic_tree' %}">
+                    {% csrf_token %}
+
+                    <div class="row mb-5">
+
+
+                        <div class="col-lg-4 col-sm-4 selectionpanel">
+                            <!-- Selection Panel -->
+                            <div class="selectionpanel">
+                                <label style="vertical-align: top;"> Taxonomy </label>
+                                <!-- TaxonomyRank1 -->
+                                <select style="width: 100%" name="taxonomy_rank" id="taxonomy_rank">
+                                    {% for val in taxonomies %}
+                                        <option value= "{{ val }}" "{% if taxonomy_rank == val %} selected {% endif %}"> {{ val|title }} </option>
+                                    {% endfor %}
+                                </select>
+                                <!-- TaxonomyRank2 -->
+                                <div class="taxonomy_rank_2">
+                                    <select name="taxonomy_rank_2" id="taxonomy_rank_2" multiple>
+                                    </select>
+                                </div>
+                                <!-- Submit -->
+                                <div class="bottom">
+                                    <input type="button" value="Plot tree" onclick="plotTree()">
+                                </div>
+                            </div>
+                            <!-- Zoom area -->
+                            <div style="position: relative; height: 560px;">
+                                <div id="loader_tree" style="display: none;">
+                                    <div class="loader vertical-center"></div>
+                                </div>
+                                <div class="img-zoom-result zoomarea" id="zoomresult">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Plot area -->
+                        <div class="col-lg-8 col-sm-8 plotarea" id="parentplotarea" style="border-radius: 15px; border: black solid 1px;">
+                                <!-- <img id="treeplot" src='' alt=""> -->
+                                <div id="plotarea">
+                                    <img id="treeplot" src='{{ASSETS_ROOT}}/img/tmpTrees/cpulidoq_28.newick.png' alt="{{error_length}}">
+                                </div>
+                        </div>
+
+                    </div>
+                    </form>
+                    <!-- End Form -->
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script>
+    function plotTree(){
+      $.ajaxSetup({traditional: true});
+      var url = $("#TreeForm").attr("plot-url");
+      var taxonomy_rank  = $("#taxonomy_rank").val();
+      var taxonomy_rank_2 = $("#taxonomy_rank_2").val();
+      var img = document.getElementById("zoomresult");
+      var loader = document.getElementById("loader_tree");
+      img.style.display = "none"
+      loader.style.display = "flex";
+
+      $.ajax({
+        url: url,
+        data: {
+          'taxonomy_rank': taxonomy_rank,
+          'taxonomy_rank_2': taxonomy_rank_2
+        },
+        success: function (data) {
+          img.style.display = "flex"
+          loader.style.display = "none";
+          $("#plotarea").html(data);
+          // Image zoom
+          imageZoom("treeplot", "zoomresult");
+        }
+      });
+    };
+
+    // Load taxonomy rank
+    $("#taxonomy_rank").change(function ( e ) {
+      var url = $("#TreeForm").attr("data-load-taxonomy-rank-url");  // get the url of the `load_cities` view
+      var taxonomy_rank = $(this).val();                               // get the selected country ID from the HTML input
+
+      $.ajax({                                 // initialize an AJAX request
+        url: url,                              // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
+        data: {
+          'taxonomy_rank': taxonomy_rank       // add the country id to the GET parameters
+        },
+        success: function (data) {             // `data` is the return of the `load_cities` view function
+          $("#taxonomy_rank_2").html(data);        // replace the contents of the city input with the data that came from the server
+        }
+      });
+    });
+
+    // Image zoom
+    // imageZoom("treeplot", "zoomresult");
+</script>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
