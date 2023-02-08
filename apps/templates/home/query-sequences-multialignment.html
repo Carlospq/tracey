@@ -1,90 +1,65 @@
 <head>
-    <style type="text/css">
-    	  .detailTable{
-            table-layout: fixed;
-            width:100%;
-            border-collapse:collapse;
-            word-wrap: break-word;
-            word-break: break-word;
-    	  }
-				.detailTable td{
-            text-align: left;
-            padding-bottom: 5px;
-            word-wrap: break-word;
-            word-break: break-word;
-        }
-        .td-header {
-            width: 6%;
-            font-weight: bold;
-        }
-        .td-data {
-            width: 94%;
-        }
-        tr td:last-child {
-          width: 1%;
-          white-space: nowrap;
-        }
-		</style>
+  <style type="text/css">
+    .alignment {
+      max-height: 900px;
+      overflow-x: scroll;
+      scrollbar-color: white black;
+      display: inline-block;
+      border: black solid 1px;
+    }
+	  .detailTable{
+      width: 100%;
+      white-space: nowrap;
+      word-wrap: break-word;
+      word-break: break-word;
+	  }
+		.detailTable td{
+      text-align: left;
+      padding-bottom: 5px;
+      width:100%;
+    }
+    tr:nth-child(even) {background-color: #f2f2f2;}
+	</style>
 </head>
 
 <div style="width:100%; word-wrap: break-word; word-break: break-word;">
 	{% if names|length < 2 %}
+
 			Plase select at least 2 sequence to obtain an alignment.
+
 	{% else %}
 
-      <table class="detailTable">
-      <tr>
-          <td class="td-header" style="table-layout: fixed; border: black solid 1px; padding-top: 15px;">
-              <table style="table-layout: fixed; margin-bottom: 20px">
-                  <tr><td style="padding-left: 15px; padding-right: 15px; font-size: 18px; font-family: Arial, sans-serif;">A very long name that does not fit in just one line of this column</td></tr>
+          <div class="alignment" id="left" style="width: 20%;">
+              <table class="detailTable">
+                {% for name in names %}
+                <tr><td style="padding-left: 15px; padding-right: 15px; font-size: 18px; font-family: Arial, sans-serif;">{{ name }}</td></tr>
+                {% endfor %}
               </table>
-          </td>
-          <td class="td-data" style="table-layout: fixed; border: black solid 1px; padding-top: 15px;">
-              <div style="overflow-x:auto; width: 100%;">
-                  <table style="width:100%; margin-bottom: 20px">
-                      {% for name in names %}
-                      <tr>
-                          {%for a, b in zippedLists|get_item:name %}
-                              <td style="padding-left: 5px; text-align: center; font-size: 18px; font-family: Arial, sans-serif;" {% if b == 1 %} bgcolor="cyan" {% endif %}">{{ a }}</td>
-                          {% endfor %}
-                          <!-- {% for leter in alignment %}
-                          <td style="text-align: center; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
-                          {% endfor %} -->
-                      </tr>
+          </div>
+          <div class="alignment" id="right" style="width: 79.5%;">
+              <table class="detailTable">
+                  {% for name in names %}
+                  <tr>
+                      {%for a, b in zippedLists|get_item:name %}
+                          <td style="padding-left: 5px; text-align: center; font-size: 18px; font-family: Arial, sans-serif;" {% if b == 1 %} bgcolor="cyan" {% endif %}">{{ a }}</td>
                       {% endfor %}
-                  </table>
-              </div>
-          </td>
-      </tr>
-      </table>
-			<table class="detailTable">
-			<tr>
-					<td class="td-header" style="table-layout: fixed; border: black solid 1px; padding-top: 15px;">
-							<table style="table-layout: fixed; width:100%; margin-bottom: 20px">
-									{% for name in names %}
-									<tr><td style="padding-left: 15px; padding-right: 15px; font-size: 18px; font-family: Arial, sans-serif;">{{ name }}</td></tr>
-									{% endfor %}
-							</table>
-					</td>
-					<td class="td-data" style="table-layout: fixed; border: black solid 1px; padding-top: 15px;">
-							<div style="overflow-x:auto; width: 100%;">
-									<table style="width:100%; margin-bottom: 20px">
-											{% for name in names %}
-											<tr>
+                      <!-- {% for leter in alignment %}
+                      <td style="text-align: center; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
+                      {% endfor %} -->
+                  </tr>
+                  {% endfor %}
+              </table>
+          </div>
 
-													{%for a, b in zippedLists|get_item:name %}
-															<td style="padding-left: 5px; text-align: center; font-size: 18px; font-family: Arial, sans-serif;" {% if b == 1 %} bgcolor="cyan" {% endif %}">{{ a }}</td>
-													{% endfor %}
-													<!-- {% for leter in alignment %}
-													<td style="text-align: center; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
-													{% endfor %} -->
-
-											</tr>
-											{% endfor %}
-									</table>
-							</div>
-					</td>
-			</tr>
-			</table>
 	{% endif %}
 </div>
+
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script type="text/javascript">
+  $('#left').on('scroll', function () {
+      $('#right').scrollTop($(this).scrollTop());
+  });
+  $('#right').on('scroll', function () {
+      $('#left').scrollTop($(this).scrollTop());
+  });
+</script>
