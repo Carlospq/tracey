@@ -788,6 +788,10 @@ def plotTrees(request):
     else:
         taxonomy_ids = df[df[colname] != "-"].index.values
 
+    # Maximum number of leafs to be ploted
+    if len(taxonomy_ids) > 3500:
+        return render(request, 'home/treeplot.html', {'error_length': 'Taxonomies selected exceed the maximun number of branches allowed to plot a tree.'})
+
     active_ids = [ str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids) ]
     clean_ids = 1
     while clean_ids:
