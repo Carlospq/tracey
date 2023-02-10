@@ -1,65 +1,91 @@
 <head>
   <style type="text/css">
-    .alignment {
-      max-height: 900px;
-      overflow-x: scroll;
-      scrollbar-color: white black;
-      display: inline-block;
-      border: black solid 1px;
+    .container {
+      position: relative;
+      max-height: 90vh;
+      max-width: 100%;
+      overflow-y: scroll;
+      display: flex;
+      padding: 5px;
+      padding-bottom: 100px;
     }
-	  .detailTable{
+    .sequencenames {
+      border: black solid 1px;
+      display: block;
+      overflow-x: scroll;
+      white-space: nowrap;
+      width: 300px;
+    }
+    .name {
+      display: block;
+      height: 20px;
+      width: 120%;
+      font-family: Arial, sans-serif;
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+    .sequencealignments {
+      border: black solid 1px;
+      display: block;
       width: 100%;
       white-space: nowrap;
-      word-wrap: break-word;
-      word-break: break-word;
-	  }
-		.detailTable td{
-      text-align: left;
-      padding-bottom: 5px;
-      width:100%;
+      overflow-x: scroll;
+    }
+    .alignment {
+      height: 20px;
+      width: 100%;
+      margin-left: 5px;
+    }
+    .letter {
+      height: 20px;
+      width: 20px;
+      text-align: center;
+      font-size: 16px;
+      font-family: Arial, sans-serif;
+      display: inline-block;
+      white-space: pre;
     }
     tr:nth-child(even) {background-color: #f2f2f2;}
 	</style>
 </head>
 
-<div style="width:100%; word-wrap: break-word; word-break: break-word;">
-	{% if names|length < 2 %}
+<div>
+  	{% if names|length < 2 %}
 
-			Plase select at least 2 sequence to obtain an alignment.
+  			Plase select at least 2 sequence to obtain an alignment.
 
-	{% else %}
+  	{% else %}
 
-          <div class="alignment" id="left" style="width: 20%;">
-              <table class="detailTable">
-                {% for name in names %}
-                <tr><td style="padding-left: 15px; padding-right: 15px; font-size: 18px; font-family: Arial, sans-serif;">{{ name }}</td></tr>
-                {% endfor %}
-              </table>
+      <div class="container" id="container">
+          <div class="sequencenames" id="sequencenames">
+              {% for name in names %}
+                  <div class="name" {% if forloop.counter|divisibleby:2 %} style="background: lightgrey" {% endif %}>{{name}}</div>
+              {% endfor %}
           </div>
-          <div class="alignment" id="right" style="width: 79.5%;">
-              <table class="detailTable">
-                  {% for name in names %}
-                  <tr>
-                      {%for a, b in zippedLists|get_item:name %}
-                          <td style="padding-left: 5px; text-align: center; font-size: 18px; font-family: Arial, sans-serif;" {% if b == 1 %} bgcolor="cyan" {% endif %}">{{ a }}</td>
-                      {% endfor %}
-                      <!-- {% for leter in alignment %}
-                      <td style="text-align: center; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
-                      {% endfor %} -->
-                  </tr>
-                  {% endfor %}
-              </table>
+          <div class="sequencealignments" id="sequencealignments">
+              {% for name in names %}
+                  {% with forloop.counter|divisibleby:2 as bg %}
+                  <div class="alignment">
+                      {%for a, b in zippedLists|get_item:name %}<div class="letter" style="background: {% if b == 1 %} cyan {% elif bg %} lightgrey {% else %} white {% endif %}">{{a}}</div>{% endfor %}
+                  </div>
+                  {% endwith %}
+              {% endfor %}
           </div>
+      </div>
 
-	{% endif %}
+  	{% endif %}
 </div>
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script type="text/javascript">
-  $('#left').on('scroll', function () {
-      $('#right').scrollTop($(this).scrollTop());
+  $('#container').on('scroll', function () {
+      $('#sequencenames').scrollTop($(this).scrollTop());
+      $('#sequencealignments').scrollTop($(this).scrollTop());
   });
-  $('#right').on('scroll', function () {
-      $('#left').scrollTop($(this).scrollTop());
+  $('#sequencenames').on('scroll', function () {
+      $('#sequencealignments').scrollTop($(this).scrollTop());
+  });
+  $('#sequencealignments').on('scroll', function () {
+      $('#sequencenames').scrollTop($(this).scrollTop());
   });
 </script>
