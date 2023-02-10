@@ -419,6 +419,9 @@ def QuerySequencesFastaFormat(request):
         # 3.MSA
         MSA = pyhmmer.hmmer.hmmalign(hmm, digitalsequences, digitize=False)
         names = [ name.decode("utf-8") for name in MSA.names ]
+        alignedsequences = {}
+        for i in range(len(names)):
+            alignedsequences[names[i]] = MSA.alignment[i]
         zippedLists = {}
         for i in range(len(names)):
             alignment = [*MSA.alignment[i]] # splits alignment into list for each character in the alignment
@@ -426,7 +429,7 @@ def QuerySequencesFastaFormat(request):
             for n in alignment:
                 upperList.append([ 1 if n.isupper() else 0 ][0])
             zippedLists[names[i]] = zip(alignment, upperList)
-        return render(request, 'home/query-sequences-multialignment.html', {'names': names, 'zippedLists': zippedLists})
+        return render(request, 'home/query-sequences-multialignment.html', {'names': names, 'zippedLists': zippedLists, 'alignedsequences': alignedsequences})
     else:
         return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
 
