@@ -120,11 +120,13 @@ def get_sequences(query, verify=False):
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
     seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
-    if verify and query['onlyverified'][0] == 'false':
-        # Adds sequences with Verifymotifs matching query 'domaingroups'
+    if verify:
         verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
         verifyseqs = Sequences.objects.filter(sequence_id__in = verifymotifs.values('sequence_id'))
-        seqs = seqs | verifyseqs # OR operator for querysets
+        if query['unverified'][0] == query['verified'][0]:
+            seqs = seqs | verifyseqs # OR operator for querysets
+        if query['unverified'][0] == 'true' and query['verified'][0] == 'false':
+            seqs = verifyseqs
 
     if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
         status = ['live' if query['sequencestatus'][0] == '1' else query['sequencestatus'][0]][0]
@@ -156,6 +158,7 @@ def get_sequences(query, verify=False):
             else:
                 context = {'error': 'At least one taxonomy must be selected.'}
                 return context
+
         reducedTaxonomyIDs = reducedTRACEYtaxonomiesIDs[taxonomy_name[0]]
         if isinstance(reducedTaxonomyIDs, int):
             reducedTaxonomyIDs = [reducedTaxonomyIDs]
@@ -311,6 +314,7 @@ def load_queryverifysequences(request):
                    'error': sequences['error']}
     else:
         context = {'sequences': sequences}
+        context['status_values'] = ['crystal structure', 'dead', 'ignore', 'live', 'replaced', 'replaced NCBI', 'suppressed', 'unknown']
 
     if len(context['sequences']) > 0:
         speciesname = {}
@@ -325,6 +329,14 @@ def load_queryverifysequences(request):
 
     context['log'] = len(context['sequences'])
     return render(request, 'home/query-verify-update-sequences.html', context)
+
+
+def updateSequenceStatus(request):
+    data = dict(request.POST)
+    seq = Sequences.objects.get(sequence_id=data['seqID'][0])
+    seq.sequencestatus = data['status'][0]
+    seq.save()
+    return HttpResponse('')
 
 
 def QuerySequences(request):
