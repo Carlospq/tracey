@@ -33,6 +33,7 @@ from .forms import *
 from .models import *
 from utils.ncbi_taxonomy import TaxonomyUpdater
 from utils.ncbi_taxonomy import TreeUpdater
+from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
 
 from django import template
 
@@ -143,26 +144,33 @@ def get_sequences(query, verify=False):
             return context
         seqs = seqs.filter(foreignannotation = query['foreignannotation'][0])
 
-    if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and not notEmpty(query, 'taxonomy_rank')):
-        if ('taxonomy' in query and notEmpty(query, 'taxonomy')):
-            taxonomy = Taxonomies.objects.filter(scientificname__in = query['taxonomy'])
-            taxonomy_childs = []
-            taxonomy_childs_ = []
-            for taxa in taxonomy:
-                taxonomy_ = Taxonomies.objects.filter(taxonomy_id = taxa.taxonomy_id)
-                taxonomy_childs_ = get_childs(Taxonomies, taxonomy_, "taxonomy_id", "taxonomyparent_id", childs=[])
-                # taxonomy_childs_ = get_childs_raw(Taxonomies, "taxonomies", taxonomy_, "taxonomy_id", "taxonomy_id", "taxonomyparent_id")
-                taxonomy_childs += taxonomy_childs_
-            taxonomy_childs_ids = [x.taxonomy_id for x in taxonomy_childs] + [x.taxonomy_id for x in taxonomy]
-            seqs = seqs.filter(taxonomy_id__in = taxonomy_childs_ids)
+    # if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and not notEmpty(query, 'taxonomy_rank')):
+    if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and notEmpty(query, 'taxonomy')):
+        if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')):
+            taxonomy_name = query['taxonomy_rank']
+        elif ('taxonomy' in query and notEmpty(query, 'taxonomy')):
+            taxonomy_name = [query['taxonomy'][-2]]
         else:
             if verify:
-                pass
+                return seqs.order_by('sequenceshortname')
             else:
-                context = {'error': 'At least one %s must be selected.' % (query['taxonomy_rank'][0])}
+                context = {'error': 'At least one taxonomy must be selected.'}
                 return context
+        reducedTaxonomyIDs = reducedTRACEYtaxonomiesIDs[taxonomy_name[0]]
+        if isinstance(reducedTaxonomyIDs, int):
+            reducedTaxonomyIDs = [reducedTaxonomyIDs]
+        # taxonomy = Taxonomies.objects.filter(scientificname__in = taxonomy_name)
+        taxonomy = Taxonomies.objects.filter(taxonomy_id__in = reducedTaxonomyIDs)
+        taxonomy_childs = []
+        taxonomy_childs_ = []
+        for taxa in taxonomy:
+            taxonomy_ = Taxonomies.objects.filter(taxonomy_id = taxa.taxonomy_id)
+            taxonomy_childs_ = get_childs(Taxonomies, taxonomy_, "taxonomy_id", "taxonomyparent_id", childs=[])
+            taxonomy_childs += taxonomy_childs_
+        taxonomy_childs_ids = [x.taxonomy_id for x in taxonomy_childs] + [x.taxonomy_id for x in taxonomy]
+        seqs = seqs.filter(taxonomy_id__in = taxonomy_childs_ids)
 
-    return seqs
+    return seqs.order_by('sequenceshortname')
 
 def notEmpty(query, element):
     try:
@@ -219,8 +227,22 @@ def QueryView(request):
 
 # Query form
 def load_taxonomy_rank(request):
+    def getInnerDict(taxa, reducedTaxonomies = reducedTRACEYtaxonomies):
+        if taxa in reducedTaxonomies:
+            return reducedTaxonomies[taxa]
+        else:
+            for t in reducedTaxonomies:
+                innerDict = getInnerDict(taxa, reducedTaxonomies[t])
+                if innerDict:
+                    return innerDict
+
     rank = request.GET.get('taxonomy_rank')
-    taxonomy_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(taxonomyrank=rank)] )))
+    if request.GET.get('reduced') == 'true':
+        # parentrank_id = Taxonomies.objects.get(scientificname=rank).taxonomy_id
+        # taxonomy_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(taxonomyparent_id=parentrank_id)] )))
+        taxonomy_list = getInnerDict(rank)
+    else:
+        taxonomy_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(taxonomyrank=rank)] )))
     return render(request, 'home/query-sequences-family-taxonomyRank.html', {'taxonomy_list': taxonomy_list})
 
 
@@ -320,7 +342,16 @@ def QuerySequences(request):
     SNAREmotifs = Motifs.objects.filter(domaingroup_id__in = SNAREdomaingroups.values('domaingroup_id'))
     shortnames = sorted(list( set([ x.sequenceshortname.split("_")[0] for x in Sequences.objects.filter(sequence_id__in = SNAREmotifs.values('sequence_id')) if x.sequenceshortname.split("_")[0] != "" ]) ))
 
-    taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
+    # taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
+    # def get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = []):
+    #     for t in rt:
+    #         indentation = n*['-' if n == 1 else '+'][0]
+    #         nameslist.append(indentation+t)
+    #         if rt[t]:
+    #             get_taxonomy_names(rt = rt[t], n=n+1, nameslist = nameslist)
+    #     return nameslist
+    # taxonomy_ranks = get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = [])
+    taxonomy_ranks = [x for x in reducedTRACEYtaxonomies]
 
     ## CONTEXT ##
     context = {'segment': segment,
@@ -335,7 +366,6 @@ def QuerySequences(request):
     if request.method == "GET":
         form = FamilyForm(request.GET)
         if form.is_valid():
-
             # If error on query request or query is empty
             if context['error']:
                 request.session['error'] = ''
@@ -758,10 +788,10 @@ def suggested_names(shortname, sequence):
 
 def TreesView(request):
     segment = request.path.split('/')[-1]
-    taxonomies = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus']
+    # taxonomies = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus']
+    taxonomies = [x for x in reducedTRACEYtaxonomies]
     context = {'segment': segment,
                'taxonomies': taxonomies}
-
     return render(request, 'home/trees.html', context)
 
 
@@ -777,19 +807,31 @@ def plotTrees(request):
             os.remove(filePath+fileName)
 
     # Start new plot
-    data = dict(request.GET)
-    colname = data['taxonomy_rank'][0]
-    if 'taxonomy_rank_2' in data:
-        values = data['taxonomy_rank_2']
-    else:
-        values = []
     df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+    data = dict(request.GET)
+    if not data:
+        return render(request, 'home/treeplot.html', {'error': 'At least one taxonomy must be selected to plot a tree.'})
+    #
+    # colname = data['taxonomy_rank'][0]
+    # if 'taxonomy_rank_2' in data:
+    #     values = data['taxonomy_rank_2']
+    # else:
+    #     values = []
 
+    reducedTaxonomyID = reducedTRACEYtaxonomiesIDs[data['taxonomy'][-1]]
+    values = Taxonomies.objects.get(taxonomy_id=reducedTaxonomyID).scientificname
+    taxonomy_ids = df[df.eq(values).any(1)].index.values
+    colname = ''
+    for column in df:
+        if values in df[column].values:
+            colname = column
+    if not colname:
+        return render(request, 'home/treeplot.html', {'error': 'This taxonomy can not be plotted. Please select a different one.'})
     # Get TRACEY Taxonomy_ids to be ploted and transform to NCBI ids
-    if values:
-        taxonomy_ids = df[df[colname].isin(values)].index.values
-    else:
-        taxonomy_ids = df[df[colname] != "-"].index.values
+    # if values:
+    #     taxonomy_ids = df[df[colname].isin(values)].index.values
+    # else:
+    #     taxonomy_ids = df[df[colname] != "-"].index.values
 
     # Maximum number of leafs to be ploted
     if len(taxonomy_ids) > 3500:
@@ -839,7 +881,7 @@ def plotTrees(request):
         fo.write(str(tree))
 
     # Plotting Tree with R script
-    bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + values
+    bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + [values]
     subprocess.run(bashCommand)
 
     return render(request, 'home/treeplot.html', {'treeplot': treeFileName+'.png'})
@@ -893,8 +935,16 @@ def QueryInsertView(request):
 @staff_login_required
 def QueryVerifyMenuView(request):
     user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
-    taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
-
+    # taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
+    # def get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = []):
+    #     for t in rt:
+    #         indentation = n*['-' if n == 1 else '+'][0]
+    #         nameslist.append(indentation+t)
+    #         if rt[t]:
+    #             get_taxonomy_names(rt = rt[t], n=n+1, nameslist = nameslist)
+    #     return nameslist
+    # taxonomy_ranks = get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = [])
+    taxonomy_ranks = [x for x in reducedTRACEYtaxonomies]
     context = {'segment': request.path.split('/')[-1],
                'sequences': Sequences.objects.none(),
                'speciesname': {},

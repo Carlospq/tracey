@@ -94,26 +94,30 @@
                             <div class="row">
                                 <!-- Taxonoy -->
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
+
                                     <!-- taxonomy_rank -->
                                     <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
                                     <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
-                                    <select style="width: 100%" name="taxonomy_rank" id="taxonomy_rank">
-                                            <option value= ""> </option>
-                                        {% for val in taxonomy_ranks %}
-                                            <option value= "{{ val }}"> {{ val.capitalize }} </option>
-                                        {% endfor %}
-                                    </select>
-                                    <!-- taxa -->
-                                    <div class="fieldWrapper">
-                                        {{ form.taxonomy }}
+                                    <div class="taxonomyDiv" id="taxonomyDiv" style="display: block">
+                                        <select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
+                                            <option value=""></option>
+                                            {% for val in taxonomy_ranks %}
+                                                <option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
+
+                                    <!-- taxa -->
+                                    <!-- <div class="fieldWrapper">
+                                        {{ form.taxonomy }}
+                                    </div> -->
                                     <p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
                                 </div>
                                 <!-- End Taxonomy -->
                                 <!-- Domain Groups -->
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
                                     <!-- domainGroup_rank -->
-                                    <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}"">Domain group</label>
+                                    <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
                                     <a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
                                     <select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank">
                                         <option value= ""> </option>
@@ -147,21 +151,51 @@
         $('.has-popover').popover({'trigger':'hover'});
     });
 
-    // Load taxonomy rank
-    $("#taxonomy_rank").change(function () {
-      var url = $("#FamilyForm").attr("data-load-taxonomy-rank-url");  // get the url of the `load_cities` view
-      var taxonomy_rank = $(this).val();                               // get the selected country ID from the HTML input
+    // Load secuential taxonomy ranks
+    function taxonomyDiv(object) {
+      var url = $("#FamilyForm").attr("data-load-taxonomy-rank-url");
+      var taxonomy_rank = object.value;
+      var parent = object.parentElement;
+      var rankNum = parseInt(object.id.split('taxonomy_rank_')[1])+1;
+
+      // remove higher ranks
+      var children = document.getElementById("taxonomyDiv").children;
+      for (var i = children.length - 1; i >= 0; i--) {
+        var child = children[i];
+        var current_id = parseInt(child.id.split('taxonomy_rank_')[1]);
+        if (parseInt(current_id) >= parseInt(rankNum)) {
+          child.remove()
+        };
+      };
+
+      // create new high rank
+      var selectList = document.createElement("select");
+      selectList.id = "taxonomy_rank_"+rankNum;
+      selectList.name = "taxonomy";
+      selectList.style = 'width: 100%; margin-top: 5px;';
+      selectList.addEventListener(
+                                  'change',
+                                  (event) => {taxonomyDiv(selectList)}
+                                );
+      parent.appendChild(selectList);
+      // var selectedList = document.getElementById(selectList.id);
+      var selectedList = $("#"+selectList.id)
 
       $.ajax({                                 // initialize an AJAX request
         url: url,                              // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
         data: {
-          'taxonomy_rank': taxonomy_rank       // add the country id to the GET parameters
+          'taxonomy_rank': taxonomy_rank,      // add the country id to the GET parameters
+          'reduced': 'true'
         },
         success: function (data) {             // `data` is the return of the `load_cities` view function
-          $("#id_taxonomy").html(data);        // replace the contents of the city input with the data that came from the server
+          selectedList.html(data);             // replace the contents of the city input with the data that came from the server
+          var x = selectedList[0]
+          if (x.options.length == 1){
+            selectedList.hide();
+          };
         }
       });
-    });
+    };
 
     // Load Domain Group rank1
     $("#domainname").change(function () {
@@ -182,7 +216,7 @@
 
     $("#domainname").change(function () {
       var url = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");  // get the url of the `load_cities` view
-      var domainname = $(this).val();                                 // get the selected country ID from the HTML input
+      var domainname = $(this).val();                                       // get the selected country ID from the HTML input
 
       $.ajax({                                        // initialize an AJAX request
         url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
@@ -193,7 +227,6 @@
         success: function (data) {                    // `data` is the return of the `load_cities` view function
           $("#domaingroup_rank").html(data);     // replace the contents of the city input with the data that came from the server
           $("#id_domaingroup").html("");
-          $('#domaingroup_rank')[0].selectize.clear();
         }
       });
     });
