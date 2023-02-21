@@ -2,45 +2,159 @@
 <html>
 <head>
 <style>
+/* Style the tab */
+body {
+  font-family: arial, sans-serif;
+}
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+/* Style the buttons inside the tab */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 17px;
+}
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #ddd;
+}
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #ccc;
+}
+/* Style the tab content */
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
 table {
   font-family: arial, sans-serif;
   border-collapse: collapse;
 }
-
 td, th {
-  border: 1px solid #dddddd;
+  border: 1px solid black;
   text-align: left;
-  padding: 8px;
+  padding: 5px;
 }
-
 tr:nth-child(even) {
   background-color: #dddddd;
+}
+.alignment td {
+  border: none;
+  padding: 0;
+  width: 15px;
+  text-align: center;
 }
 </style>
 </head>
 
-<body><div style="width:100%; word-wrap: break-word; word-break: break-word;">
+<body>
 
-		<div class='mb-5'>
-				<p style="font-size: 24px; padding: 5px;"> {{ name }}: BLAST results against {{ db }}.</p>
-				<p style="font-size: 18px; padding: 5px;"> Length of motif: {{ motif_length }}aa</p>
-		<div>
-		<hr>
-		{% if blast_error %}{{ blast_error}}<hr>{% endif %}
-		{{ result }}
-		<table>
-				<tr>
-						{% for h in header %}
-				    		<th>{{ h }}</th>
-						{% endfor %}
-			  </tr>
-				{% for line in blast_result %}
-				<tr>
-						{% for f in line %}
-    				<td>{{ f }}</td>
-						{% endfor %}
-				</tr>
-				{% endfor %}
-		</table>
+    <div class="tab">
+        <button class="tablinks active" onclick="openTab(event, 'Tophits')">Top hits</button>
+        <button class="tablinks" onclick="openTab(event, 'Alignment')">Alignment</button>
+    </div>
+    <!-- Top hits tab -->
+    <div id="Tophits" class="tabcontent" style="display: block;">
+      <div class='mb-5'>
+          <p style="font-size: 24px; padding: 5px;"> {{ name }}: BLAST results against {{ db }}.</p>
+          <p style="font-size: 18px; padding: 5px;"> Length of motif: {{ motif_length }}aa</p>
+      </div>
+      {% if blast_error %}{{ blast_error}}<hr>{% endif %}
+      {{ result }}
+      <table>
+          <tr>
+              <th>Sequences producing significant alignments:</th>
+              <th style="text-align: center;">(Bits)</th>
+              <th style="text-align: center;">E-value</th>
+          </tr>
+          {% for name in scores %}
+          {% with scr=scores|get_item:name %}
+          <tr>
+              <td>{{scr|get_item:'seqID'}}</td>
+              <td style="text-align: center;">{{scr|get_item:'bits'}}</td>
+              <td style="text-align: center;">{{scr|get_item:'e-value'}}</td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+      </table>
+    </div>
+    <!-- Alignment tab -->
+    <div id="Alignment" class="tabcontent">
+        <div class='mb-5'>
+            <p style="font-size: 24px; padding: 5px;"> {{ name }}: BLAST results against {{ db }}.</p>
+            <p style="font-size: 18px; padding: 5px;"> Length of motif: {{ motif_length }}aa</p>
+        </div>
+        <table>
+            <thead style="display: block;">
+                <tr>
+                    <th style="width: 150px;">Sequences ID</th>
+                    <th style="width: 100px;ext-align: center;">Motif start</th>
+                    <th style="text-align: center;">Alignment</th>
+                    <th style="width: 100px;text-align: center;">Motif end</th>
+                </tr>
+                <tr style="background-color: darkgrey;">
+                    <td>{{query_alignment|get_item:'seqID'}}</td>
+                    <td style="text-align: center;">{{query_alignment|get_item:'start'}}</td>
+                    <td style="padding-left: 20px; padding-right: 20px;">
+                        <table class="alignment" >
+                            <tr>
+                                {% for l in query_alignment|get_item:'alignment' %}
+                                    <td>{{l}}</td>
+                                {% endfor %}
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="text-align: center;">{{query_alignment|get_item:'stop'}}</td>
+                </tr>
+            </thead>
+            <tbody style="height: 900px; overflow-y: auto; display: block;">
+                {% for name in alignments %}
+                {% with al=alignments|get_item:name %}
+                <tr>
+                    <td style="width: 150px;">{{al|get_item:'seqID'}}</td>
+                    <td style="width: 100px; text-align: center;">{{al|get_item:'start'}}</td>
+                    <td style="padding-left: 20px; padding-right: 20px;">
+                        <table class="alignment" >
+                            <tr>
+                                {% for l in al|get_item:'alignment' %}
+                                    <td>{{l}}</td>
+                                {% endfor %}
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 100px; text-align: center;">{{al|get_item:'stop'}}</td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-</div></body>
+<script>
+function openTab(evt, tabName) {
+  var i, tabcontent, tablinks;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+</script>
+
+</body>
