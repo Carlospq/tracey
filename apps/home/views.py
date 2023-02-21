@@ -172,7 +172,6 @@ def get_sequences(query, verify=False):
             taxonomy_childs += taxonomy_childs_
         taxonomy_childs_ids = [x.taxonomy_id for x in taxonomy_childs] + [x.taxonomy_id for x in taxonomy]
         seqs = seqs.filter(taxonomy_id__in = taxonomy_childs_ids)
-
     return seqs.order_by('sequenceshortname')
 
 def notEmpty(query, element):
@@ -968,16 +967,60 @@ def QueryVerifyMenuView(request):
     return render(request, 'home/query-verify-menu.html', context)
 
 
+def parseNCBIblastpSTDOUT(stdout):
+    lines = stdout.split("\n")
+    scores = {}
+    alignments = {}
+    query_alignment ={}
+
+    switch = 0
+    for line in lines:
+        if line.startswith('Query'):
+            switch += 1
+        if line.startswith('Lambda'):
+            break
+        if switch == 0 or not line: continue
+        if switch == 1:
+            query_header = line
+            switch += 1
+            continue
+        if switch == 2:
+            query_length = line
+            switch += 1
+            continue
+        if switch == 3 and "Bits" in line:
+            scores_header = line
+            switch += 1
+            continue
+        if switch == 4:
+            values = line.split()
+            seqID = values[0].split("|")[0]
+            scores[seqID] = {'seqID': values[0], 'bits': values[1], 'e-value': values[2]}
+        if switch == 5:
+            values = line.split()
+            if not query_alignment:
+                query_alignment = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+            else:
+                alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+    return [query_header, query_length, scores_header, scores, query_alignment, alignments]
+
+
 @login_required(login_url="/noPermits.html")
 def QueryVerifyBlastView(request, db, query_id):
-    if db[-1] == 'm':
+    if db[-1] == 'v':
         query = Verifymotifs.objects.get(pk=int(query_id))
+        start = [query.startposition-1 if query.startposition-1 > 0 else 0][0]
+        query_sequence = query.sequence.sequence[start:query.stopposition]
+        shortname = "_".join([ query.sequence.sequenceshortname, query.motifname ])
+    elif db[-1] == 'm':
+        query = Motifs.objects.get(pk=int(query_id))
         query_sequence = query.sequence.sequence[query.startposition-1:query.stopposition]
         shortname = "_".join([ query.sequence.sequenceshortname, query.motifname ])
     elif db[-1] == 's':
         query = Sequences.objects.get(pk=int(query_id))
         query_sequence = query.sequence
         shortname = query.sequenceshortname
+
     context = {'db': db[:-1],
                'query_id': query_id,
                'name': shortname,
@@ -994,28 +1037,25 @@ def QueryVerifyBlastView(request, db, query_id):
         with open(file_path, 'w') as fasta_file:
             fasta_file.write( context['fasta_sequence'] )
 
-        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 6)
+        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 1)
         stdout, stderr = blastp_cline()
 
         if stderr:
             context['blast_error'] = stderr
         else:
-            context['blast_result'] = [x.split("\t") for x in [line for line in stdout.split("\n") ]]
+            parsedstdout = parseNCBIblastpSTDOUT(stdout)
+            context['query_header'] = parsedstdout[0]
+            context['query_length'] = parsedstdout[1]
+            context['scores_header'] = parsedstdout[2]
+            context['scores'] = parsedstdout[3]
+            context['query_alignment'] = parsedstdout[4]
+            context['alignments'] = parsedstdout[5]
+            # context['blast_result'] = [x.split("\t") for x in [line for line in stdout.split("\n") ]]
 
     elif context['db'] == 'NCBI':
 
         ncbi_url = 'https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome&QUERY=%s'%(context['fasta_sequence'])
         return HttpResponseRedirect(ncbi_url)
-        # return redirect('http://blast.ncbi.nlm.nih.gov/blast/Blast.cgi?CMD=put&DATABASE=nr&PROGRAM=blastp&QUERY=GTDHTERRGRIYIQAHIDRDVLIVLVRDAKNLVPMDPNGLSDPYVKLKLIPDPKSESKQKTKTIKCSLNPEWNETFRFQLKESDKDRRLSVEIWDWDLTSRNDFMGSLSFGISELQKASVDGWFKLLSQEEGEYFNVPVP')
-        # from Bio.Blast.NCBIWWW import qblast
-                # Protein databases
-                # - env_nr
-                # - nr
-                # - pataa
-                # - pdbaa
-                # - refseq_protein
-                # - swissprot
-        # context['result'] = qblast('blastp', 'nr', file_path, url_base='https://blast.ncbi.nlm.nih.gov/Blast.cgi', format_type='Tabular')  #https://ncbi.github.io/blast-cloud/dev/api.html
 
     else:
         context['blast_error'] = 'An error ocurred while choosing database..'
@@ -1056,8 +1096,8 @@ def QueryVerifyView(request, sequence_id):
     context["motifs"]  = {}
     context["verifymotifs"]  = {}
 
-    suggestedNames = suggested_names(seq.sequenceshortname, seq.sequence)
-    context['suggestedNames'] = ",    ".join(suggestedNames)
+    # suggestedNames = suggested_names(seq.sequenceshortname, seq.sequence)
+    # context['suggestedNames'] = ",    ".join(suggestedNames)
 
     for type, motifs in zip(['motifs', 'verifymotifs'], [motifs, verifymotifs]):
         for m in motifs:

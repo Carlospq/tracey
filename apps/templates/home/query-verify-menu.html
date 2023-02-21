@@ -349,15 +349,17 @@
       });
     };
 
-    // Don't reload site on submit
+    // Send form data for sequence search
     $(document).on('submit','#MotifForm',function(e){
-        // Loading animation
+        // Don't reload site on submit
         e.preventDefault();
+        // Get variables
         var domainname = $("#domainname").val();
         var domaingroup_rank = $("#domaingroup_rank").val();
         var domaingroup = $("#domaingroup").val();
         var verified = document.getElementById("verified").checked;
         var unverified = document.getElementById("unverified").checked;
+        // Loading animation
         document.getElementById("loader").style.display = "flex";
 
         var taxonomy = [];
@@ -451,8 +453,6 @@
         }
       });
     });
-
-
 </script>
 </body>
 {% endblock content %}
