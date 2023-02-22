@@ -5,13 +5,22 @@
 				<p style="margin-top: 5px; color: darkgreen; font-weight: 600;" >Number of sequences: {{ log }}</p>
 		{% endif %}
 </div>
-<table class="hoverTable sortable scrolling" id="resultsTable">
+{% csrf_token %}
+<table class="hoverTable sortable scrolling" id="resultsTable"  style="height: 100%;" >
 		{% for seq in sequences %}
 		<tr class='clickable-row' data-href='/query-verify/{{ seq.sequence_id }}'>
 				<td style="width: 9%;">{{ seq.sequenceshortname }}</td>
 				<td style="width: 9%;">{{ speciesname|get_item:seq.sequence_id }}</td>
 				<td style="width: 9%;">{{ motifs|get_item:seq.sequence_id }}</td>
-				<td style="width: 9%;">{{ seq.sequencestatus }}</td>
+				<td style="width: 9%; height: 100%;">
+						<div id="status_column" style="height: 100%;">
+						<select style="width: 75%; margin-top: 1em;" name="status" id="{{seq.sequence_id}}" onChange="updateStatus(this)">
+								{% for val in status_values %}
+										<option value= "{{ val }}" {% if seq.sequencestatus == val %} selected {% endif %}> {{ val }} </option>
+								{% endfor %}
+						</select>
+						</div>
+				</td>
 				<td style="width: 7%;">{{ seq.verifymotifs_set.count }}</td>
 				<td style="width: 7%;">{{ seq.motifs_set.count }}</td>
 				<td style="width: 5%;">{{ seq.private }}</td>
@@ -24,14 +33,17 @@
 		{% endfor %}
 </table>
 
-
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
+		//Find element status
+		var status_column = document.getElementById("status_column");
     // Table rows clickable
     jQuery(document).ready(function($) {
 				document.getElementById("loader").style.display = "none";
-        $(".clickable-row").click(function() {
-            window.location = $(this).data("href");
+        $(".clickable-row").click(function(e) {
+					if (!status_column.contains(e.target)) {
+						window.location = $(this).data("href");
+					}
         });
     });
 
@@ -53,8 +65,13 @@
 								shouldSwitch = false;
 								/*Get the two elements you want to compare,
 								one from current row and one from the next:*/
-								x = rows[i].getElementsByTagName("TD")[coln];
-								y = rows[i + 1].getElementsByTagName("TD")[coln];
+								if (coln == 3) {
+									x = rows[i].getElementsByTagName("SELECT")[0];
+									y = rows[i + 1].getElementsByTagName("SELECT")[0];
+								} else {
+									x = rows[i].getElementsByTagName("TD")[coln];
+									y = rows[i + 1].getElementsByTagName("TD")[coln];
+								}
 								//check if the two rows should switch place:
 								if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
 										//if so, mark as a switch and break the loop:
@@ -87,8 +104,13 @@
 								shouldSwitch = false;
 								/*Get the two elements you want to compare,
 								one from current row and one from the next:*/
-								x = rows[i].getElementsByTagName("TD")[coln];
-								y = rows[i + 1].getElementsByTagName("TD")[coln];
+								if (coln == 3) {
+									x = rows[i].getElementsByTagName("SELECT")[0];
+									y = rows[i + 1].getElementsByTagName("SELECT")[0];
+								} else {
+									x = rows[i].getElementsByTagName("TD")[coln];
+									y = rows[i + 1].getElementsByTagName("TD")[coln];
+								}
 								//check if the two rows should switch place:
 								if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
 										//if so, mark as a switch and break the loop:
@@ -104,4 +126,21 @@
 						}
 				}
 		}
+
+		/*Update sequence status*/
+		function updateStatus(object) {
+			var status = object.value;
+			var seqID = object.id;
+
+			$.ajax({
+        url: "{% url 'ajax_updateSequenceStatus' %}",
+        data: {
+          status: status,
+          seqID: seqID,
+					csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+        },
+				method: 'POST'
+      });
+		}
+
 </script>

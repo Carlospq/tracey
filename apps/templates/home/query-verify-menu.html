@@ -194,11 +194,16 @@
                             </div>
                             </div>
                             <div class="row mb-4" style="height: 100%;">
-                            <div class="fieldWrapper col-lg-4 col-sm-4">
-                                <!-- <label style="vertical-align: top; width: 100%" for="sequencestatus"> Sequence status </label> -->
-                                <input type="checkbox" id="onlyverified" name="onlyverified" value="1" checked>
-                                <label for="sequencestatus"> Only verified sequences</label>
-                            </div>
+                                <div class="col-6" style="margin-top: 5px;">
+                                    <div class="fieldWrapper" style="margin-right: 30px; display: inline-block;">
+                                        <input type="checkbox" id="unverified" name="unverified" value="1" checked>
+                                        <label for="unverified"> Unverified sequences</label>
+                                    </div>
+                                    <div class="fieldWrapper" style="display: inline-block;">
+                                        <input type="checkbox" id="verified" name="verified" value="1">
+                                        <label for="verified"> Verified sequences</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         </form>
@@ -318,7 +323,7 @@
       // create new high rank
       var selectList = document.createElement("select");
       selectList.id = "taxonomy_rank_"+rankNum;
-      selectList.name = "taxonomy_rank";
+      selectList.name = "taxonomy";
       selectList.style = 'width: 100%; margin-top: 5px;';
       selectList.addEventListener(
                                   'change',
@@ -344,15 +349,23 @@
       });
     };
 
-    // Don't reload site on submit
+    // Send form data for sequence search
     $(document).on('submit','#MotifForm',function(e){
-        // Loading animation
+        // Don't reload site on submit
         e.preventDefault();
+        // Get variables
         var domainname = $("#domainname").val();
         var domaingroup_rank = $("#domaingroup_rank").val();
         var domaingroup = $("#domaingroup").val();
-        var onlyverified = document.getElementById("onlyverified").checked;
+        var verified = document.getElementById("verified").checked;
+        var unverified = document.getElementById("unverified").checked;
+        // Loading animation
         document.getElementById("loader").style.display = "flex";
+
+        var taxonomy = [];
+        $("select[name='taxonomy']").each(function() {
+          taxonomy.push($(this).val());
+        });
 
         // Data for domaingroup_rank field
         $.ajax({
@@ -377,9 +390,10 @@
                 domainname: $("#domainname").val(),
                 domaingroup_rank: $("#domaingroup_rank").val(),
                 domaingroup: $("#domaingroup").val(),
-                taxonomy: $("#id_taxonomy").val(),
+                taxonomy: taxonomy,
                 sequencestatus: $("#status").val(),
-                onlyverified: onlyverified,
+                verified: verified,
+                unverified: unverified,
                 private: $("#private").val(),
                 csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
                 action: 'post'
@@ -439,8 +453,6 @@
         }
       });
     });
-
-
 </script>
 </body>
 {% endblock content %}

@@ -223,7 +223,17 @@
 								{% endif %}
 						</div>
             {% if 'query-verify' in segment %}
-            <div class="row" style="display: flex; align-items: center;">
+            <hr>
+            <div class="row" style="display: flex; align-items: center; margin-top: 15px;">
+                <table>
+                    <tr>
+                        <td class="tdlabel" style="width: 5.5%; color: black;">BLAST sequence:</td>
+                        <td class="tdfield" style="width: 10%;"><a href="{% url 'query-verify-blast' db='TRACEYs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  againts TRACEY (live) </a></td>
+                        <td class="tdfield" style="width: 10%;"><a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts NCBI </a></td>
+                    </tr>
+                </table>
+            </div>
+            <!-- <div class="row" style="display: flex; align-items: center;">
                 <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST sequence:</p></div>
                 <div class="col-4" style="padding: 0;">
                     <a href="{% url 'query-verify-blast' db='TRACEYs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts TRACEY </a>
@@ -231,7 +241,7 @@
                 <div class="col-4" style="padding: 0;">
                     <a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts NCBI </a>
                 </div>
-            </div>
+            </div> -->
             {% endif %}
 				</div>
 		</div>
@@ -348,10 +358,10 @@
                 <div class="row mb-3" style="display: flex; align-items: center;">
                     <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
                     <div class="col-4" style="padding: 0;">
-                        <a href="{% url 'query-verify-blast' db='TRACEYm' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts TRACEY </a>
+                        <a href="{% url 'query-verify-blast' db='TRACEYv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts TRACEY (live) </a>
                     </div>
                     <div class="col-4" style="padding: 0;">
-                        <a href="{% url 'query-verify-blast' db='NCBIm' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts NCBI </a>
+                        <a href="{% url 'query-verify-blast' db='NCBIv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts NCBI </a>
                     </div>
                 </div>
 
@@ -456,6 +466,18 @@
                         </tr>
                     </table>
                 </div>
+
+                <hr>
+                <div class="row mb-3" style="display: flex; align-items: center;">
+                    <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
+                    <div class="col-4" style="padding: 0;">
+                        <a href="{% url 'query-verify-blast' db='TRACEYm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts TRACEY (live) </a>
+                    </div>
+                    <div class="col-4" style="padding: 0;">
+                        <a href="{% url 'query-verify-blast' db='NCBIm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> againts NCBI </a>
+                    </div>
+                </div>
+
                 </div>
             </td>
         </tr>

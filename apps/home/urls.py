@@ -40,8 +40,8 @@ urlpatterns = [
     # Verify
     path('query-verify', views.QueryVerifyMenuView, name='query-verify-menu'),
     path('query-verify/<int:sequence_id>', views.QueryVerifyView, name='query-verify'),
-    path('query-verify/traceyBLAST/<str:db>m/<int:query_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
-    path('query-verify/traceyBLAST/<str:db>s/<int:query_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
+    path('query-verify/traceyBLAST/<str:db>/<int:query_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
+    
 
     # Taxonomy update results
     path('update_taxonomy_results', views.read_update_taxonomy_results, name='read_update_taxonomy_results'),
@@ -54,7 +54,8 @@ urlpatterns = [
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
     path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
     path('ajax/ajax-update-tree/', views.update_tree, name='ajax_update_tree'),
-    path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"), 
+    path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"),
+    path('ajax/updateSequenceStatus', views.updateSequenceStatus, name="ajax_updateSequenceStatus"),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),
