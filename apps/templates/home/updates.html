@@ -1,0 +1,86 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Query {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<style>
+  .update-card {
+    background: lightgrey;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 25px;
+  }
+  .update-header {
+    font-size: 24px;
+  }
+  .update-date {
+    font-size: 12px;
+  }
+  .update-list {
+    margin-left: 25px;
+  }
+</style>
+{% endblock stylesheets %}
+{% block content %}
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Card frame -->
+        <div class="card border-0 shadow components-section">
+
+                <!-- Card body -->
+                <div class="col-12 mb-4">
+                    <div class="card-body">
+
+                        <div class="mb-6">
+                            <h1><strong> Last updates on TRACEY website: </strong></h1>
+                            <p><i>Keep yourself tuned!</i></p>
+                            <hr>
+                        </div>
+
+                        <div class="row update-card">
+                            <p class="update-header">Update on main pages visualization, and functionalities in <i>Verify Motifs</i></p><hr>
+                            <p class="update-date"><i>Date: 22/02/2023</i></p>
+
+                            <p><b>Mayor updates:</b></p>
+                            <ul class="update-list">
+                              <li>Added "Update" page</li>
+                              <li>Added "Tree" page</li>
+                              <li>Implemented reduced Taxonomy selection for sequences queries</li>
+                              <li>Alignment againts TRACEY is now done only with "live" sequences</li>
+                              <li>Aligment visualization optimized</li>
+                              <li>Very Motifs:
+                                <ul>
+                                  <li>Added filter "unveryfied/veryfied" checkboxes</li>
+                                  <li>Sequence status can be now changed directly from this page</li>
+                                </ul>
+                              </li>
+                            </ul>
+
+                            <p style="margin-top: 20px;"><b>Minor updates:</b></p>
+                            <ul class="update-list">
+                              <li>Sequence details page:
+                                <ul>
+                                  <li>Sequence textarea blocked (can't be editet)</li>
+                                </ul>
+                              </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+                </div>
+                <!-- End Card body -->
+
+        </div>
+        <!-- End Card frame -->
+    </div>
+</div>
+
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
