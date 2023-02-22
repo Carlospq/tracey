@@ -1001,11 +1001,16 @@ def parseNCBIblastpSTDOUT(stdout):
             if not query_alignment:
                 query_alignment = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
             else:
-                alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+                if len(values) == 1: continue
+                try:
+                    alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+                except IndexError:
+                    continue
     return [query_header, query_length, scores_header, scores, query_alignment, alignments]
 
 
 @login_required(login_url="/noPermits.html")
+@staff_login_required
 def QueryVerifyBlastView(request, db, query_id):
     if db[-1] == 'v':
         query = Verifymotifs.objects.get(pk=int(query_id))
@@ -1037,7 +1042,7 @@ def QueryVerifyBlastView(request, db, query_id):
         with open(file_path, 'w') as fasta_file:
             fasta_file.write( context['fasta_sequence'] )
 
-        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 1)
+        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 3)
         stdout, stderr = blastp_cline()
 
         if stderr:
