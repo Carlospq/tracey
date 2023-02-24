@@ -7,7 +7,7 @@ args = commandArgs(trailingOnly=TRUE)
 
 nwk <- args[1]
 colname <- args[2]
-groupNames <- args[3:length(args)]
+groupNames <- str_replace_all(args[3:length(args)], fixed(" "), "")
 tree <- read.tree(file = paste0('apps/static/assets/img/tmpTrees/', nwk))
 unlink(paste0('apps/static/assets/img/tmpTrees/', nwk))
 

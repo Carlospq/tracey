@@ -213,7 +213,7 @@
                         <div class="col-lg-8 col-sm-8 plotarea" id="parentplotarea" style="border-radius: 15px; border: black solid 1px;">
                                 <!-- <img id="treeplot" src='' alt=""> -->
                                 <div id="plotarea">
-                                    <img id="treeplot" src='{{ASSETS_ROOT}}/img/tmpTrees/cpulidoq_28.newick.png' alt="{{error_length}}">
+                                    <img id="treeplot" src='' alt="{{error_length}}">
                                 </div>
                         </div>
                     </div>
@@ -245,7 +245,6 @@
         opt = taxonomy[i];
         result.push(opt.value || opt.text);
       }
-      console.log(result);
 
       $.ajax({
         url: url,
