@@ -833,6 +833,7 @@ def plotTrees(request):
     # values = Taxonomies.objects.get(taxonomy_id=reducedTaxonomyID).scientificname
     reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[data['taxonomy'][-1]]
     values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
+    print(values)
     taxonomy_ids = []
     for v in values:
         arr = list(df[df.eq(v).any(1)].index.values)
@@ -856,7 +857,7 @@ def plotTrees(request):
     if len(taxonomy_ids) > 3500:
         return render(request, 'home/treeplot.html', {'error_length': 'Taxonomies selected exceed the maximun number of branches allowed to plot a tree. Please select a subgroup.'})
 
-    active_ids = [ str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids) ]
+    active_ids = [ str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids) ]
     clean_ids = 1
     while clean_ids:
         bashCommand = ['/home/cpulidoq/.cargo/bin/fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
@@ -883,11 +884,11 @@ def plotTrees(request):
         try:
             t = Taxonomies.objects.get(ncbi_taxonomy_id=tax_id)
             tscientificname = t.scientificname.replace("'", "")
-            tax_name = tscientificname + "|" + df.loc[t.taxonomy_id][colname]
+            tax_name = tscientificname + "|" + df.loc[t.ncbi_taxonomy_id][colname]
         except:
             tax_name = 'unknown'
         tree = tree[:start] + tax_name + tree[end:]
-
+    print(tree)
     # Get username
     try:
         user = AuthUser.objects.get(pk=request.session['_auth_user_id']).username
