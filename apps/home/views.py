@@ -11,6 +11,7 @@ import pyhmmer
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from random import randrange
 from dna_features_viewer import GraphicFeature, GraphicRecord
 from time import gmtime, strftime
@@ -151,7 +152,8 @@ def get_sequences(query, verify=False):
         if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')):
             taxonomy_name = query['taxonomy_rank']
         elif ('taxonomy' in query and notEmpty(query, 'taxonomy')):
-            taxonomy_name = [query['taxonomy'][-2]]
+            query['taxonomy'] = list(filter(None, query['taxonomy'])) #remove empty values in list
+            taxonomy_name = [query['taxonomy'][-1]]
         else:
             if verify:
                 return seqs.order_by('sequenceshortname')
@@ -159,11 +161,9 @@ def get_sequences(query, verify=False):
                 context = {'error': 'At least one taxonomy must be selected.'}
                 return context
 
-        reducedTaxonomyIDs = reducedTRACEYtaxonomiesIDs[taxonomy_name[0]]
-        if isinstance(reducedTaxonomyIDs, int):
-            reducedTaxonomyIDs = [reducedTaxonomyIDs]
+        reducedTaxonomyIDs = reducedTRACEYtaxonomies_ncbiIDs[taxonomy_name[0]]
         # taxonomy = Taxonomies.objects.filter(scientificname__in = taxonomy_name)
-        taxonomy = Taxonomies.objects.filter(taxonomy_id__in = reducedTaxonomyIDs)
+        taxonomy = Taxonomies.objects.filter(ncbi_taxonomy_id__in = reducedTaxonomyIDs)
         taxonomy_childs = []
         taxonomy_childs_ = []
         for taxa in taxonomy:
@@ -829,13 +829,21 @@ def plotTrees(request):
     # else:
     #     values = []
 
-    reducedTaxonomyID = reducedTRACEYtaxonomiesIDs[data['taxonomy'][-1]]
-    values = Taxonomies.objects.get(taxonomy_id=reducedTaxonomyID).scientificname
-    taxonomy_ids = df[df.eq(values).any(1)].index.values
+    # reducedTaxonomyID = reducedTRACEYtaxonomiesIDs[data['taxonomy'][-1]]
+    # values = Taxonomies.objects.get(taxonomy_id=reducedTaxonomyID).scientificname
+    reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[data['taxonomy'][-1]]
+    values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
+    taxonomy_ids = []
+    for v in values:
+        arr = list(df[df.eq(v).any(1)].index.values)
+        taxonomy_ids = taxonomy_ids + arr
+    # taxonomy_ids = df[df.eq(values).any(1)].index.values
     colname = ''
-    for column in df:
-        if values in df[column].values:
-            colname = column
+    for v in values:
+        for column in df:
+            if v in df[column].values:
+                colname = column
+                break
     if not colname:
         return render(request, 'home/treeplot.html', {'error': 'This taxonomy can not be plotted. Please select a different one.'})
     # Get TRACEY Taxonomy_ids to be ploted and transform to NCBI ids
@@ -846,7 +854,7 @@ def plotTrees(request):
 
     # Maximum number of leafs to be ploted
     if len(taxonomy_ids) > 3500:
-        return render(request, 'home/treeplot.html', {'error_length': 'Taxonomies selected exceed the maximun number of branches allowed to plot a tree.'})
+        return render(request, 'home/treeplot.html', {'error_length': 'Taxonomies selected exceed the maximun number of branches allowed to plot a tree. Please select a subgroup.'})
 
     active_ids = [ str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids) ]
     clean_ids = 1
@@ -892,7 +900,7 @@ def plotTrees(request):
         fo.write(str(tree))
 
     # Plotting Tree with R script
-    bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + [values]
+    bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + values
     subprocess.run(bashCommand)
 
     return render(request, 'home/treeplot.html', {'treeplot': treeFileName+'.png'})
