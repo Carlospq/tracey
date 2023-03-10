@@ -65,12 +65,18 @@
                       </tr>
                       <tr>
                           <td class="td-header">dbxref:</td>
-                          <td class="td-data">{{ sequence.dbxref }}</td>
+                          <td class="td-data"><a href="https://www.ncbi.nlm.nih.gov/protein/{{ sequence.dbxref }}" target="_blank" style="color: blue;">{{ sequence.dbxref }}</a></td>
                       </tr>
                       <tr>
                           <td class="td-header">Source database:</td>
                           <td class="td-data">{{ sequence.sourcedatabase }}</td>
                       </tr>
+                      {% if pdb %}
+                      <tr>
+                          <td class="td-header">PDB:</td>
+                          <td class="td-data"><a href="https://www.rcsb.org/structure/{{ pdb }}" target="_blank" style="color: blue;">{{ pdb }}</a> {{ pdb_name }}</td>
+                      </tr>
+                      {% endif %}
                       <tr>
                           <td class="td-header">Foreign annotation:</td>
                           <td class="td-data">{{ sequence.foreignannotation }}</td> <!-- <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.foreignannotation }}</textarea> -->
