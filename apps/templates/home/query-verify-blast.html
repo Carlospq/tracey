@@ -2,11 +2,13 @@
 <html>
 <head>
 <style>
-/* Style the tab */
 body {
   font-family: arial, sans-serif;
+  height: 95vh;
 }
+/* Style the tab */
 .tab {
+  width: 98vw;
   overflow: hidden;
   border: 1px solid #ccc;
   background-color: #f1f1f1;
@@ -33,27 +35,117 @@ body {
 /* Style the tab content */
 .tabcontent {
   display: none;
-  padding: 6px 12px;
   border: 1px solid #ccc;
   border-top: none;
+  width: 98vw;
+  height: 90vh;
 }
-table {
+.table_hits {
+  display: block;
+  position: relative;
   font-family: arial, sans-serif;
   border-collapse: collapse;
+  height: 65vh;
+  min-width: 30%;
+  max-width: 50%;
+  overflow-y: auto;
+  border: black solid 1px;
 }
-td, th {
+.table_hits th {
+  position: sticky;
+  top: 0;
+  background: white;
+  background-clip: padding-box;
+}
+.table_hits td, .table_hits th {
   border: 1px solid black;
   text-align: left;
   padding: 5px;
 }
-tr:nth-child(even) {
+.table_hits tr:nth-child(even) {
   background-color: #dddddd;
 }
-.alignment td {
-  border: none;
-  padding: 0;
-  width: 15px;
+.container {
+  margin: 0px 12px;
+  position: relative;
+  width: 95vw;
+  height: 60vh;
   text-align: center;
+  display: block;
+}
+.header {
+  width: 2400px;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+.header_cell {
+  display: inline-block;
+  z-index: 3;
+}
+.alignment_cell {
+  display: block;
+  background-clip: padding-box;
+}
+.cell {
+  vertical-align: top;
+  height: 30px;
+  line-height: 30px;
+  border: black solid 1px;
+  font-size: 18px;
+}
+.query_cell {
+  display: inline-block;
+  background: lightgrey;
+  z-index: 3;
+}
+.alignment_line {
+  vertical-align: top;
+}
+.alignment_col {
+  display: inline-block;
+  position: relative;
+  vertical-align: top;
+}
+.seqID {
+  width: 240px;
+}
+.values {
+  width: 110px;
+}
+.sequence {
+  width: 1800px;
+}
+.alignment_results {
+  width: 2400px;
+  height: calc(60vh - 60px);
+  position: relative;
+  overflow-y: auto;
+}
+.alignment_table {
+  table-layout: fixed;
+  padding-left: 5px;
+  padding-right: 5px;
+  height: 28px;
+  line-height: 28px;
+  font-family: arial, sans-serif;
+  position: relative;
+  top: 0;
+  border: black solid 1px;
+  border-collapse: collapse;
+}
+.alignment_table tr, .alignment_table td {
+  height: 28px;
+}
+.alignment_table td {
+  min-width: 15px;
+  max-width: 15px;
+}
+.alignment_table td:first-child {
+  padding-left: 10px;
+}
+.alignment_table td:last-child {
+  padding-right: 10px;
 }
 </style>
 </head>
@@ -66,81 +158,127 @@ tr:nth-child(even) {
     </div>
     <!-- Top hits tab -->
     <div id="Tophits" class="tabcontent" style="display: block;">
-      <div class='mb-5'>
-          <p style="font-size: 24px; padding: 5px;"> {{ name }}: BLAST results against {{ db }}.</p>
-          <p style="font-size: 18px; padding: 5px;"> Length of motif: {{ motif_length }}aa</p>
+      <div class='mb-5' style='padding: 12px;'>
+          <p style="font-size: 24px; margin: 0 0 10 0"> BLAST results against {{ db }}.</p>
+          <p style="font-size: 24px; margin: 0 0 10 0"> Query_1: {{ name }}</p>
+          <p style="font-size: 18px; margin: 0"> Length of motif: {{ motif_length }}aa</p>
       </div>
       {% if blast_error %}{{ blast_error}}<hr>{% endif %}
       {{ result }}
-      <table>
-          <tr>
-              <th>Sequences producing significant alignments:</th>
-              <th style="text-align: center;">(Bits)</th>
-              <th style="text-align: center;">E-value</th>
-          </tr>
-          {% for name in scores %}
-          {% with scr=scores|get_item:name %}
-          <tr>
-              <td>{{scr|get_item:'seqID'}}</td>
-              <td style="text-align: center;">{{scr|get_item:'bits'}}</td>
-              <td style="text-align: center;">{{scr|get_item:'e-value'}}</td>
-          </tr>
-          {% endwith %}
-          {% endfor %}
-      </table>
+      <div class="container">
+          <table class="table_hits">
+              <tr>
+                  <th style="width: 100%">Sequences producing significant alignments:</th>
+                  <th style="text-align: center;">(Bits)</th>
+                  <th style="text-align: center;">E-value</th>
+              </tr>
+              {% for name in scores %}
+              {% with scr=scores|get_item:name %}
+              <tr>
+                  <td>{{scr|get_item:'seqID'}}</td>
+                  <td style="text-align: center;">{{scr|get_item:'bits'}}</td>
+                  <td style="text-align: center;">{{scr|get_item:'e-value'}}</td>
+              </tr>
+              {% endwith %}
+              {% endfor %}
+          </table>
+      </div>
     </div>
     <!-- Alignment tab -->
     <div id="Alignment" class="tabcontent">
-        <div class='mb-5'>
-            <p style="font-size: 24px; padding: 5px;"> {{ name }}: BLAST results against {{ db }}.</p>
-            <p style="font-size: 18px; padding: 5px;"> Length of motif: {{ motif_length }}aa</p>
+
+        <div class='mb-5' style="padding: 12px;">
+            <p style="font-size: 24px; margin: 0 0 10 0"> BLAST results against {{ db }}.</p>
+            <p style="font-size: 24px; margin: 0 0 10 0"> Query_1: {{ name }}</p>
+            <p style="font-size: 18px; margin: 0 0 10 0"> Length of motif: {{ motif_length }}aa</p>
         </div>
-        <table>
-            <thead style="display: block;">
-                <tr>
-                    <th style="width: 150px;">Sequences ID</th>
-                    <th style="width: 100px;ext-align: center;">Motif start</th>
-                    <th style="text-align: center;">Alignment</th>
-                    <th style="width: 100px;text-align: center;">Motif end</th>
-                </tr>
-                <tr style="background-color: darkgrey;">
-                    <td>{{query_alignment|get_item:'seqID'}}</td>
-                    <td style="text-align: center;">{{query_alignment|get_item:'start'}}</td>
-                    <td style="padding-left: 20px; padding-right: 20px;">
-                        <table class="alignment" >
+
+        <div class="container" style="overflow-y: hidden">
+            <div class="header"
+                ><div class="cell header_cell seqID"><b>Seq ID</b></div
+                ><div class="cell header_cell values"><b>Motif start</b></div
+                ><div class="cell header_cell sequence"><b>Alignment</b></div
+                ><div class="cell header_cell  values"><b>Motif End</b></div
+                ><div class="cell header_cell values"><b>E-value</b></div
+            ></div>
+            <div class="header"
+                ><div class="cell query_cell seqID">{{query_alignment|get_item:'seqID'}}</div
+                ><div class="cell query_cell values">{{query_alignment|get_item:'start'}}</div
+                ><div class="cell query_cell sequence" id="top" style="background: none; overflow-x: auto;"
+
+                        ><table class="alignment_table" style="background: lightgrey;">
                             <tr>
                                 {% for l in query_alignment|get_item:'alignment' %}
                                     <td>{{l}}</td>
                                 {% endfor %}
                             </tr>
-                        </table>
-                    </td>
-                    <td style="text-align: center;">{{query_alignment|get_item:'stop'}}</td>
-                </tr>
-            </thead>
-            <tbody style="height: 900px; overflow-y: auto; display: block;">
-                {% for name in alignments %}
-                {% with al=alignments|get_item:name %}
-                <tr>
-                    <td style="width: 150px;">{{al|get_item:'seqID'}}</td>
-                    <td style="width: 100px; text-align: center;">{{al|get_item:'start'}}</td>
-                    <td style="padding-left: 20px; padding-right: 20px;">
-                        <table class="alignment" >
+                        </table
+
+                ></div
+                ><div class="cell query_cell values">{{query_alignment|get_item:'stop'}}</div
+                ><div class="cell query_cell values">{{query_alignment|get_item:'e-Value'}}</div
+            ></div>
+            <div class="alignment_results">
+                <div class="alignment_col">
+                    {% for name in alignments %}
+                    {% if forloop.counter >= 2 %}
+                    {% with al=alignments|get_item:name %}
+                        <div class="cell alignment_cell seqID" style="text-align: left; padding-left: 5px; width: 235px; {% if not forloop.counter|divisibleby:2 %} background: lightgrey; background-clip: padding-box; {% endif %}">{{al|get_item:'seqID'}}</div>
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                </div
+                ><div class="alignment_col"
+                    {% for name in alignments %}
+                    {% if forloop.counter >= 2 %}
+                    {% with al=alignments|get_item:name %}
+                        ><div class="cell alignment_cell values" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>{{al|get_item:'start'}}</div
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                ></div
+                ><div class="alignment_col" id="bottom" style="overflow-x: auto; white-space: nowrap; overflow-y: hidden;">
+                    {% for name in alignments %}
+                    {% if forloop.counter >= 2 %}
+                    {% with al=alignments|get_item:name %}
+                    <div class="cell alignment_cell sequence" style="border: transparent solid 1px;">
+                        <table class="alignment_table" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>
                             <tr>
                                 {% for l in al|get_item:'alignment' %}
                                     <td>{{l}}</td>
                                 {% endfor %}
                             </tr>
                         </table>
-                    </td>
-                    <td style="width: 100px; text-align: center;">{{al|get_item:'stop'}}</td>
-                </tr>
-                {% endwith %}
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                </div
+                ><div class="alignment_col"
+                    {% for name in alignments %}
+                    {% if forloop.counter >= 2 %}
+                    {% with al=alignments|get_item:name %}
+                        ><div class="cell alignment_cell values" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>{{al|get_item:'stop'}}</div
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                ></div
+                ><div class="alignment_col">
+                    {% for name in alignments %}
+                    {% if forloop.counter >= 2 %}
+                    {% with al=alignments|get_item:name %}
+                        <div class="cell alignment_cell values" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>{{al|get_item:'e-value'}}</div>
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
     </div>
 
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
 function openTab(evt, tabName) {
   var i, tabcontent, tablinks;
@@ -154,7 +292,20 @@ function openTab(evt, tabName) {
   }
   document.getElementById(tabName).style.display = "block";
   evt.currentTarget.className += " active";
-}
+};
+
+$( document ).ready(function() {
+  var div1 = $('#top');
+  var div2 = $('#bottom');
+
+  div1.scroll(function() {
+      div2.scrollLeft($(this).scrollLeft());
+  });
+
+  div2.scroll(function() {
+      div1.scrollLeft($(this).scrollLeft());
+  });
+});
 </script>
 
 </body>

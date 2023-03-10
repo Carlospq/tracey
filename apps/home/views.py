@@ -506,6 +506,10 @@ def QuerySequencesDetails(request, sequence_id):
         # raise Http404("Sequence ID does not exist")
 
     context["speciesname"] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = context['sequence'].taxonomy_id)][0]
+    if 'pdb' in context['sequence'].foreignannotation:
+        m = re.search(r'pdb\|([A-Z0-9]+)\|[A-Za-z]\s([A-Za-z\s]+)', context['sequence'].foreignannotation)
+        context["pdb"] = m.group(1)
+        context["pdb_name"] = m.group(2)
 
     motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id)
 
@@ -799,7 +803,6 @@ def suggested_names(shortname, sequence):
 
 def TreesView(request):
     segment = request.path.split('/')[-1]
-    # taxonomies = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus']
     taxonomies = [x for x in reducedTRACEYtaxonomies]
     context = {'segment': segment,
                'taxonomies': taxonomies}
@@ -808,37 +811,31 @@ def TreesView(request):
 
 def plotTrees(request):
     # Clean old tree files/plots
-    filePath = 'apps/static/assets/img/tmpTrees/'
-    fileslist = os.listdir(filePath)
+    static1 = 'apps/static/assets/img/tmpTrees/'
+    static2 = 'staticfiles/assets/img/tmpTrees/'
     current_time = time.time()
     minutes = 5
-    for fileName in fileslist:
-        file_time = os.stat(filePath+fileName).st_mtime
-        if(current_time - file_time > minutes*60):
-            os.remove(filePath+fileName)
+    for path in [static1, static2]:
+        fileslist = os.listdir(path)
+        for fileName in fileslist:
+            file_time = os.stat(path+fileName).st_mtime
+            if(current_time - file_time > minutes*60):
+                os.remove(path+fileName)
+
 
     # Start new plot
     df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
     data = dict(request.GET)
     if not data:
         return render(request, 'home/treeplot.html', {'error': 'At least one taxonomy must be selected to plot a tree.'})
-    #
-    # colname = data['taxonomy_rank'][0]
-    # if 'taxonomy_rank_2' in data:
-    #     values = data['taxonomy_rank_2']
-    # else:
-    #     values = []
 
-    # reducedTaxonomyID = reducedTRACEYtaxonomiesIDs[data['taxonomy'][-1]]
-    # values = Taxonomies.objects.get(taxonomy_id=reducedTaxonomyID).scientificname
     reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[data['taxonomy'][-1]]
     values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
-    print(values)
     taxonomy_ids = []
     for v in values:
         arr = list(df[df.eq(v).any(1)].index.values)
         taxonomy_ids = taxonomy_ids + arr
-    # taxonomy_ids = df[df.eq(values).any(1)].index.values
+        
     colname = ''
     for v in values:
         for column in df:
@@ -847,11 +844,6 @@ def plotTrees(request):
                 break
     if not colname:
         return render(request, 'home/treeplot.html', {'error': 'This taxonomy can not be plotted. Please select a different one.'})
-    # Get TRACEY Taxonomy_ids to be ploted and transform to NCBI ids
-    # if values:
-    #     taxonomy_ids = df[df[colname].isin(values)].index.values
-    # else:
-    #     taxonomy_ids = df[df[colname] != "-"].index.values
 
     # Maximum number of leafs to be ploted
     if len(taxonomy_ids) > 3500:
@@ -860,7 +852,7 @@ def plotTrees(request):
     active_ids = [ str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids) ]
     clean_ids = 1
     while clean_ids:
-        bashCommand = ['/home/cpulidoq/.cargo/bin/fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
+        bashCommand = ['fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
         runout = subprocess.run(bashCommand, capture_output=True)
         if runout.stderr==b'':
             tree = str(runout.stdout.decode("utf-8")).strip().replace('"', "")
@@ -897,7 +889,7 @@ def plotTrees(request):
 
     # Save newick tree (this file will be deleted within R script)
     treeFileName = '%s_%s.newick'%(user, str(randrange(100)))
-    with open('apps/static/assets/img/tmpTrees/'+treeFileName, 'w') as fo:
+    with open(static1+treeFileName, 'w') as fo:
         fo.write(str(tree))
 
     # Plotting Tree with R script
@@ -977,14 +969,27 @@ def QueryVerifyMenuView(request):
 
 
 def parseNCBIblastpSTDOUT(stdout):
+
+    def count_white_spaces(s):
+        spaces = []
+        count = 0
+        for c in s:
+            if c.isspace():
+                count += 1
+            if not c.isspace() and count > 0:
+                spaces.append(count)
+                count = 0
+        return(spaces)
+
     lines = stdout.split("\n")
     scores = {}
     alignments = {}
-    query_alignment ={}
+    sequencesIDs = []
+    align_block = 0
 
     switch = 0
     for line in lines:
-        if line.startswith('Query'):
+        if line.startswith('Query='):
             switch += 1
         if line.startswith('Lambda'):
             break
@@ -1003,18 +1008,51 @@ def parseNCBIblastpSTDOUT(stdout):
             continue
         if switch == 4:
             values = line.split()
-            seqID = values[0].split("|")[0]
-            scores[seqID] = {'seqID': values[0], 'bits': values[1], 'e-value': values[2]}
-        if switch == 5:
-            values = line.split()
-            if not query_alignment:
-                query_alignment = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
-            else:
-                if len(values) == 1: continue
+            if len(values) == 3:
+                seqID = values[0].split("|")[0]
+                sequencesIDs.append(seqID)
+                scores[seqID] = {'seqID': values[0], 'bits': values[1], 'e-value': values[2]}
+            elif len(values) == 4:
+                if values[0] == "Query_1":
+                    align_block += 1
                 try:
-                    alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+                    if values[0] in alignments:
+                        alignments[values[0]]['stop'] = values[3]
+                        alignments[values[0]]['alignment'] += values[2]
+                    else:
+                        # alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+                        if values[0] != "Query_1":
+                            seqID = sequencesIDs.pop(0)
+                            if align_block > 1:
+                                extra_gaps_start = count_white_spaces(line)[1] - query_gaps[1] + len(str(values[1])) - len(str(alignments['Query_1']['start'])) + 60*(align_block-1)
+                            else:
+                                extra_gaps_start = count_white_spaces(line)[1] - query_gaps[1] + len(str(values[1])) - len(str(alignments['Query_1']['start']))
+                            alignments[values[0]] = {'seqID': seqID, 'start': values[1], 'alignment': extra_gaps_start*"-"+values[2], 'stop': values[3], 'e-value': scores[seqID]['e-value']}
+                        else:
+                            seqID = values[0]
+                            query_gaps = count_white_spaces(line)
+                            alignments[values[0]] = {'seqID': seqID, 'start': values[1], 'alignment': values[2], 'stop': values[3], 'e-value': '-'}
                 except IndexError:
                     continue
+    query_alignment = alignments.pop("Query_1")
+    for ID in alignments:
+        query_length = len(query_alignment['alignment'])
+        match_length = len(alignments[ID]['alignment'])
+        extra_gaps_end = query_length - match_length
+        alignments[ID]['alignment'] = alignments[ID]['alignment'] + "-"*extra_gaps_end
+        #     values = line.split()
+        #     seqID = values[0].split("|")[0]
+        #     scores[seqID] = {'seqID': values[0], 'bits': values[1], 'e-value': values[2]}
+        # if switch == 5:
+        #     values = line.split()
+        #     if not query_alignment:
+        #         query_alignment = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+        #     else:
+        #         if len(values) == 1: continue
+        #         try:
+        #             alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+        #         except IndexError:
+        #             continue
     return [query_header, query_length, scores_header, scores, query_alignment, alignments]
 
 
@@ -1051,9 +1089,8 @@ def QueryVerifyBlastView(request, db, query_id):
         with open(file_path, 'w') as fasta_file:
             fasta_file.write( context['fasta_sequence'] )
 
-        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 3)
+        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 4)
         stdout, stderr = blastp_cline()
-
         if stderr:
             context['blast_error'] = stderr
         else:
