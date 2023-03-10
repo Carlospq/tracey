@@ -8,8 +8,11 @@ args = commandArgs(trailingOnly=TRUE)
 nwk <- args[1]
 colname <- args[2]
 groupNames <- str_replace_all(args[3:length(args)], fixed(" "), "")
-tree <- read.tree(file = paste0('apps/static/assets/img/tmpTrees/', nwk))
-unlink(paste0('apps/static/assets/img/tmpTrees/', nwk))
+
+newickFile <- paste0('apps/static/assets/img/tmpTrees/', nwk)
+tree <- read.tree(file = newickFile)
+unlink(newickFile)
+
 
 groupInfo <- split(tree$tip.label, sapply(strsplit(tree$tip.label, "\\|"), "[", 2))
 groupInfo <- groupInfo[names(groupInfo) %in% groupNames == TRUE]
@@ -55,3 +58,5 @@ plotFileName <- paste0('apps/static/assets/img/tmpTrees/', nwk, '.png')
 png(file=plotFileName, width=size, height=size)
 print(tree_plot_wClades)
 dev.off()
+
+file.copy(plotFileName, paste0('staticfiles/assets/img/tmpTrees/', nwk, '.png'))
