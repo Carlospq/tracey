@@ -13,6 +13,7 @@ newickFile <- paste0('apps/static/assets/img/tmpTrees/', nwk)
 tree <- read.tree(file = newickFile)
 unlink(newickFile)
 
+
 groupInfo <- split(tree$tip.label, sapply(strsplit(tree$tip.label, "\\|"), "[", 2))
 groupInfo <- groupInfo[names(groupInfo) %in% groupNames == TRUE]
 

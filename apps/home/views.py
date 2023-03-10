@@ -835,7 +835,7 @@ def plotTrees(request):
     for v in values:
         arr = list(df[df.eq(v).any(1)].index.values)
         taxonomy_ids = taxonomy_ids + arr
-
+        
     colname = ''
     for v in values:
         for column in df:
@@ -880,7 +880,7 @@ def plotTrees(request):
         except:
             tax_name = 'unknown'
         tree = tree[:start] + tax_name + tree[end:]
-
+    print(tree)
     # Get username
     try:
         user = AuthUser.objects.get(pk=request.session['_auth_user_id']).username
