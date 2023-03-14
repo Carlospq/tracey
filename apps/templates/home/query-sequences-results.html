@@ -208,12 +208,14 @@
                 <input type="submit" value="Fasta format" name="fasta" style="margin-left: 1rem; width: 150px;" />
                 <!-- <p style="padding-left: 1rem; width: 100%;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" value=2 style="color: blue">Multiple Sequence Alignment</a> </p> -->
                 {% if is_staff %}
-                <input type="submit" value="Multi Alignment" name="multialignment" style="margin-left: 12rem; width: 150px;" />
-                <select name="hmmModel" id="hmmModel" style="margin-left: 1rem; width: 150px;">
+                <p style="margin: auto; margin-right: 0; margin-left: 12rem; width: 130px; height: 100%;">HMMER MSA:</p>
+                <select name="hmmModel" id="hmmModel" style="margin-left: 1rem; width: 170px;">
                   {% for hmm in hmmModels %}
                   <option value="{{ hmm }}">{{hmm}}</option>
                   {% endfor %}
                 </select>
+                <input type="submit" value="Show in screen" name="multialignment" style="margin-left: 4rem; width: 150px;" />
+                <input type="submit" value="Download MSA" name="download_multialignment" style="margin-left: 1rem; width: 150px;" />
                 {% endif %}
             </div>
             </form>
