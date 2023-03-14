@@ -835,7 +835,7 @@ def plotTrees(request):
     for v in values:
         arr = list(df[df.eq(v).any(1)].index.values)
         taxonomy_ids = taxonomy_ids + arr
-        
+
     colname = ''
     for v in values:
         for column in df:
@@ -880,7 +880,6 @@ def plotTrees(request):
         except:
             tax_name = 'unknown'
         tree = tree[:start] + tax_name + tree[end:]
-    print(tree)
     # Get username
     try:
         user = AuthUser.objects.get(pk=request.session['_auth_user_id']).username
@@ -985,8 +984,8 @@ def parseNCBIblastpSTDOUT(stdout):
     scores = {}
     alignments = {}
     sequencesIDs = []
+    dbBlast_ids = ["Query_1"]
     align_block = 0
-
     switch = 0
     for line in lines:
         if line.startswith('Query='):
@@ -1016,49 +1015,53 @@ def parseNCBIblastpSTDOUT(stdout):
                 if values[0] == "Query_1":
                     align_block += 1
                 try:
+                    if not values[0] in dbBlast_ids:
+                        previous_id_index = dbBlast_ids.index(previous_id)
+                        dbBlast_ids.insert(previous_id_index+1, values[0])
                     if values[0] in alignments:
+                        # contatenate next segment of alignment
                         alignments[values[0]]['stop'] = values[3]
                         alignments[values[0]]['alignment'] += values[2]
                     else:
-                        # alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
+                        # add new sequence to alignment dictionary and count gaps until alignment stat position
                         if values[0] != "Query_1":
-                            seqID = sequencesIDs.pop(0)
-                            if align_block > 1:
-                                extra_gaps_start = count_white_spaces(line)[1] - query_gaps[1] + len(str(values[1])) - len(str(alignments['Query_1']['start'])) + 60*(align_block-1)
-                            else:
-                                extra_gaps_start = count_white_spaces(line)[1] - query_gaps[1] + len(str(values[1])) - len(str(alignments['Query_1']['start']))
-                            alignments[values[0]] = {'seqID': seqID, 'start': values[1], 'alignment': extra_gaps_start*"-"+values[2], 'stop': values[3], 'e-value': scores[seqID]['e-value']}
+                            extra_gaps_start = count_white_spaces(line)[1] - query_gaps[1] + len(str(values[1])) - len(str(alignments['Query_1']['start'])) + 60*(align_block-1)
+                            alignments[values[0]] = {'seqID': '', 'start': values[1], 'alignment': extra_gaps_start*"-"+values[2], 'stop': values[3], 'e-value': ''}
                         else:
-                            seqID = values[0]
                             query_gaps = count_white_spaces(line)
-                            alignments[values[0]] = {'seqID': seqID, 'start': values[1], 'alignment': values[2], 'stop': values[3], 'e-value': '-'}
+                            alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3], 'e-value': '-'}
+                    previous_id = values[0]
                 except IndexError:
                     continue
+
+    for dbx in dbBlast_ids[1:]:
+        idx = dbBlast_ids.index(dbx)
+        alignments[dbBlast_ids[idx]]['seqID'] = sequencesIDs[idx-1]
+        alignments[dbBlast_ids[idx]]['e-value'] = scores[sequencesIDs[idx-1]]['e-value']
+
     query_alignment = alignments.pop("Query_1")
     for ID in alignments:
         query_length = len(query_alignment['alignment'])
         match_length = len(alignments[ID]['alignment'])
         extra_gaps_end = query_length - match_length
         alignments[ID]['alignment'] = alignments[ID]['alignment'] + "-"*extra_gaps_end
-        #     values = line.split()
-        #     seqID = values[0].split("|")[0]
-        #     scores[seqID] = {'seqID': values[0], 'bits': values[1], 'e-value': values[2]}
-        # if switch == 5:
-        #     values = line.split()
-        #     if not query_alignment:
-        #         query_alignment = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
-        #     else:
-        #         if len(values) == 1: continue
-        #         try:
-        #             alignments[values[0]] = {'seqID': values[0], 'start': values[1], 'alignment': values[2], 'stop': values[3]}
-        #         except IndexError:
-        #             continue
+
     return [query_header, query_length, scores_header, scores, query_alignment, alignments]
 
 
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryVerifyBlastView(request, db, query_id):
+
+    alignment_colors = {'A': 'CornflowerBlue', 'I': 'CornflowerBlue', 'L': 'CornflowerBlue', 'M': 'CornflowerBlue', 'F': 'CornflowerBlue', 'W': 'CornflowerBlue', 'V': 'CornflowerBlue', 'C': 'CornflowerBlue',
+                        'K': 'red', 'R': 'red',
+                        'E': 'magenta', 'D': 'magenta',
+                        'N': 'lightgreen', 'Q': 'lightgreen', 'S': 'lightgreen', 'T': 'lightgreen',
+                        'C': 'pink',
+                        'G': 'orange',
+                        'P': 'yellow',
+                        'H': 'cyan', 'Y': 'cyan',
+                        '-': 'none', '.': 'none'}
     if db[-1] == 'v':
         query = Verifymotifs.objects.get(pk=int(query_id))
         start = [query.startposition-1 if query.startposition-1 > 0 else 0][0]
@@ -1089,7 +1092,7 @@ def QueryVerifyBlastView(request, db, query_id):
         with open(file_path, 'w') as fasta_file:
             fasta_file.write( context['fasta_sequence'] )
 
-        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 4)
+        blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", num_alignments = 500, max_hsps = 1, outfmt = 4)
         stdout, stderr = blastp_cline()
         if stderr:
             context['blast_error'] = stderr
@@ -1101,6 +1104,7 @@ def QueryVerifyBlastView(request, db, query_id):
             context['scores'] = parsedstdout[3]
             context['query_alignment'] = parsedstdout[4]
             context['alignments'] = parsedstdout[5]
+            context['alignment_colors'] = alignment_colors
             # context['blast_result'] = [x.split("\t") for x in [line for line in stdout.split("\n") ]]
 
     elif context['db'] == 'NCBI':
