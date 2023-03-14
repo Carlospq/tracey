@@ -427,6 +427,7 @@ def QuerySequencesResults(request):
         for f in os.listdir('utils/hmmModels/%s'%(d)):
             hmmMoldes.append(f.split('.hmm')[0])
 
+    hmmMoldes.sort()
     context["hmmModels"] = hmmMoldes
     return render(request, 'home/query-sequences-results.html', context)
 
@@ -440,9 +441,10 @@ def QuerySequencesFastaFormat(request):
     except Sequences.DoesNotExist:
         raise Http404("Sequences does not exist")
 
+
     if 'fasta' in request.POST:
         return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
-    elif 'multialignment' in request.POST:
+    elif 'multialignment' in request.POST or 'download_multialignment' in request.POST:
         if len(sequences) < 2:
             return render(request, 'home/query-sequences-multialignment.html', {'names': []})
         # Do HMMalignment with sequences
@@ -459,10 +461,19 @@ def QuerySequencesFastaFormat(request):
         digitalsequences = [pyhmmer.easel.TextSequence(name=bytes(seq.sequenceshortname, 'utf-8'), sequence=seq.sequence).digitize(alphabet) for seq in sequences]
         # 3.MSA
         MSA = pyhmmer.hmmer.hmmalign(hmm, digitalsequences, digitize=False)
+        # 4.Convert MSA into dictionary of sequences
         names = [ name.decode("utf-8") for name in MSA.names ]
         alignedsequences = {}
         for i in range(len(names)):
             alignedsequences[names[i]] = MSA.alignment[i]
+        # 5. Donwload MSA (if)
+        if 'download_multialignment' in request.POST:
+            file_data = ""
+            for al in alignedsequences:
+                file_data += ">"+al+"\n"+alignedsequences[al]+"\n"
+            response = HttpResponse(file_data, content_type='application/text charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="HMM_MSA.fasta"'
+            return response
         zippedLists = {}
         for i in range(len(names)):
             alignment = [*MSA.alignment[i]] # splits alignment into list for each character in the alignment
