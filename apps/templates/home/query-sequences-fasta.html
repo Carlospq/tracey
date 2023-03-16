@@ -4,6 +4,11 @@
 					&gt;{{ seq.sequenceshortname }}<br>
 					{{ seq.sequence }}<br>
 			{% endfor %}
+	{% elif motifs_seqs %}
+			{% for m in motifs_seqs %}
+					&gt;{{ m }}<br>
+					{{ motifs_seqs|get_item:m }}<br>
+			{% endfor %}
 	{% else %}
 			0 sequences selected. Plase select at least 1 sequence to obtain the sequence in FASTA format.
 	{% endif %}

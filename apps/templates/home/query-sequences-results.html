@@ -164,11 +164,11 @@
                             <button type="button" name="button" onclick="sortTable(0)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i></button>
                             <button type="button" name="button" onclick="sortDown(0)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i></button>
                         </th>
-                        <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="2">Aliases
+                        <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="2">Species
                             <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                             <button type="button" name="button" onclick="sortDown(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
                          </th>
-                        <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="3">Species
+                        <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="3">Source database
                             <button type="button" name="button" onclick="sortTable(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                             <button type="button" name="button" onclick="sortDown(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
                         </th>
@@ -190,8 +190,8 @@
                             <td style="width: 10%;">
                                 <a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a>
                             </td>
-                            <td style="width: 14%;">{{ seq.aliases }}</td>
                             <td style="width: 14%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+                            <td style="width: 14%;">{{ seq.sourcedatabase }}</td>
                             <td style="width: 30%;">
                                 <textarea readonly style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
                             </td>
@@ -203,20 +203,26 @@
                 </table>
       			</div>
             <p style="padding-left: 1rem;">This query retrived <b>{{ sequences|length }}</b> sequence(s).</p>
-            <div class="row mt-4 mb-4" style="padding-left: 1rem;">
-                <!-- <p style="padding-left: 1rem; width: 100%;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" value=1 style="color: blue">Fasta format</a> </p> -->
-                <input type="submit" value="Fasta format" name="fasta" style="margin-left: 1rem; width: 150px;" />
-                <!-- <p style="padding-left: 1rem; width: 100%;"><a href="" target="popup" id="queryfasta" onclick="queryFasta.submit(); return false;" value=2 style="color: blue">Multiple Sequence Alignment</a> </p> -->
+            <div class="row mt-4 mb-4" style="padding-left: 1rem; width: 100%">
+                <hr>
+                <div style="width: 50%;">
+                    <p style="margin: auto; margin-left: 1rem; width: 130px; height: 100%; display: inline-block">Fasta format:</p>
+                    <input type="submit" value="Full sequence" name="fasta_seq" style="margin-left: 1rem; width: 150px;" />
+                    <input type="submit" value="Motif sequence" name="fasta_motif" style="margin-left: 1rem; width: 150px;" />
+                </div>
                 {% if is_staff %}
-                <p style="margin: auto; margin-right: 0; margin-left: 12rem; width: 130px; height: 100%;">HMMER MSA:</p>
-                <select name="hmmModel" id="hmmModel" style="margin-left: 1rem; width: 170px;">
-                  {% for hmm in hmmModels %}
-                  <option value="{{ hmm }}">{{hmm}}</option>
-                  {% endfor %}
-                </select>
-                <input type="submit" value="Show in screen" name="multialignment" style="margin-left: 4rem; width: 150px;" />
-                <input type="submit" value="Download MSA" name="download_multialignment" style="margin-left: 1rem; width: 150px;" />
+                <div style="width: 50%;">
+                    <p style="margin: auto; width: 130px; height: 100%; display: inline-block">HMMER MSA:</p>
+                    <select name="hmmModel" id="hmmModel" style="margin-left: 1rem; width: 120px;">
+                      {% for hmm in hmmModels %}
+                      <option value="{{ hmm }}">{{hmm}}</option>
+                      {% endfor %}
+                    </select>
+                    <input type="submit" value="Show in screen" name="multialignment" style="margin-left: 4rem; width: 150px;" />
+                    <input type="submit" value="Download MSA" name="download_multialignment" style="margin-left: 1rem; width: 150px;" />
+                </div>
                 {% endif %}
+
             </div>
             </form>
 

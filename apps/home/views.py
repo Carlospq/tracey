@@ -404,7 +404,7 @@ def QuerySequencesResults(request):
     segment = request.path.split("?")[0].split('/')[-1]
     context = dict(request.GET)
     sequences = get_sequences(context)
-
+    print(context)
     if len(sequences) == 0 or 'error' in sequences:
         if 'error' in sequences:
             request.session['error'] = sequences['error']
@@ -442,8 +442,18 @@ def QuerySequencesFastaFormat(request):
         raise Http404("Sequences does not exist")
 
 
-    if 'fasta' in request.POST:
-        return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
+    if 'fasta_seq' in request.POST or 'fasta_motif' in request.POST:
+        if 'fasta_seq' in request.POST:
+            return render(request, 'home/query-sequences-fasta.html', {'sequences': sequences})
+        elif 'fasta_motif' in request.POST:
+            motifs_seqs = {}
+            for seq in sequences:
+                for m in seq.motifs_set.all():
+                    s = seq.sequence[[0 if m.startposition == 0 else m.startposition-1][0]:m.stopposition]
+                    name = seq.sequenceshortname+"|"+"_".join([m.domaingroup.domain.domainname, m.domaingroup.domaingroupname])
+                    motifs_seqs[name] = s
+            return render(request, 'home/query-sequences-fasta.html', {'motifs_seqs': motifs_seqs})
+
     elif 'multialignment' in request.POST or 'download_multialignment' in request.POST:
         if len(sequences) < 2:
             return render(request, 'home/query-sequences-multialignment.html', {'names': []})
@@ -472,7 +482,7 @@ def QuerySequencesFastaFormat(request):
             for al in alignedsequences:
                 file_data += ">"+al+"\n"+alignedsequences[al]+"\n"
             response = HttpResponse(file_data, content_type='application/text charset=utf-8')
-            response['Content-Disposition'] = 'attachment; filename="HMM_MSA.fasta"'
+            response['Content-Disposition'] = 'attachment; filename="'+request.POST['hmmModel']+'_MSA.fasta"'
             return response
         zippedLists = {}
         for i in range(len(names)):
