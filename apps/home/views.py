@@ -91,8 +91,7 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
 
 
 def get_sequences(query, verify=False):
-
-    # Filter by Domaingroup
+    print(query)
     # Gets all domaingroups (and their children) matching query 'domaingroup(s)'
     if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
         domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
@@ -112,10 +111,10 @@ def get_sequences(query, verify=False):
         domaingroups = Domaingroups.objects.filter(domain_id = domain.domain_id)
     else:
         if verify:
+            domaingroups = Domaingroups.objects.all()
+        else:
             context = {'error': "At least 'Domain name', 'Domain group' or 'Subgroup' fields are required"}
             return context
-        else:
-            domaingroups = Domaingroups.objects.all()
 
     # Filter sequences using domaingroups obtained in previous step
     motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
@@ -147,31 +146,27 @@ def get_sequences(query, verify=False):
             return context
         seqs = seqs.filter(foreignannotation = query['foreignannotation'][0])
 
-    # if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and not notEmpty(query, 'taxonomy_rank')):
-    if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')) or ('taxonomy' in query and notEmpty(query, 'taxonomy')):
-        if ('taxonomy_rank' in query and notEmpty(query, 'taxonomy_rank')):
-            taxonomy_name = query['taxonomy_rank']
-        elif ('taxonomy' in query and notEmpty(query, 'taxonomy')):
-            query['taxonomy'] = list(filter(None, query['taxonomy'])) #remove empty values in list
-            taxonomy_name = [query['taxonomy'][-1]]
-        else:
-            if verify:
-                return seqs.order_by('sequenceshortname')
-            else:
-                context = {'error': 'At least one taxonomy must be selected.'}
-                return context
+    if 'species_list' in query:
+        taxonomies_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(scientificname__in=query['species_list'])]
+        seqs = seqs.filter(taxonomy_id__in=taxonomies_ids)
 
+    if ('taxonomy' in query and notEmpty(query, 'taxonomy')):
+        query['taxonomy'] = list(filter(None, query['taxonomy'])) #remove empty values in list
+        taxonomy_name = [query['taxonomy'][-1]]
+
+        df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
         reducedTaxonomyIDs = reducedTRACEYtaxonomies_ncbiIDs[taxonomy_name[0]]
-        # taxonomy = Taxonomies.objects.filter(scientificname__in = taxonomy_name)
-        taxonomy = Taxonomies.objects.filter(ncbi_taxonomy_id__in = reducedTaxonomyIDs)
-        taxonomy_childs = []
-        taxonomy_childs_ = []
-        for taxa in taxonomy:
-            taxonomy_ = Taxonomies.objects.filter(taxonomy_id = taxa.taxonomy_id)
-            taxonomy_childs_ = get_childs(Taxonomies, taxonomy_, "taxonomy_id", "taxonomyparent_id", childs=[])
-            taxonomy_childs += taxonomy_childs_
-        taxonomy_childs_ids = [x.taxonomy_id for x in taxonomy_childs] + [x.taxonomy_id for x in taxonomy]
-        seqs = seqs.filter(taxonomy_id__in = taxonomy_childs_ids)
+        taxonomy_names = [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyIDs)]
+        ncbi_taxonomy_ids = []
+        for t in taxonomy_names:
+            arr = list(df[(df.eq(t).any(1))].index.values)
+            ncbi_taxonomy_ids = ncbi_taxonomy_ids + arr
+        taxonomy_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=ncbi_taxonomy_ids)]
+        seqs = seqs.filter(taxonomy_id__in=taxonomy_ids)
+
+    if len(seqs) > 4000 and not verify:
+        context = {'error': 'This query returned too many sequences (>4000). Please refine your search.'}
+        return context
     return seqs.order_by('sequenceshortname')
 
 def notEmpty(query, element):
@@ -246,6 +241,21 @@ def load_taxonomy_rank(request):
     else:
         taxonomy_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(taxonomyrank=rank)] )))
     return render(request, 'home/query-sequences-family-taxonomyRank.html', {'taxonomy_list': taxonomy_list})
+
+
+def load_species(request):
+    df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+    rank = request.GET.get('taxonomy_rank')
+
+    reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[rank]
+    values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
+    taxonomy_ids = []
+    for v in values:
+        arr = list(df[ (df.eq(v).any(1)) & (df['species']!="-") ].index.values)
+        taxonomy_ids = taxonomy_ids + arr
+
+    species_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids)] )))
+    return render(request, 'home/query-sequences-family-species.html', {'species_list': species_list})
 
 
 def load_domaingroups_rank1(request):
@@ -353,15 +363,6 @@ def QuerySequences(request):
     SNAREmotifs = Motifs.objects.filter(domaingroup_id__in = SNAREdomaingroups.values('domaingroup_id'))
     shortnames = sorted(list( set([ x.sequenceshortname.split("_")[0] for x in Sequences.objects.filter(sequence_id__in = SNAREmotifs.values('sequence_id')) if x.sequenceshortname.split("_")[0] != "" ]) ))
 
-    # taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
-    # def get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = []):
-    #     for t in rt:
-    #         indentation = n*['-' if n == 1 else '+'][0]
-    #         nameslist.append(indentation+t)
-    #         if rt[t]:
-    #             get_taxonomy_names(rt = rt[t], n=n+1, nameslist = nameslist)
-    #     return nameslist
-    # taxonomy_ranks = get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = [])
     taxonomy_ranks = [x for x in reducedTRACEYtaxonomies]
 
     ## CONTEXT ##
@@ -379,6 +380,7 @@ def QuerySequences(request):
         if form.is_valid():
             # If error on query request or query is empty
             if context['error']:
+                context['error'] = request.session['error']
                 request.session['error'] = ''
                 return render(request, 'home/query-sequences.html', context)
             # If no field is specified
@@ -404,7 +406,7 @@ def QuerySequencesResults(request):
     segment = request.path.split("?")[0].split('/')[-1]
     context = dict(request.GET)
     sequences = get_sequences(context)
-    print(context)
+
     if len(sequences) == 0 or 'error' in sequences:
         if 'error' in sequences:
             request.session['error'] = sequences['error']
