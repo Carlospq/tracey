@@ -3,7 +3,14 @@
 {% block title %} Query sequences {% endblock %}
 
 <!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+    .taxonomyDiv {
+        width: 100%;
+        display: block;
+    }
+</style>
+{% endblock stylesheets %}
 {% block content %}
 
 <div class="row mt-4">
@@ -28,14 +35,15 @@
                     <div class="card-body">
                         <div style="padding-bottom: 5px" >
                             <h1><strong> Protein Sequences Query </strong></h1>
-                            <p><i> Search Tracey database for sequences fullfilling the selected parameters. </i></p>
-                            <p style="color: red"> {% if error %}{% if '0 sequences' in error %} {{ error }} {% endif %}{% endif %} </p>
+                            <p><i> Search Tracey database for sequences fulfilling the selected parameters. </i></p>
+                            {% if error %}<p style="color: red"> {{ error }} </p>{% endif %}
                             <hr>
                         </div>
 
                         <!-- Beggining of Form -->
                         <form method='get' action='query-sequences-results' name="FamilyForm" id="FamilyForm"
                             data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
+                            data-load-species-url="{% url 'ajax_load_species' %}"
                             data-load-sequenceshortnames-url="{% url 'ajax_load_sequenceshortnames' %}"
                             data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
                             data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
@@ -96,15 +104,25 @@
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
 
                                     <!-- taxonomy_rank -->
-                                    <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
-                                    <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
-                                    <div class="taxonomyDiv" id="taxonomyDiv" style="display: block">
-                                        <select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
-                                            <option value=""></option>
-                                            {% for val in taxonomy_ranks %}
-                                                <option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
-                                            {% endfor %}
-                                        </select>
+                                    <div style="display: block; width: 100%;">
+                                        <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
+                                        <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
+                                    </div>
+                                    <div style="display: block; width: 100%; height: calc(100% - 33px); position: relative;">
+                                        <div style="width: 50%; vertical-align: top; display: inline-block;">
+                                            <div class="taxonomyDiv" id="taxonomyDiv">
+                                                <select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
+                                                    <option value=""></option>
+                                                    {% for val in taxonomy_ranks %}
+                                                        <option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div
+                                        ><div style="width: 50%; vertical-align: top; height: 100%; padding-left: 10px; display: inline-block;">
+                                            <select name="species_list" id="species_list" multiple style="width: 100%; height: 100%">
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <!-- taxa -->
@@ -154,11 +172,12 @@
     // Load secuential taxonomy ranks
     function taxonomyDiv(object) {
       var url = $("#FamilyForm").attr("data-load-taxonomy-rank-url");
+      var url_species = $("#FamilyForm").attr("data-load-species-url");
       var taxonomy_rank = object.value;
       var parent = object.parentElement;
       var rankNum = parseInt(object.id.split('taxonomy_rank_')[1])+1;
 
-      // remove higher ranks
+      // remove children ranks
       var children = document.getElementById("taxonomyDiv").children;
       for (var i = children.length - 1; i >= 0; i--) {
         var child = children[i];
@@ -168,7 +187,7 @@
         };
       };
 
-      // create new high rank
+      // create new child rank
       var selectList = document.createElement("select");
       selectList.id = "taxonomy_rank_"+rankNum;
       selectList.name = "taxonomy";
@@ -181,18 +200,28 @@
       // var selectedList = document.getElementById(selectList.id);
       var selectedList = $("#"+selectList.id)
 
-      $.ajax({                                 // initialize an AJAX request
-        url: url,                              // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
+      $.ajax({
+        url: url,
         data: {
-          'taxonomy_rank': taxonomy_rank,      // add the country id to the GET parameters
+          'taxonomy_rank': taxonomy_rank,
           'reduced': 'true'
         },
-        success: function (data) {             // `data` is the return of the `load_cities` view function
-          selectedList.html(data);             // replace the contents of the city input with the data that came from the server
+        success: function (data) {
+          selectedList.html(data);
           var x = selectedList[0]
           if (x.options.length == 1){
             selectedList.hide();
           };
+        }
+      });
+
+      $.ajax({
+        url: url_species,
+        data: {
+          'taxonomy_rank': taxonomy_rank,
+        },
+        success: function (data) {
+          $("#species_list").html(data);
         }
       });
     };
