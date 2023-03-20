@@ -26,6 +26,31 @@
         }
     </style>
 </head>
+
+
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script>
+   function suggestNames() {
+        var sequence = $("#id_sequence").val();
+        if (!sequence) {
+        	alert("Sequence is empty. Please enter a sequence to get suggestions.");
+		} else {
+			$.ajax({
+				url: "{% url 'ajax_suggestNames' %}",
+				type: "POST",
+				data: {
+					'sequence': sequence,
+					csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+				},
+				success: function (data) {
+					$("#suggestedNames").html(data);
+				},
+			});
+		}
+   }
+</script>
+
+
 <form method='post' action='' name="motifForm" id="motifForm">
 		{% csrf_token %}
 
@@ -33,26 +58,27 @@
 		<div class="row mb-4">
 				<div class="col-lg-6 col-sm-6">
 						<div class="row mb-1">
-								<table>
-                  <tr>
+								<table><tr>
 										<td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
 										<td class="tdquestion">
-                        <!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
-                        <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>
-                    </td>
+												<!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
+												<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue">
+													<abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr>
+												</a>
+                    					</td>
 										<td class="tdfield">
 												{{ form.sequenceshortname }}
 												{% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
 										</td>
-								   </tr>
-                   {% if suggestedNames %}
-                   <tr>
-                     <td class="tdlabel">Suggested Names:</td>
-                     <td class="tdquestion"><abbr data-toggle="tooltip" title="Suggested names based on BLAST against TRACEY sequences" style='color: blue; text-align: right'> ? </abbr></td>
-                     <td class="tdfield">{{ suggestedNames }}</td>
-                   </tr>
-                   {% endif %}
-                 </table>
+									   </tr>
+									   {% if suggestedNames %}
+									   <tr>
+										 <td class="tdlabel">Suggested Names:</td>
+										 <td class="tdquestion"><abbr data-toggle="tooltip" title="Suggested names based on BLAST against TRACEY sequences" style='color: blue; text-align: right'> ? </abbr></td>
+										 <td class="tdfield">{{ suggestedNames }}</td>
+									   </tr>
+									   {% endif %}
+								 </table>
 						</div>
 						<div class="row mb-1">
 								<table><tr>
@@ -81,7 +107,15 @@
 										<td class="tdlabel" style="padding-left: 25px;">{{ form.sequence.label_tag }}</td>
 										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
 										<td class="tdfield">
-												<div class="fieldWrapper">{{ form.sequence }}</div>
+												<div class="fieldWrapper" id="sequence">{{ form.sequence }}</div>
+												{% for error in form.errors.sequence %}<p class="perror"">{{ error }}</p>{% endfor %}
+										</td>
+								</tr></table>
+								<table><tr>
+										<td class="tdlabel" style="padding-left: 25px; padding-right: 15px;"><input type="button" onclick="suggestNames()" value="Suggested names" style="font-size: 14px; white-space: normal;"></td>
+										<td class="tdquestion"><abbr data-toggle="tooltip" title="Return suggested names based on sequence alignment against tracey sequences. It can take several minutes for very long sequences." style='color: blue; text-align: right'> ? </abbr></td>
+										<td class="tdfield">
+												<textarea id="suggestedNames" style="line-height: 31px; width: 100%; height: 62px; resize: none; overflow-y: auto;" disabled></textarea>
 												{% for error in form.errors.sequence %}<p class="perror"">{{ error }}</p>{% endfor %}
 										</td>
 								</tr></table>

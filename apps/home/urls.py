@@ -57,6 +57,7 @@ urlpatterns = [
     path('ajax/ajax-update-tree/', views.update_tree, name='ajax_update_tree'),
     path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"),
     path('ajax/updateSequenceStatus', views.updateSequenceStatus, name="ajax_updateSequenceStatus"),
+    path('ajax/suggestNames', views.suggestNames, name="ajax_suggestNames"),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),
