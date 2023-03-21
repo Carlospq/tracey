@@ -99,22 +99,23 @@ class InsertSequence(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        helptexts = {'foreignannotation': 'NCBI gene ID annotation',
-                     'sequenceshortname': '',
-                     'annotation': '',
-                     'sequence': '',
-                     'sequencestatus': '',
-                     'sequencecomments': '',
-                     'taxonomy': '',
-                     'private': '',
-                     'aliases': '',
+        helptexts = {'foreignannotation': 'Short description of the sequence provided by sequence "sourcedatabase" (usually as the FastA header)',
+                     'sequenceshortname': 'Click for full description',
+                     'annotation': 'Custom annotations.',
+                     'sequence': 'Amino acid sequence.',
+                     'sequencestatus': '- live: alive and ready to use\n- crystalstructure: represents a crystal structure\n- suppressed: sequence is being suppressed from the analysis, maybe incorrect\n- replaced NCBI: replaced at the NCBI database and should no longer be used'
+                                       '\n- replaced: replaced with a sequence that is not from NCBI\n- withdrawn: withdrawn from the source database and no longer avaiable\n- dead: not used\n- ignore: sequence is ignored\n- unknown: unknown status',
+                     'sequencecomments': 'Comments about this entry.',
+                     'taxonomy': 'Species name associated to the sequence. Can not be left blank',
+                     'private': 'Published/unpublished status of sequences. Set this field to "No" only if sequence has been already published.',
+                     'aliases': 'All different names attributed to this protein',
                      'sourcedatabase': 'Source from where sequence has been obtained',
                      'gene': '- If blank an empty instance of gene will be assigned to this sequence\n- "not_specified:-1:###" means an empty instance of Gene has been asigned to this sequence',
-                     'sequencetype': '',
+                     'sequencetype': 'Type of sequence. TRACEY is ment to store only protein sequences so far.',
                      'changelog': '',
                      'newChangelog': 'Short and clear description of the modification',
                      'replacedby': '',
-                     'dbxref': 'Sequence ID from source database. If "Source database" is specified then "dbxref" can not be empty.'}
+                     'dbxref': 'Sequence ID from source database. If "Source database" is specified then this field can not be empty.'}
 
         for f in self.fields:
             self.fields[f].help_text = helptexts[f]
