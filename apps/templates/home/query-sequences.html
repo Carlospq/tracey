@@ -48,6 +48,7 @@
                             data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
                             data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                         <input type="text" name="motif" value="{{ family }}" hidden></input>
+                        <input type="text" name="private" value="1" hidden></input>
                         {% csrf_token %}
 
                         <!-- Selection of domain -->
@@ -62,7 +63,16 @@
                                 </select>
                             </div>
 
-                            <div class="col-lg-6 col-sm-6">
+                            <div class="col-lg-3 col-sm-3">
+                                <!-- Foreign annotation -->
+                                    <label style="vertical-align: top;" for="{{ form.foreignannotation.id_for_label }}">Foreign annotation
+                                        <abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue;'> ? </abbr>
+                                    </label>
+                                      {{ form.foreignannotation }}
+                                      {% if error %}<p style="color: red">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
+                                <!-- End Foreign annotation -->
+                            </div>
+                            <div class="col-lg-3 col-sm-3">
                                 <label style="vertical-align: top; width: 100%" for="sequencestatus"> Sequence status </label>
                                 <input type="checkbox" id="sequencestatus" name="sequencestatus" value="1" checked>
                                 <label for="sequencestatus"> Only active sequences</label>
@@ -76,26 +86,17 @@
                             <!-- Row 1 -->
                             <div class="row">
                                 <!-- Shortname -->
-                                <div class="col-lg-6 col-sm-6">
-                                    <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
-                                    <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>
-                                    <select style="width: 100%" name="shortname" id="shortname" >
-                                            <option value=""> </option>
-                                        {% for val in shortnames %}
-                                            <option value= "{{ val }}"> {{ val }} </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
+<!--                                <div class="col-lg-6 col-sm-6">-->
+<!--                                    <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>-->
+<!--                                    <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>-->
+<!--                                    <select style="width: 100%" name="shortname" id="shortname" >-->
+<!--                                            <option value=""> </option>-->
+<!--                                        {% for val in shortnames %}-->
+<!--                                            <option value= "{{ val }}"> {{ val }} </option>-->
+<!--                                        {% endfor %}-->
+<!--                                    </select>-->
+<!--                                </div>-->
                                 <!-- End Shortname -->
-                                <!-- Foreign annotation -->
-                                <div class="col-lg-6 col-sm-6">
-                                    <label style="vertical-align: top;" for="{{ form.foreignannotation.id_for_label }}">Foreign annotation
-                                        <abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue;'> ? </abbr>
-                                    </label>
-                                      {{ form.foreignannotation }}
-                                      <p style="color: red">{% if error %}{% if 'Foreign' in error %} {{ error }} {% endif %}{% endif %}</p>
-                                </div>
-                                <!-- End Foreign annotation -->
                             </div>
                             <!-- End Row 1 -->
                             <!-- Row 2 -->
@@ -106,7 +107,9 @@
                                     <!-- taxonomy_rank -->
                                     <div style="display: block; width: 100%;">
                                         <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
-                                        <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
+                                        <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue">
+                                            <abbr data-toggle="tooltip" title='Click for full description' style='color: blue;'> ? </abbr>
+                                        </a>
                                     </div>
                                     <div style="display: block; width: 100%; height: calc(100% - 33px); position: relative;">
                                         <div style="width: 50%; vertical-align: top; display: inline-block;">
@@ -136,7 +139,9 @@
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
                                     <!-- domainGroup_rank -->
                                     <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
-                                    <a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue"> ?</a>
+                                    <a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue">
+                                        <abbr data-toggle="tooltip" title='Click for full description' style='color: blue;'> ? </abbr>
+                                    </a>
                                     <select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank">
                                         <option value= ""> </option>
                                         {% for val in domaingroup_rank %}
@@ -215,10 +220,15 @@
         }
       });
 
+      var taxonomy_list = [];
+      var taxonomy_ranks = document.getElementsByName("taxonomy");
+      taxonomy_ranks.forEach((tax) => taxonomy_list.push(tax.value));
+
       $.ajax({
         url: url_species,
         data: {
           'taxonomy_rank': taxonomy_rank,
+          'taxonomy_list': taxonomy_list,
         },
         success: function (data) {
           $("#species_list").html(data);
