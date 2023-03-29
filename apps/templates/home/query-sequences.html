@@ -274,11 +274,13 @@
     $("#domaingroup_rank").change(function () {
       var url = $("#FamilyForm").attr("data-load-domaingroups-rank2-url");  // get the url of the `load_cities` view
       var domaingroup_rank = $(this).val();                                 // get the selected country ID from the HTML input
+      var domainname = $("#domainname").val();
 
       $.ajax({                                        // initialize an AJAX request
         url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
         data: {
-          'domaingroup_rank': domaingroup_rank        // add the country id to the GET parameters
+          'domaingroup_rank': domaingroup_rank,        // add the country id to the GET parameters
+          'domainname': domainname
         },
         success: function (data) {                    // `data` is the return of the `load_cities` view function
           $("#id_domaingroup").html(data);     // replace the contents of the city input with the data that came from the server

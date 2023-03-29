@@ -87,8 +87,13 @@
                     shouldSwitch = false;
                     /*Get the two elements you want to compare,
                     one from current row and one from the next:*/
-                    x = rows[i].getElementsByTagName("TD")[coln];
-                    y = rows[i + 1].getElementsByTagName("TD")[coln];
+                    if (coln == 1) {
+                        x = rows[i].getElementsByTagName("TD")[coln].firstChild;
+                        y = rows[i + 1].getElementsByTagName("TD")[coln].firstChild;
+                    } else {
+                        x = rows[i].getElementsByTagName("TD")[coln];
+                        y = rows[i + 1].getElementsByTagName("TD")[coln];
+                    }
                     //check if the two rows should switch place:
                     if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
                         //if so, mark as a switch and break the loop:
@@ -122,8 +127,13 @@
                     shouldSwitch = false;
                     /*Get the two elements you want to compare,
                     one from current row and one from the next:*/
-                    x = rows[i].getElementsByTagName("TD")[coln];
-                    y = rows[i + 1].getElementsByTagName("TD")[coln];
+                    if (coln == 1) {
+                        x = rows[i].getElementsByTagName("TD")[coln].firstChild;
+                        y = rows[i + 1].getElementsByTagName("TD")[coln].firstChild;
+                    } else {
+                        x = rows[i].getElementsByTagName("TD")[coln];
+                        y = rows[i + 1].getElementsByTagName("TD")[coln];
+                    }
                     //check if the two rows should switch place:
                     if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
                         //if so, mark as a switch and break the loop:
@@ -161,8 +171,8 @@
                             <input type="checkbox" id="maincheck" name="maincheck" onClick="toggle(this)">
                         </th>
                         <th class="border-bottom" scope="col" style="width:10%; text-align: center;"> Short Name
-                            <button type="button" name="button" onclick="sortTable(0)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i></button>
-                            <button type="button" name="button" onclick="sortDown(0)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i></button>
+                            <button type="button" name="button" onclick="sortTable(1)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i></button>
+                            <button type="button" name="button" onclick="sortDown(1)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i></button>
                         </th>
                         <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="2">Species
                             <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
@@ -187,9 +197,7 @@
                             <td class="border-bottom" scope="col" style="width:2%;">
                                 <input type="checkbox" id="cb{{seq.sequence_id}}" name="checkbox" value='{{seq.sequence_id}}'>
                             </td>
-                            <td style="width: 10%;">
-                                <a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a>
-                            </td>
+                            <td style="width: 10%;"><a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a></td>
                             <td style="width: 14%;">{{ speciesname|get_item:seq.sequence_id }}</td>
                             <td style="width: 14%;">{{ seq.sourcedatabase }}</td>
                             <td style="width: 30%;">
