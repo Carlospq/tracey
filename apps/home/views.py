@@ -99,7 +99,9 @@ def get_sequences(query, verify=False):
 		children_ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
 		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
 	elif 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
-		domaingrouprank = Domaingroups.objects.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
+		domainname = query['domainname'][0]
+		domaingrouprank = Domaingroups.objects.filter(domain = Domains.objects.get(domainname=domainname))
+		domaingrouprank = domaingrouprank.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
 		domaingrouprank_children = get_childs(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", childs=[])
 		# domaingrouprank_childs = get_childs_raw(Domaingroups, "domaingroups", domaingrouprank, "domaingroup_id", "domaingroup_id", "domaingroupparent_id")
 		children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
@@ -423,6 +425,7 @@ def QuerySequencesResults(request):
 	context["speciesname"] = speciesname
 	context["segment"] = segment
 	context["is_staff"] = request.user.is_staff
+
 	hmmMoldes = []
 	for d in os.listdir('utils/hmmModels/'):
 		if not os.path.isdir('utils/hmmModels/%s'%(d)): continue
@@ -431,6 +434,7 @@ def QuerySequencesResults(request):
 
 	hmmMoldes.sort()
 	context["hmmModels"] = hmmMoldes
+
 	return render(request, 'home/query-sequences-results.html', context)
 
 
@@ -1176,8 +1180,8 @@ def QueryVerifyView(request, sequence_id):
 	# Retrive verifyMotifs
 	motifs = Motifs.objects.filter(sequence_id = sequence_id)
 	verifymotifs = Verifymotifs.objects.filter(sequence_id = sequence_id)
-	context["motifs"]  = {}
-	context["verifymotifs"]  = {}
+	context["motifs"] = {}
+	context["verifymotifs"] = {}
 
 	# suggestedNames = suggested_names(seq.sequenceshortname, seq.sequence)
 	# context['suggestedNames'] = ",    ".join(suggestedNames)
