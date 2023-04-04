@@ -174,13 +174,17 @@
                             <button type="button" name="button" onclick="sortTable(1)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i></button>
                             <button type="button" name="button" onclick="sortDown(1)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i></button>
                         </th>
-                        <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="2">Species
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="2">Species
                             <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                             <button type="button" name="button" onclick="sortDown(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
                          </th>
-                        <th class="border-bottom" scope="col" style="width:14%; text-align: center;" id="3">Source database
+                        <th class="border-bottom" scope="col" style="width:8%; text-align: center;" id="2">Motifs
                             <button type="button" name="button" onclick="sortTable(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
                             <button type="button" name="button" onclick="sortDown(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                        </th>
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="3">Source database
+                            <button type="button" name="button" onclick="sortTable(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
+                            <button type="button" name="button" onclick="sortDown(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
                         </th>
                         <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="5">Foreign Annotation</th>
                         <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="6">Sequence</th>
@@ -198,8 +202,9 @@
                                 <input type="checkbox" id="cb{{seq.sequence_id}}" name="checkbox" value='{{seq.sequence_id}}'>
                             </td>
                             <td style="width: 10%;"><a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a></td>
-                            <td style="width: 14%;">{{ speciesname|get_item:seq.sequence_id }}</td>
-                            <td style="width: 14%;">{{ seq.sourcedatabase }}</td>
+                            <td style="width: 10%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+                            <td style="width: 8%;">{{ motifnames|get_item:seq.sequence_id }}</td>
+                            <td style="width: 10%;">{{ seq.sourcedatabase }}</td>
                             <td style="width: 30%;">
                                 <textarea readonly style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
                             </td>
