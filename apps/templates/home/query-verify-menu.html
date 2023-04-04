@@ -127,6 +127,7 @@
                         <form method='post' action='#' name="MotifForm" id="MotifForm"
                               data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
                               data-load-species-url="{% url 'ajax_load_species' %}"
+                              data-load-sequenceshortnames-url="{% url 'ajax_load_sequenceshortnames' %}"
                               data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
                               data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                             <!-- ajax_load_verifyTable1 -->
@@ -169,6 +170,17 @@
                                     </div>
                                 </div>
 
+                            </div>
+
+                            <div class="row mb-4">
+                                <!-- Shortname -->
+                                <div class="col-3">
+                                    <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
+                                    <select style="width: 100%" name="shortname" id="shortname" >
+                                        <option selected="selected" disabled="true">-- Choose a domain to display Shortnames --</option>">
+                                    </select>
+                                </div>
+                                <!-- End Shortname -->
                             </div>
 
                             <div class="row mb-4" style="min-height: 200px;">
@@ -377,6 +389,7 @@
         data: {
           'taxonomy_rank': taxonomy_rank,
           'taxonomy_list': taxonomy_list,
+          'verify': 'true',
         },
         success: function (data) {
           $("#species_list").html(data);
@@ -392,6 +405,7 @@
         var domainname = $("#domainname").val();
         var domaingroup_rank = $("#domaingroup_rank").val();
         var domaingroup = $("#domaingroup").val();
+        var shortname = $("#shortname").val();
         var species_list = $("#species_list").val();
         var verified = document.getElementById("verified").checked;
         var unverified = document.getElementById("unverified").checked;
@@ -427,6 +441,7 @@
                 domaingroup_rank: $("#domaingroup_rank").val(),
                 domaingroup: $("#domaingroup").val(),
                 taxonomy: taxonomy,
+                shortname: shortname,
                 species_list: species_list,
                 sequencestatus: $("#status").val(),
                 verified: verified,
@@ -471,6 +486,7 @@
       });
     });
 
+    // Load domaingroups
     $("#domaingroup_rank").change(function () {
       var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
       var domainname = $("#domainname").val();
@@ -490,6 +506,25 @@
         }
       });
     });
+
+    // Load shortnames
+    $("#domainname").change(function () {
+      var url = $("#MotifForm").attr("data-load-sequenceshortnames-url");   // get the url of the `load_cities` view
+      var domainname = $(this).val();                                       // get the selected country ID from the HTML input
+
+      $.ajax({                                        // initialize an AJAX request
+        url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
+        data: {
+          'domainname': domainname        // add the country id to the GET parameters
+        },
+
+        success: function (data) {                    // `data` is the return of the `load_cities` view function
+          $("#shortname").html(data);     // replace the contents of the city input with the data that came from the server
+        }
+      });
+    });
+
+
 </script>
 </body>
 {% endblock content %}

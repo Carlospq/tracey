@@ -99,7 +99,9 @@ def get_sequences(query, verify=False):
 		children_ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
 		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
 	elif 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
-		domaingrouprank = Domaingroups.objects.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
+		domainname = query['domainname'][0]
+		domaingrouprank = Domaingroups.objects.filter(domain = Domains.objects.get(domainname=domainname))
+		domaingrouprank = domaingrouprank.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
 		domaingrouprank_children = get_childs(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", childs=[])
 		# domaingrouprank_childs = get_childs_raw(Domaingroups, "domaingroups", domaingrouprank, "domaingroup_id", "domaingroup_id", "domaingroupparent_id")
 		children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
@@ -247,6 +249,12 @@ def load_species(request):
 	# rank = request.GET.get('taxonomy_rank')
 	ranks = [x for x in request.GET.getlist('taxonomy_list[]') if x != ''][-1]
 
+	# domain = Domains.objects.get(domainname="SNARE")
+	# domaingroups = Domaingroups.objects.filter(domain_id=domain.domain_id)
+	# motifs = Motifs.objects.filter(domaingroup_id__in=[x.domaingroup_id for x in domaingroups])
+	# if 'verify' in request.GET:
+	# 	vmotifs = Verifymotifs.objects.filter(domaingroup_id__in=[x.domaingroup_id for x in domaingroups])
+
 	reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[ranks]
 	values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
 	taxonomy_ids = []
@@ -254,7 +262,16 @@ def load_species(request):
 		arr = list(df[ (df.eq(v).any(1)) & (df['species']!="-") ].index.values)
 		taxonomy_ids = taxonomy_ids + arr
 
-	species_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids)] )))
+	# species_list = []
+	# for t in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids):
+	# 	sequences = t.sequences_set.all()
+	# 	if motifs.filter(sequence_id__in=sequences):
+	# 		species_list.append(t.scientificname)
+	# 	if vmotifs.filter(sequence_id__in=sequences):
+	# 		if not t.scientificname in species_list:
+	#			species_list.append(t.scientificname)
+	# species_list.sort()
+	species_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids) ] )))
 	return render(request, 'home/query-sequences-family-species.html', {'species_list': species_list})
 
 
@@ -373,6 +390,7 @@ def QuerySequences(request):
 			   'taxonomy_ranks': taxonomy_ranks,
 			   'domaingroup_rank': SNAREdomaingroupnames,
 			   'form': form,
+			   'is_staff': request.user.is_staff,
 			   'error': [request.session['error'] if 'error' in request.session else ''][0]}
 
 	if request.method == "GET":
@@ -419,10 +437,16 @@ def QuerySequencesResults(request):
 	for seq in sequences:
 		speciesname[seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
 
+	motifnames = {}
+	for seq in sequences:
+		motifnames[seq.sequence_id] = ", ".join(sorted(list(set([Domaingroups.objects.get(domaingroup_id=x.domaingroup_id).domaingroupname for x in seq.motifs_set.all()]))))
+
 	context["sequences"] = sequences
 	context["speciesname"] = speciesname
+	context["motifnames"] = motifnames
 	context["segment"] = segment
 	context["is_staff"] = request.user.is_staff
+
 	hmmMoldes = []
 	for d in os.listdir('utils/hmmModels/'):
 		if not os.path.isdir('utils/hmmModels/%s'%(d)): continue
@@ -431,6 +455,7 @@ def QuerySequencesResults(request):
 
 	hmmMoldes.sort()
 	context["hmmModels"] = hmmMoldes
+
 	return render(request, 'home/query-sequences-results.html', context)
 
 
@@ -988,7 +1013,8 @@ def QueryVerifyMenuView(request):
 			   'sequences': Sequences.objects.none(),
 			   'speciesname': {},
 			   'MotifForm': MotifForm(initial={'status': 'live'}),
-			   'taxonomy_ranks': taxonomy_ranks
+			   'taxonomy_ranks': taxonomy_ranks,
+			   'shortnames': [''],
 			   }
 
 	context['log'] = len(context['sequences'])
@@ -1090,21 +1116,32 @@ def QueryVerifyBlastView(request, db, query_id):
 						'P': 'yellow',
 						'H': 'cyan', 'Y': 'cyan',
 						'-': 'none', '.': 'none'}
-	if db[-1] == 'v':
+	if db[-1] == 'v': #verifyMotifs
 		query = Verifymotifs.objects.get(pk=int(query_id))
 		start = [query.startposition-1 if query.startposition-1 > 0 else 0][0]
 		query_sequence = query.sequence.sequence[start:query.stopposition]
 		shortname = "_".join([ query.sequence.sequenceshortname, query.motifname ])
-	elif db[-1] == 'm':
+	elif db[-1] == 'm': #motifs
 		query = Motifs.objects.get(pk=int(query_id))
 		query_sequence = query.sequence.sequence[query.startposition-1:query.stopposition]
 		shortname = "_".join([ query.sequence.sequenceshortname, query.motifname ])
-	elif db[-1] == 's':
+	elif db[-1] == 's': #sequences
 		query = Sequences.objects.get(pk=int(query_id))
 		query_sequence = query.sequence
 		shortname = query.sequenceshortname
 
-	context = {'db': db[:-1],
+	if db[-2] == 'a': #allSequences
+		db_type = 'all'
+		db_path = 'utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyall'
+	elif db[-2] == 'v': #verifySequences
+		db_type = 'verify'
+		db_path = 'utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyverify'
+	elif db[-2] == 'u': #unverifySequences
+		db_type = 'unverify'
+		db_path = 'utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyunverify'
+
+
+	context = {'db': db[:-2]+'_'+db_type,
 			   'query_id': query_id,
 			   'name': shortname,
 			   'motif_length': len(query_sequence),
@@ -1114,13 +1151,13 @@ def QueryVerifyBlastView(request, db, query_id):
 	context['fasta_sequence'] = '>'+context['name']+"\n%s"%(query_sequence)
 
 	file_path = 'utils/ncbi-blast-2.13.0+/query_vm.fasta'
-	if context['db'] == 'TRACEY':
+	if 'TRACEY' in context['db']:
 
 		blastp_path = 'utils/ncbi-blast-2.13.0+/bin/blastp'
 		with open(file_path, 'w') as fasta_file:
 			fasta_file.write( context['fasta_sequence'] )
 
-		blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", num_alignments = 500, max_hsps = 1, outfmt = 4)
+		blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = db_path, num_alignments = 500, max_hsps = 1, outfmt = 4)
 		stdout, stderr = blastp_cline()
 		if stderr:
 			context['blast_error'] = stderr
@@ -1176,8 +1213,8 @@ def QueryVerifyView(request, sequence_id):
 	# Retrive verifyMotifs
 	motifs = Motifs.objects.filter(sequence_id = sequence_id)
 	verifymotifs = Verifymotifs.objects.filter(sequence_id = sequence_id)
-	context["motifs"]  = {}
-	context["verifymotifs"]  = {}
+	context["motifs"] = {}
+	context["verifymotifs"] = {}
 
 	# suggestedNames = suggested_names(seq.sequenceshortname, seq.sequence)
 	# context['suggestedNames'] = ",    ".join(suggestedNames)
