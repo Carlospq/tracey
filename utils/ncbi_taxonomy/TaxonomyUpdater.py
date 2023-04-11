@@ -1,14 +1,17 @@
 #####################################
 #
-# creator: Carlos Pulido
+# version: 1.1
 # date: 05/12/2022
+# updated: 21/03/2023
+#
+# creator: Carlos Pulido
 #
 # To run this script type the following command on a terminal at the main projects directory:
 # python manage.py shell < utils/ncbi_taxonomy/TaxonomyUpdater.py
 #
 #####################################
 #
-# Uses NCBI taxonomy files to check and update TRACEY taxonomies
+# Description: This script downloads and reads most updated NCBI taxonomy files, then compares and updates the actual TRACEY taxonomies
 # NCBI taxonomy files can be found here: https://www.ncbi.nlm.nih.gov/guide/taxonomy/ -> Downloads
 # Definitions of headers can be found here: https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump_readme.txt
 #
