@@ -112,76 +112,84 @@ def create_ncbi_taxonomy(ncbi_id, ncbi, report_file=''):
                           ncbi_taxonomy_id = int(ncbi_id),
                           taxonomystatus = 'main reference')
     taxonomy.save()
+    # Write report
     if report_file:
         report_file.write("CREATED Taxonomy (id:%s): %s\n"%(taxonomy.taxonomy_id, taxonomy.scientificname))
     return taxonomy
 
 
-def update_taxonomy(taxonomy, ncbi, report_file='', update_type=''):
+def merge_ncbi_taxonomy(taxonomy, ncbi, report_file=''):
+    # Default values
     time_now = datetime.datetime.now().date()
-    tracey_id = taxonomy.taxonomy_id
-    ncbi_id = taxonomy.ncbi_taxonomy_id
-    #MERGED IDs
-    if update_type == "MERGED":
-        new_ncbi_id = int(ncbi['dict_merged'][str(ncbi_id)]['new_tax_id'])
-        # Create new Taxonomy if does not exists in TRACEY
-        try:
-            new_merged_taxonomy = Taxonomies.objects.get(ncbi_taxonomy_id=new_ncbi_id)
-        except:
-            new_merged_taxonomy = create_ncbi_taxonomy(new_ncbi_id, ncbi)
-        # Mark old Taxonomy as "merged" in comments (only if last update date is different than todays date)
-        if not str(time_now) in taxonomy.taxonomycomments and not 'merged into %s'%(new_merged_taxonomy.taxonomy_id) in taxonomy.taxonomycomments:
-            taxonomy.taxonomycomments = taxonomy.taxonomycomments+'; %s - automatically Updated by TaxonomyUpdater: merged into %s by NCBI'%(str(time_now), new_merged_taxonomy.taxonomy_id)
-            taxonomy.taxonomystatus = 'merged by ncbi'
-            # Move Sequences from old Taxonomy to new Taxonomy
-            if report_file:
-                report_file.write("%s Taxonomy (id:%s): %s - merged into %s (id:%s) by NCBI\n"%(update_type, tracey_id, taxonomy.scientificname, new_merged_taxonomy.scientificname, new_merged_taxonomy.taxonomy_id))
-            for seq in taxonomy.sequences_set.all():
-                seq.taxonomy_id = new_merged_taxonomy.taxonomy_id
-                seq.save()
-                if report_file:
-                    report_file.write("\t- SEQUENCE %s (id:%s): now linked to taxonomy %s (id:%s)\n"%(seq.sequenceshortname, seq.sequence_id, new_merged_taxonomy.scientificname, new_merged_taxonomy.taxonomy_id))
-    # DELETED IDs
-    elif update_type == "DELETED":
-        report_file.write("DELETED Taxonomy (%s): %s\n"%(tracey_id, taxonomy.scientificname))
-        if not str(time_now) in taxonomy.taxonomycomments and not 'deleted from NCBI' in taxonomy.taxonomycomments:
-            taxonomy.taxonomycomments = taxonomy.taxonomycomments+'; %s - automatically Updated by TaxonomyUpdater: deleted from NCBI'%(str(time_now))
-            taxonomy.taxonomystatus = 'deleted from ncbi'
-            if report_file:
-                report_file.write("%s Taxonomy (id:%s): %s - deleted from NCBI\n"%(update_type, tracey_id, taxonomy.scientificname))
-                # Sequences are reported in 'report_file'
-                for seq in taxonomy.sequences_set.all():
-                    # Flag them as "dead" (????)
-                    report_file.write("\t- %s (id:%s): sequence's taxonomy (%s; id:%s) has been deleted from NCBI\n"%(seq.sequenceshortname, seq.sequence_id, taxonomy.scientificname, tracey_id))
-    # EXISTING IDs: check if update is required
-    elif str(ncbi_id) in ncbi['dict_nodes']:
-        # Check if parent taxonomy exists and create it if doesn't exists
-        ncbi_parent_id = ncbi['dict_nodes'][str(ncbi_id)]['parent_tax_id']
-        try:
-            taxonomy_parent = Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_parent_id)
-        except:
-            taxonomy_parent = create_ncbi_taxonomy(ncbi_parent_id, ncbi)
-        # Update Taxonomy info (if required)
-        updated_fields = []
-        for attr, val in zip(['taxonomyparent_id', 'taxonomyrank', 'scientificname'], [int(taxonomy_parent.taxonomy_id), ncbi['dict_nodes'][str(ncbi_id)]['rank'], ncbi['dict_names'][str(ncbi_id)]['name_txt']]):
-            if getattr(taxonomy, attr) != val:
-                taxonomy.taxonomyparent_id = int(taxonomy_parent.taxonomy_id)
-                taxonomy.taxonomyrank = ncbi['dict_nodes'][str(ncbi_id)]['rank']
-                taxonomy.scientificname = ncbi['dict_names'][str(ncbi_id)]['name_txt']
-                updated_fields.append(attr)
-        if updated_fields:
-            taxonomy.taxonomycomments = taxonomy.taxonomycomments+'; %s - automatically Updated by TaxonomyUpdater: updated fields = %s'%(str(time_now), ", ".join(updated_fields))
-            if report_file:
-                report_file.write("UPDATED Taxonomy (id:%s): %s\n updated fields - %s\n"%(taxonomy.taxonomy_id, taxonomy.scientificname, ", ".join(updated_fields)))
-    # MISSING IDs
-    else:
-        if report_file:
-            report_file.write("NOT FOUND: %s NCBI ID was not found in ncbi files\n"%(ncbi_id))
-        return
-
+    # Search for merged taxonomy - create parent taxonomy if does not exists
+    ncbi_merged_id = ncbi['dict_merged'][ncbi_id]['new_tax_id']
+    taxonomy.taxonomystatus = 'merged by ncbi'
+    taxonomy.taxonomycomments = taxonomy.taxonomycomments + '; %s - automatically Updated by TaxonomyUpdater: merged into %s by NCBI' % (str(time_now), ncbi_merged_id)
     taxonomy.save()
-    return taxonomy
+    try:
+        merged_taxonomy = Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_merged_id)
+    except:
+        merged_taxonomy = create_ncbi_taxonomy(ncbi_merged_id, ncbi)
+    # Update reportFile
+    if report_file:
+        with open(report_file, 'a') as rf:
+            rf.write("MERGED Taxonomy (id:%s): %s - merged into %s (id:%s) by NCBI\n" % (tracey_id, taxonomy.scientificname, merged_taxonomy.scientificname, merged_taxonomy.taxonomy_id))
+    # Make sequences from old taxonomies to point to new taxonomy
+    for seq in taxonomy.sequences_set.all():
+        seq.taxonomy_id = merged_taxonomy.taxonomy_id
+        seq.taxonomy = merged_taxonomy
+        seq.save()
+        if report_file:
+            with open(report_file, 'a') as rf:
+                rf.write("\t- SEQUENCE %s (id:%s): now linked to taxonomy %s (id:%s)\n" % (seq.sequenceshortname, seq.sequence_id, merged_taxonomy.scientificname, merged_taxonomy.taxonomy_id))
+    return
 
+
+def delete_ncbi_taxonomy(taxonomy, report_file=''):
+    # Default values
+    time_now = datetime.datetime.now().date()
+    # Delete taxonomy
+    taxonomy.taxonomystatus = 'deleted by ncbi'
+    taxonomy.taxonomycomments = taxonomy.taxonomycomments + '; %s - automatically Updated by TaxonomyUpdater: deleted from NCBI' % (str(time_now))
+    taxonomy.save()
+    # Update reportFile
+    if report_file:
+        with open(report_file, 'a') as rf:
+            rf.write("DELETED Taxonomy (id:%s): %s - deleted from NCBI\n" % (taxonomy.taxonomy_id, taxonomy.scientificname))
+        # Sequences are reported in 'report_file'
+        for seq in taxonomy.sequences_set.all():
+            # Flag them as "dead" (????)
+            with open(report_file, 'a') as rf:
+                rf.write("\t- %s (id:%s): sequence's taxonomy (%s; id:%s) has been deleted from NCBI\n" % (seq.sequenceshortname, seq.sequence_id, taxonomy.scientificname, taxonomy.taxonomy_id))
+
+
+def update_ncbi_taxonomy(taxonomy, ncbi, report_file=''):
+    time_now = datetime.datetime.now().date()
+    ncbi_id = taxonomy.ncbi_taxonomy_id
+    ncbi_parent_id = ncbi['dict_nodes'][str(ncbi_id)]['parent_tax_id']
+
+    # Check if parent taxonomy exists and create it if doesn't exists
+    try:
+        taxonomy_parent = Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_parent_id)
+    except:
+        taxonomy_parent = create_ncbi_taxonomy(ncbi_parent_id, ncbi)
+
+    # Update Taxonomy info (if required)
+    updated_fields = []
+    for attr, val in zip(['taxonomyparent_id', 'taxonomyrank', 'scientificname'], [int(taxonomy_parent.taxonomy_id), ncbi['dict_nodes'][str(ncbi_id)]['rank'], ncbi['dict_names'][str(ncbi_id)]['name_txt']]):
+        if getattr(taxonomy, attr) != val:
+            taxonomy.taxonomyparent_id = int(taxonomy_parent.taxonomy_id)
+            taxonomy.taxonomyrank = ncbi['dict_nodes'][str(ncbi_id)]['rank']
+            taxonomy.scientificname = ncbi['dict_names'][str(ncbi_id)]['name_txt']
+            updated_fields.append(attr)
+    if updated_fields:
+        taxonomy.taxonomycomments = taxonomy.taxonomycomments+'; %s - automatically Updated by TaxonomyUpdater: updated fields = %s'%(str(time_now), ", ".join(updated_fields))
+        taxonomy.save()
+        if report_file:
+            with open(report_file, 'a') as rf:
+                rf.write("UPDATED Taxonomy (id:%s): %s\n updated fields - %s\n"%(taxonomy.taxonomy_id, taxonomy.scientificname, ", ".join(updated_fields)))
+
+    return taxonomy
 def update_tracey_taxonomies(path = 'utils/ncbi_taxonomy/taxdmp/', report_file_name='TaxonomyUpdate.report.txt'):
     time_now = datetime.datetime.now().date()
     # Check date of last update in report_file_name
@@ -199,17 +207,56 @@ def update_tracey_taxonomies(path = 'utils/ncbi_taxonomy/taxdmp/', report_file_n
         report_file.write("#### REPORT for TaxonomyUpdater (Date: %s)  ####\n"%(str(time_now)))
         report_file.write("#### NOTE: IDs in this report correspond to TRACEY IDs and not to NCBI IDs  ####\n\n")
     ncbi = read_ncbi_files(path)
-    # Parse all TAXONOMIES in TRACEY and update them if necesary
+
+    ## Tag duplications in database
+    # taxonomystatus: 'merged by ncbi', 'additional', 'unknown', 'main reference', 'secondary reference', 'duplication', 'additionnal', 'deleted from ncbi'
+    print("Removing duplications in database")
+    from collections import Counter
+    counts = Counter([x.ncbi_taxonomy_id for x in Taxonomies.objects.all()])
+    duplicated_ncbi_ids = [x for x in counts if counts[x] > 1]
+    for ncbi_id in duplicated_ncbi_ids:
+        # 32644 is the NCBI ID for "unclassified sequences" - skip it
+        if ncbi_id == 32644:
+            continue
+        # Set first entry as MAIN
+        main_entry = Taxonomies.objects.filter(ncbi_taxonomy_id=ncbi_id).order_by('taxonomy_id')[0]
+        # Set any sequence in the rest of duplication to point to the main entry
+        for entry in Taxonomies.objects.filter(ncbi_taxonomy_id=ncbi_id).exclude(taxonomy_id=main_entry.taxonomy_id):
+            for g in Genomesource.objects.filter(taxonomy=entry):
+                g.taxonomy = main_entry
+                g.taxonomy_id = main_entry.taxonomy_id
+                g.save()
+            for seq in Sequences.objects.filter(taxonomy_id=entry.taxonomy_id):
+                seq.taxonomy_id = main_entry.taxonomy_id
+                seq.taxonomy = main_entry
+                seq.save()
+            entry.delete()
+
+
+    ## Merge Taxonomies that have been merged by NCBI
+    print("Merging Taxonomies that have been merged by NCBI")
+    for ncbi_id in ncbi['dict_merged']:
+        try: # Check if taxonomy exists and merge it
+            taxonomy = Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_id)
+            merge_ncbi_taxonomy(taxonomy, ncbi, report_file=path+report_file_name)
+        except:
+            continue
+
+    ## Delete Taxonomies that have been deleted by NCBI
+    print("Deleting Taxonomies that have been deleted by NCBI")
     for taxonomy in Taxonomies.objects.all():
-        ncbi_id = str(taxonomy.ncbi_taxonomy_id)
-        # Check update type for Taxonomy
-        if ncbi_id in ncbi['dict_delnodes']:
-            update_type = 'DELETED'
-        elif ncbi_id in ncbi['dict_merged']:
-            update_type = 'MERGED'
+        if str(taxonomy.ncbi_taxonomy_id) in ncbi['dict_delnodes']:
+            delete_ncbi_taxonomy(taxonomy, report_file=path+report_file_name)
+
+    ## Update Taxonomies that have been updated by NCBI
+    print("Updating Taxonomies that have been updated by NCBI")
+    for taxonomy in Taxonomies.objects.all():
+        if str(taxonomy.ncbi_taxonomy_id) in ncbi['dict_nodes']:
+            update_ncbi_taxonomy(taxonomy, ncbi, report_file=path+report_file_name)
         else:
-            update_type = ''
-        update_taxonomy(taxonomy, ncbi, report_file=report_file, update_type=update_type)
+            if report_file_name:
+                with open(path+report_file_name, 'a') as fh:
+                    fh.write("NOT FOUND: %s NCBI ID was not found in TRACEY\n"%(taxonomy.ncbi_taxonomy_id))
 
     return "\nUpdate completed."
 
