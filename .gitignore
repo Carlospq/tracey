@@ -12,3 +12,5 @@ utils/ncbi_taxonomy/.Rhistory
 apps/static/assets/img/images/TRACEY_phylogeneticTree.png
 apps/static/assets/img/tmpTrees/*
 staticfiles
+taxonomyGraph.pdf
+.idea
