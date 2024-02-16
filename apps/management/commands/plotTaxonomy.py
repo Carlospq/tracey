@@ -40,7 +40,7 @@ class Command(BaseCommand):
 		plt.margins(x=0.3, y=0.3)
 		plt.title('Node name: scientificname_#sequences_#children')
 		# plt.show()
-		plt.savefig("graph.pdf")
+		plt.savefig("taxonomyGraph.pdf")
 
 	def add_taxonomies(self, taxonomy, ALL_NODES, EDGES, depth_up=3, depth_up_counter=0, depth_down=1, depth_down_counter=0):
 		depth_up_counter += 1
@@ -77,6 +77,11 @@ class Command(BaseCommand):
 		### Generate clusters
 		ALL_NODES = []
 		EDGES = []
+
+		# Print help if no arguments
+		if not options['scientificname']:
+			print("Please provide a scientific name\nExample:\n\tpython manage.py plotTaxonomy --scientificname 'Homo sapiens' [--depth_up int] [--depth_down int] ")
+			return
 
 		taxonomies = Taxonomies.objects.filter(scientificname=options['scientificname'])
 		depth_up = options['depth_up']
