@@ -5,11 +5,15 @@ services:
     restart: always
     volumes:
       - data:/var/lib/mysql
+      - /opt/mysql/mysql_data:/var/lib/mysql
+      - /tmp/mysql/mysqld:/var/run/mysqld
     environment:
-      MYSQL_ROOT_PASSWORD: tracey
-      MYSQL_DATABASE: tracey
-      MYSQL_USER: tracey
-      MYSQL_PASSWORD: tracey
+      - MYSQL_HOST=localhost
+      - MYSQL_PORT=3306
+      - MYSQL_ROOT_PASSWORD=tracey
+      - MYSQL_DATABASE=tracey
+      - MYSQL_USER=tracey
+      - MYSQL_PASSWORD=tracey
     ports:
       - "3306:3306"
     healthcheck:
@@ -22,16 +26,18 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: tracey_backend
-    command: sh -c "python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
+    command: /bin/bash -c "python manage.py runserver 0.0.0.0:8000"
     restart: always
     volumes:
       - .:/app
+      - /tmp/mysql/mysqld:/run/mysqld
     ports:
       - "8000:8000"
     env_file:
       - .env
     depends_on:
-      db:
-        condition: service_healthy
+      - db
+        #condition: service_healthy
+
 volumes:
   data:
