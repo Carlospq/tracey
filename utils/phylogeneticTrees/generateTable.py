@@ -31,6 +31,12 @@ for t in Taxonomies.objects.all():
         table_dict[t.ncbi_taxonomy_id].append(name)
 
 
-df = pd.DataFrame.from_dict(table_dict, orient='index')
-df.columns = ['tracey_id'] + ranks
-df.to_csv('utils/phylogeneticTrees/ncbi_taxonomies.csv')
+df = pd.DataFrame.from_dict(table_dict, orient='index').reset_index()
+df.columns = ['ncbi_id', 'tracey_id'] + ranks
+
+# Save taxonomies without tracey_id column
+only_ncbi = df.loc[:, df.columns != 'tracey_id']
+only_ncbi.to_csv('utils/phylogeneticTrees/taxonomies.csv', index=False)
+
+# Save taxonomies with tracey_id column and ncbi_id column
+df.to_csv('utils/phylogeneticTrees/ncbi_taxonomies.csv', index=False)
