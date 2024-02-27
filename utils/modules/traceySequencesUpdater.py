@@ -5,6 +5,7 @@ import xmltodict
 import re
 from apps.home.models import *
 from collections import Counter
+from Bio import Align
 
 ##############################################################################################################################
 #### FUNCTIONS ####
@@ -93,7 +94,28 @@ def getSpeciesTaxId(seq):
 	return [t.taxonomy_id]+[t.taxonomy_id for t in children]
 
 
-def getIdenticalSequences(sequence, summary_output):
+def alignSimilarSequences(sequence, threshold=0.70):
+	similarSequences = []
+	testSequences = []
+
+	# Use domaingroups instead?
+	motifs = [m.motifname for m in sequence.motifs_set.all()]
+	for seq in Sequences.objects.filter(taxonomy=sequence.taxonomy):
+		for m in seq.motifs_set.all():
+			if m.motifname in motifs:
+				if not seq in testSequences:
+					testSequences.append(seq)
+
+	aligner = Align.PairwiseAligner()
+	for seq in testSequences:
+		alignments = aligner.align(sequence.sequence, seq.sequence)
+		if alignments[0].score/len(sequence.sequence) >= threshold:
+			if not seq in similarSequences:
+				similarSequences.append(seq)
+	return similarSequences
+
+
+def getSimilarSequences(sequence, summary_output):
 	# Returns all sequences with exact same protein sequence belonging to the same taxonomy
 	status = ['live' if not 'Status' in summary_output else summary_output['Status']][0]
 	identicalSequences = {sequence.sequence_id: {'sequence': sequence,
@@ -102,8 +124,10 @@ def getIdenticalSequences(sequence, summary_output):
 												 'summary_output': summary_output}
 						  }
 	errorSequences = {}
-	taxIds = getSpeciesTaxId(sequence)
-	for seq in Sequences.objects.filter(sequence=sequence.sequence).filter(taxonomy_id__in=taxIds):
+
+	#taxIds = getSpeciesTaxId(sequence)
+	#for seq in Sequences.objects.filter(sequence__icontains=sequence.sequence).filter(taxonomy_id__in=taxIds):
+	for seq in alignSimilarSequences(sequence):
 		if seq.sequence_id != sequence.sequence_id:
 			ncbi_id = get_ncbi_id(seq)
 			if not ncbi_id:
@@ -179,8 +203,8 @@ def sequenceUpdate(sequence, summary_output):
 	# Initialize updateLog to keep track of all updates
 	updateLog = {}
 
-	# Check if identical sequence exist in TRACEY and collect NCBI data for them
-	identicalSequences, errorSequences = getIdenticalSequences(sequence, summary_output)
+	# Check if similar sequence exist in TRACEY and collect NCBI data for them
+	identicalSequences, errorSequences = getSimilarSequences(sequence, summary_output)
 	# If error while fetching identical sequences write to log file and continue
 	if errorSequences:
 		for errorSeqId in errorSequences:
@@ -188,6 +212,7 @@ def sequenceUpdate(sequence, summary_output):
 									 'comment': errorSequences[errorSeqId]['error']}
 
 	# Select main sequence in case of multiple identical sequences (if no identical then mainSequence = sequence)
+	# NOTE: mainsequence will become the only active sequence in TRACEY
 	mainSequence = selectMainFromIdenticalSequences(identicalSequences)
 
 	# Update all sequences in identicalSequences: mainSequence becomes "live", the rest become "ignore"
