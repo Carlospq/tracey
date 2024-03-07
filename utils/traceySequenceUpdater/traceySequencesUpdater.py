@@ -11,7 +11,7 @@ if os.path.isfile("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log"%
 	sys.exit("ERROR: Log file already exists. Exiting...")
 else:
 	logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
-	logFile.write("traceyID\tncbiID\tcomment\n")
+	logFile.write("traceyID\tncbiID\tshortname_old\tshortname_new\tcomment\n")
 	logFile.close()
 
 ##############################################################################################################################
@@ -49,13 +49,15 @@ if __name__ == "django.core.management.commands.shell":
 		# If summary_error from NCBI: write sequence ID and error into log file and continue
 		if sequence.foreignannotation == "none":
 			comment = "ERROR with sequence tracey_id %s: Foreignannotation missing\n"%(sequence.sequence_id)
-			writeLog(logFile, sequence.sequence_id, '', comment)
+			#writeLog(logFile, sequence.sequence_id, ncbi_id, summary_error)
+			writeLog(logFile, sequence.sequence_id, '', sequence.sequenceshortname, '', comment)
 			continue
 
 		ncbi_id = get_ncbi_id(sequence)
 		if not ncbi_id:
 			comment = "ERROR with sequence tracey_id %s: No NCBI ID found\n"%(sequence.sequence_id)
-			writeLog(logFile, sequence.sequence_id, '', comment)
+			#writeLog(logFile, sequence.sequence_id, ncbi_id, summary_error)
+			writeLog(logFile, sequence.sequence_id, '', sequence.sequenceshortname, '', comment)
 			continue
 
 		# Get summary data for idx
@@ -63,14 +65,20 @@ if __name__ == "django.core.management.commands.shell":
 
 		# If summary_error from NCBI: write sequence ID and error into log file and continue
 		if summary_error:
-			writeLog(logFile, sequence.sequence_id, ncbi_id, summary_error)
+			#writeLog(logFile, sequence.sequence_id, ncbi_id, summary_error)
+			writeLog(logFile, sequence.sequence_id, ncbi_id, sequence.sequenceshortname, '', comment)
 			continue
 
 		# Update sequence if needed and print log into logFile
 		updateLog = sequenceUpdate(sequence, summary_output)
+		print(updateLog)
 		for updateId in updateLog:
-			sequencesAnalysed.append(updateId)
-			writeLog(logFile, updateId, updateLog[updateId]['accessionVersion'], updateLog[updateId]['comment'])
+			try:
+				shortname = Sequences.objects.get(sequence_id=updateId)
+			except:
+				shortname = 'empty'
+			#writeLog(logFile, updateId, updateLog[updateId]['accessionVersion'], updateLog[updateId]['comment'])
+			writeLog(logFile, updateId, updateLog[updateId]['accessionVersion'], shortname, updateLog[updateId]['newshortname'], updateLog[updateId]['comment'])
 
 		logFile.close()
 

@@ -9,8 +9,10 @@ from Bio import Align
 
 ##############################################################################################################################
 #### FUNCTIONS ####
-def writeLog(logFile, traceyID, ncbiID, comment):
-	logFile.write("%s\t%s\t%s\n" % (traceyID, ncbiID, comment))
+# def writeLog(logFile, traceyID, ncbiID, comment):
+# 	logFile.write("%s\t%s\t%s\n" % (traceyID, ncbiID, comment))
+def writeLog(logFile, traceyID, ncbiID, shortname, newshortname, comment):
+	logFile.write("%s\t%s\t%s\t%s\t%s\n" % (traceyID, ncbiID, shortname, newshortname, comment))
 
 
 def get_ncbi_id(seq):
@@ -191,12 +193,89 @@ def countLive(identicalSequences):
 	return sum([1 for seqId in identicalSequences if identicalSequences[seqId]['status'] == 'live'])
 
 
-def regexForeignannotation(foreignannotation):
-	# vam/vamp
-	patterns = {'ykt': 'ykt[0-9]*',
-				'vamp': 'vam.*?\W([0-9A-Z]*)|vesicle-associated membrane protein ([0-9]*)',
-				'syx': 'sy.*?x.*?[-0-9A-Z]*',
+def regexProteinName(protname):
+	patterns = {'ykt': 'ykt([0-9]*)',
+				'sft1': 'sft1',
+				'gos': 'Golgi SNA.* .*?(R[0-9]*)|gos(R[0-9]*)',
+				'GS15': 'GS15|BET1L|bet1-like',
+				'use': 'use(1)|use-(1)',
+				'bet': 'bet(1)|bet-(1)',
+				'tom': 'tomosyn',
+				'vti': 'vti(\d*[a-z]*)|vesicle transport through interaction with t-SNAREs.*(\d[A-Z]*)',
+				'snap': 'snap.*?([0-9]*)|synaptosom[a-z*]-associated protein ([0-9]*)|sec9',
+				'membrin': 'membrin\W?([0-9]*)|memb([0-9]+)|Golgi SNAP receptor',
+				'endobrevin': 'endobrevin',
+				'syxbp': 'syntaxin\s*-?\s*binding protein ([0-9]*)|stxbp.*?([0-9]*[l]?)',
+				'syb': 'syb[^l]\D*?(\d*)|synaptobrevin[^-like]\s*(\d+)',
+				'syx': 'syntaxin\D*(\d+[A-Z]*)|syn([0-9]*[A-Z]*)|stx([0-9]*[A-Z]*)',
+				'sec': 'sec.*?([0-9]*[a-z])?',
+				'vamp': 'v\D*a\D*m\D*p\D*(\d*)?',
 				}
+	for prot in patterns:
+		match = re.search(patterns[prot], protname, re.IGNORECASE)
+		if match:
+			try:
+				num = [x for x in match.groups() if x][0]
+				if num:
+					return prot+num
+				else:
+					return prot
+			except IndexError:
+				return prot
+	return ''
+
+
+def predictShortname(identicalSequence):
+	shortname = identicalSequence['sequence'].taxonomy.taxonomyshortname.split("_")[0]
+	name = identicalSequence['summary_output']['Title']
+	accession = identicalSequence['summary_output']['AccessionVersion']
+
+	try:
+		efetch_out, efetch_err = efetch(accession)
+		GBQ = [x for x in efetch_out['GBSeq_feature-table']['GBFeature'] if x['GBFeature_key'] in ['Protein', 'CDS']]
+		GBQ = [x['GBFeature_quals']['GBQualifier'] for x in GBQ]
+		for qualifier in GBQ:
+			for desc in [x['GBQualifier_value'] for x in qualifier if
+						 x['GBQualifier_name'] in ['product', 'name', 'note', 'gene', 'gene_synonym']]:
+				name += ' '+desc
+	except:
+		pass
+
+	# search for protein names regexs
+	protName = regexProteinName(name)
+	if protName:
+		shortname += "_" + protName
+	else:
+		shortname = identicalSequence['sequence'].sequenceshortname
+	return shortname
+
+
+def predictShortnameByTraceyId(traceySeqId):
+	seq = Sequences.objects.get(sequence_id=traceySeqId)
+	shortname = seq.taxonomy.taxonomyshortname.split("_")[0]
+	ncbiId = get_ncbi_id(seq)
+	efetch_out, efetch_err = efetch(ncbiId)
+
+	name = ''
+	try:
+		GBQ = [x for x in efetch_out['GBSeq_feature-table']['GBFeature'] if x['GBFeature_key'] in ['Protein', 'CDS']]
+		GBQ = [x['GBFeature_quals']['GBQualifier'] for x in GBQ]
+		for qualifier in GBQ:
+			for desc in [x['GBQualifier_value'] for x in qualifier if x['GBQualifier_name'] in ['product', 'name', 'note', 'gene', 'gene_synonym']]:
+				name += " "+desc
+	except:
+		pass
+
+	# search for protein names regexs
+	name += seq.sequenceshortname
+	print(name)
+	protName = regexProteinName(name)
+	if protName:
+		shortname += "_"+protName
+	else:
+		shortname = seq.sequenceshortname
+	return shortname
+
 
 def sequenceUpdate(sequence, summary_output):
 
@@ -209,7 +288,9 @@ def sequenceUpdate(sequence, summary_output):
 	if errorSequences:
 		for errorSeqId in errorSequences:
 			updateLog[errorSeqId] = {'accessionVersion': errorSequences[errorSeqId]['ncbi_id'],
-									 'comment': errorSequences[errorSeqId]['error']}
+									 'comment': errorSequences[errorSeqId]['error'],
+									 'newshortname': Sequences.objects.get(sequence_id=errorSeqId).sequenceshortname
+									 }
 
 	# Select main sequence in case of multiple identical sequences (if no identical then mainSequence = sequence)
 	# NOTE: mainsequence will become the only active sequence in TRACEY
@@ -224,7 +305,7 @@ def sequenceUpdate(sequence, summary_output):
 
 		accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
 		comment = ''
-
+		newShortname = predictShortname(identicalSequences[identicalSeqId])
 		# Update dbxref: gi to accession version
 		if seq.dbxref != accessionVersion:
 			sequence.dbxref = accessionVersion
@@ -252,7 +333,8 @@ def sequenceUpdate(sequence, summary_output):
 						# newEntrySequence = newSequenceEntryFromEfetch(fetch_output)
 						# updateLog[newEntrySequence.sequence_id] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
 						updateLog[identicalSeqId+99999999] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
-																   'comment': 'New sequence entry created replacing TRACEY ID %s' % seq.sequence_id}
+															  'comment': 'New sequence entry created replacing TRACEY ID %s' % seq.sequence_id,
+															  'newshortname': newShortname}
 
 			# Else If sequence is deleted/suppressed/dead, Update TRACEY sequence and write to log file
 			else:
@@ -264,15 +346,20 @@ def sequenceUpdate(sequence, summary_output):
 
 		# If not "Status" in summary_output (meaning sequence is active in NCBI)
 		else:
+			# Update sequenceshortname if necessary
+			#if "OLD" in seq.sequenceshortname.upper() or not seq.sequenceshortname:
+			#	newShortname = predictShortname(identicalSequences[identicalSeqId])
+
 			if identicalSeqId in mainSequence:
 
 				# Check shortname and update if necessary
-				if "OLD" in seq.sequenceshortname.upper():
-					oldMatch = re.search('\W*?[-|_]*?old', seq.sequenceshortname, re.IGNORECASE).group()
-					seq.sequenceshortname.replace(oldMatch, '')
-				elif not seq.sequenceshortname:
+				#if "OLD" in seq.sequenceshortname.upper() or not seq.sequenceshortname:
+					#newShortname = predictShortname()
+					#oldMatch = re.search('\W*?[-|_]*?old', seq.sequenceshortname, re.IGNORECASE).group()
+					#seq.sequenceshortname.replace(oldMatch, '')
+				#elif not seq.sequenceshortname:
 					# Make shortname from taxonomy shortname and SNARE group
-					taxShortName = seq.taxonomy.taxonomyshortname
+					#taxShortName = seq.taxonomy.taxonomyshortname
 
 				if "pdb" in seq.foreignannotation or 'pdb' in identicalSequences[identicalSeqId]['summary_output']['Extra']:
 					if not "pdb" in seq.foreignannotation:
@@ -293,14 +380,15 @@ def sequenceUpdate(sequence, summary_output):
 					comment += "No changes needed. Sequence status already ignore"
 			updateLog[identicalSeqId] = {
 				'accessionVersion': identicalSequences[identicalSeqId]['summary_output']['AccessionVersion'],
-				'comment': comment
+				'comment': comment,
+				'newshortname': newShortname
 			}
 
 		if identicalSeqId not in updateLog:
 			updateLog[identicalSeqId] = {'accessionVersion': accessionVersion,
-										 'comment': comment}
+										 'comment': comment,
+										 'newshortname': newShortname}
 	return updateLog
 
 
 ##############################################################################################################################
-
