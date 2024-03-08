@@ -10,10 +10,13 @@
 <head>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <script src='{{ ASSETS_ROOT }}/js/a076d05399.js' crossorigin='anonymous'></script>
+    <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+    <script src="{{ ASSETS_ROOT }}/js/paginatedTable.js"></script>
     <style type="text/css">
             .scrollingTable {
                 table-layout: fixed;
                 width: 100%;
+                height: auto;
                 overflow-y: auto;
                 word-wrap: break-word;
                 word-break: break-word;
@@ -45,31 +48,100 @@
                 word-wrap: break-word;
                 word-break: break-word;
             }
-            tableHeader {
+            .tableHeader {
                 table-layout: fixed;
                 width:100%;
                 border-collapse:collapse;
                 word-wrap: break-word;
                 word-break: break-word;
             }
+            .page-number {
+                display: inline-block;
+                color: blue;
+                margin: 2px;
+                padding: 5px;
+            }
+            .page-number.active {
+                text-decoration:underline;
+                color: darkcyan;
+            }
+            .page-number:hover {
+                cursor: pointer;
+                background-color: lightgrey;
+                color: red;
+            }
+            .pager {
+                display: flex;
+                margin: auto;
+            }
+            .dt-column-title {
+                display: inline-block;
+            }
+            .dt-column-order {
+                display: inline-block;
+                color: white;
+                right: 12px;
+                top: 0;
+                bottom: 0;
+                width: 12px;
+                cursor: pointer;
+                text-align: left;
+                border-spacing: 0;
+                border-collapse: collapse;
+            }
+            .sortbtnUp:before {
+                content: "▲";
+                color: white;
+                opacity: 0.6;
+                line-height: 9px;
+                font-size: 0.8em;
+                bottom: 55%;
+                position:absolute;
+            }
+            .sortbtnDown:after {
+                content: "▼";
+                color: white;
+                opacity: 0.6;
+                line-height: 9px;
+                font-size: 0.8em;
+                top: 55%;
+                position: absolute;
+            }
+            .sortbtnUp:hover:before, .sortbtnDown:hover:after {
+                opacity: 1;
+            }
+            .sortbtnUp.selected:before, .sortbtnDown.selected:after {
+                opacity: 1;
+            }
+
     </style>
     <script type="text/javascript">
-        function makeTableScroll() {
-            // Constant retrieved from server-side via JSP
-            var maxRows = 15;
+        {#function makeTableScroll() {#}
+        {#    // Constant retrieved from server-side via JSP#}
+        {#    var maxRows = 15;#}
+        {##}
+        {#    var table = document.getElementById('myTable');#}
+        {#    var wrapper = table.parentNode;#}
+        {#    var rowsInTable = table.rows.length;#}
+        {#    var height = 0;#}
+        {#    if (rowsInTable > maxRows) {#}
+        {#        for (var i = 0; i < maxRows; i++) {#}
+        {#            height += table.rows[i].clientHeight;#}
+        {#        }#}
+        {#        wrapper.style.height = height + "px";#}
+        {#    }#}
+        {# }#}
+        function sortTable(coln, el) {
+            var elementsUp = document.getElementsByClassName("sortbtnUp")
+            var elementsDown = document.getElementsByClassName("sortbtnDown")
+            elementsUp.forEach(function(element) {
+                $(element).removeClass('selected')
+            });
+            elementsDown.forEach(function(element) {
+                $(element).removeClass('selected')
+             });
+            $(el).addClass('selected')
 
-            var table = document.getElementById('myTable');
-            var wrapper = table.parentNode;
-            var rowsInTable = table.rows.length;
-            var height = 0;
-            if (rowsInTable > maxRows) {
-                for (var i = 0; i < maxRows; i++) {
-                    height += table.rows[i].clientHeight;
-                }
-                wrapper.style.height = height + "px";
-            }
-        }
-        function sortTable(coln) {
             var table, rows, switching, i, x, y, shouldSwitch;
             table = document.getElementById("myTable");
             button = document.getElementById("myTable");
@@ -109,7 +181,17 @@
                 }
             }
         }
-        function sortDown(coln) {
+        function sortDown(coln, el) {
+            var elementsUp = document.getElementsByClassName("sortbtnUp")
+            var elementsDown = document.getElementsByClassName("sortbtnDown")
+            elementsUp.forEach(function(element) {
+                $(element).removeClass('selected')
+            });
+            elementsDown.forEach(function(element) {
+                $(element).removeClass('selected')
+             });
+            $(el).addClass('selected')
+
             var table, rows, switching, i, x, y, shouldSwitch;
             table = document.getElementById("myTable");
             button = document.getElementById("myTable");
@@ -155,9 +237,36 @@
                 checkboxes[i].checked = source.checked;
             }
         }
+        function changeLength(length){
+            $('table.paginated').each(function() {
+                var currentPage = 0;
+                var numPerPage = length;
+                var $table = $(this);
+                //$table.parent().parent().children( ".pager" ).remove();
+                $table.bind('repaginate', function() {
+                    $table.find('tbody tr').hide().slice(currentPage * numPerPage, (currentPage + 1) * numPerPage).show();
+                });
+                $table.trigger('repaginate');
+                var numRows = $table.find('tbody tr').length;
+                var numPages = Math.ceil(numRows / numPerPage);
+                var $pager = $( ".pager" ).empty();
+                $('<p style="margin-bottom: auto; margin-top: auto; padding-left: 10px">Page: </p>').appendTo($pager);
+                for (var page = 0; page < numPages; page++) {
+                    $('<span class="page-number"></span>').text(page + 1).bind('click', {
+                        newPage: page
+                    }, function(event) {
+                        currentPage = event.data['newPage'];
+                        $table.trigger('repaginate');
+                        $(this).addClass('active').siblings().removeClass('active');
+                    }).appendTo($pager).addClass('clickable');
+                }
+                //$pager.insertBefore($table.parent()).find('span.page-number:first').addClass('active');
+            });
+        }
     </script>
 </head>
-<body onload="makeTableScroll();">
+{#<body onload="makeTableScroll();">#}
+<body>
 
 <div class="row mt-4">
     <div class="container">
@@ -170,21 +279,33 @@
                         <th class="border-bottom" scope="col" style="width:2%; text-align:center">
                             <input type="checkbox" id="maincheck" name="maincheck" onClick="toggle(this)">
                         </th>
-                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;"> Short Name
-                            <button type="button" name="button" onclick="sortTable(1)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i></button>
-                            <button type="button" name="button" onclick="sortDown(1)" style="height: 15px; vertical-align: middle;"><i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i></button>
+                        <th class="border-bottom" scope="col" name="1" style="width:10%; text-align: center; position: relative">
+                            <div class="dt-column-title" role="button">Short Name</div>
+                            <div class="dt-column-order">
+                                <span class="sortbtnUp" onclick="sortTable(1, this)"></span>
+                                <span class="sortbtnDown" onclick="sortDown(1, this)"></span>
+                            </div>
                         </th>
-                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="2">Species
-                            <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                            <button type="button" name="button" onclick="sortDown(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center; position: relative" id="2" >
+                            <div class="dt-column-title" role="button">Species</div>
+                            <div class="dt-column-order">
+                                <span class="sortbtnUp" onclick="sortTable(2, this)"></span>
+                                <span class="sortbtnDown" onclick="sortDown(2, this)"></span>
+                            </div>
                          </th>
-                        <th class="border-bottom" scope="col" style="width:8%; text-align: center;" id="2">Motifs
-                            <button type="button" name="button" onclick="sortTable(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                            <button type="button" name="button" onclick="sortDown(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                        <th class="border-bottom" scope="col" style="width:8%; text-align: center; position: relative" id="2">
+                            <div class="dt-column-title" role="button">Motifs</div>
+                            <div class="dt-column-order">
+                                <span class="sortbtnUp" onclick="sortTable(3, this)"></span>
+                                <span class="sortbtnDown" onclick="sortDown(3, this)"></span>
+                            </div>
                         </th>
-                        <th class="border-bottom" scope="col" style="width:10%; text-align: center;" id="3">Source database
-                            <button type="button" name="button" onclick="sortTable(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                            <button type="button" name="button" onclick="sortDown(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                        <th class="border-bottom" scope="col" style="width:10%; text-align: center; position: relative" id="3">
+                            <div class="dt-column-title" role="button">Source database</div>
+                            <div class="dt-column-order">
+                                <span class="sortbtnUp" onclick="sortTable(4, this)"></span>
+                                <span class="sortbtnDown" onclick="sortDown(4, this)"></span>
+                            </div>
                         </th>
                         <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="5">Foreign Annotation</th>
                         <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="6">Sequence</th>
@@ -194,8 +315,22 @@
             </div>
             <form name="queryFasta" target="_blank" action="/query/fastaFormat/" method="post">
             {% csrf_token %}
-            <div class="scrollingTable mb-3" style="border: 1px solid lightgrey;">
-                <table class="hoverTable sortable" id="myTable">
+            <div class="dt-length-div" style="padding: 10px; display: flex">
+                <div class="dt-length" style="width: 20%; margin: auto; padding: inherit;">
+                    <select name="table_length" aria-controls="example" class="dt-input" id="dt-length-0" onchange="changeLength(this.value)">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <label for="dt-length-0"> entries per page</label>
+                </div>
+                <div class="pager" style="width: 75%; margin-left:20%;">
+                </div>
+            </div>
+            <div class="scrollingTable mb-3" style="border: 1px solid lightgrey; height: auto; min-height: 200px">
+                <!--<table class="hoverTable sortable" id="myTable">-->
+                <table class="hoverTable paginated" id="myTable">
                     {% for seq in sequences %}
                         <tr>
                             <td class="border-bottom" scope="col" style="width:2%;">
