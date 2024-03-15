@@ -94,6 +94,13 @@ class FamilyForm(forms.Form):
                                      'style': 'width: 100%; margin-top: 6px'})
 
 
+def get_taxonomy_choices():
+    taxonomies = Taxonomies.objects.filter().order_by('scientificname')
+    taxonomies = [ (x.scientificname, x.scientificname) for x in taxonomies ]
+    return taxonomies
+
+
+TAXONOMY_CHOICES = get_taxonomy_choices()
 
 class InsertSequence(ModelForm):
 
@@ -155,8 +162,11 @@ class InsertSequence(ModelForm):
     sequence = forms.CharField(required=True, label="Sequence", widget=forms.Textarea(attrs={'rows': 5}))
     sequence.widget.attrs.update({'style': 'height: 100%; width: 100%; resize: none;'})
     #######################################################################################################################
-    taxonomy = forms.ModelChoiceField(required=True, label="Taxonomy", queryset=Taxonomies.objects.filter().order_by('scientificname'), empty_label="")
-    taxonomy.widget.attrs.update({'style': 'width: 100%; resize: none;'})
+    #taxonomy = forms.ModelChoiceField(required=True, label="Taxonomy", queryset=Taxonomies.objects.filter().order_by('scientificname'), empty_label="")
+    #taxonomy = forms.ChoiceField(required=True, label="Taxonomy", choices=TAXONOMY_CHOICES)
+    taxonomy = forms.CharField(required=True, label="Taxonomy")
+    #taxonomy.widget.attrs.update({'style': 'width: 100%; resize: none;'})
+    taxonomy.widget.attrs.update({'style': 'width: 100%; resize: none;', 'oninput': 'searchOpen();'})
 
     sourcedatabase = forms.CharField(required=False, label="Source database")
     sourcedatabase.widget.attrs.update({'rows': 1, 'style': 'width: 100%; resize: none;'})
@@ -216,7 +226,6 @@ class InsertSequence(ModelForm):
 
     def clean_sourcedatabase(self):
         sourceDB = self.cleaned_data['sourcedatabase']
-        print('DB', sourceDB)
         if sourceDB == None or sourceDB == "":
             return ''
         else:
@@ -250,8 +259,11 @@ class InsertSequence(ModelForm):
 
     def clean_taxonomy(self):
         scientificname = self.cleaned_data['taxonomy']
-        taxonomy = Taxonomies.objects.get(scientificname=scientificname)
-        return taxonomy
+        try:
+            taxonomy = Taxonomies.objects.get(scientificname=scientificname)
+            return taxonomy
+        except:
+            raise ValidationError("Taxonomy '%s' does not exist. Please enter a valid Taxonomy name."%(scientificname))
 
 
 class MotifForm(forms.Form):

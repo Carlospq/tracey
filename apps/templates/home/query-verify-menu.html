@@ -41,9 +41,9 @@
         }
     	  /* Define the hover highlight color for the table row */
         .hoverTable tr:hover td {
-            cursor: pointer;
+            {#cursor: pointer;#}
             table-layout: fixed;
-            border: black solid 3px;
+            border: black solid 2px;
             background-color: lightgrey;
             word-wrap: break-word;
             word-break: break-word;
@@ -115,6 +115,7 @@
             <div class="col-12 mb-4">
                 <div class="card-body">
 
+                    <!-- Title -->
                     <div style="padding-bottom: 5px" >
                         <h1><strong> Verify Motifs </strong></h1>
                         <p><i>Verify and update sequences in Tracey.</i></p>
@@ -122,6 +123,7 @@
                         <hr>
                     </div>
 
+                    <!-- Form & Table with sequences -->
                     <div class="col-12">
                         <!-- Beggining of Form -->
                         <form method='post' action='#' name="MotifForm" id="MotifForm"
@@ -240,7 +242,7 @@
                                 </div>
                             </div>
                         </form>
-                        <!-- List of matching sequences -->
+                        <!-- List of matching sequences | header -->
                         <div class="border-0" style="border-radius: 10px 10px 0px 0px;">
                             <table class="tableHeader border-0 table-flush" style="width:100%; height: 45px; border-radius: 10px 10px 0px 0px; background-color: #1F2937; color: white; table-layout: fixed; border-collapse: collapse; word-wrap: break-word; word-break: break-word;">
                                 <thead class="thead-dark" style="width:100%">
@@ -304,13 +306,13 @@
                                 </thead>
                             </table>
                         </div>
+                        <!-- List of matching sequences | body -->
                         <div class="scrollingTable mb-3" style="border: 1px solid lightgrey;">
                             <table class="hoverTable sortable" id="resultsTable">
                             </table>
-                  			</div>
-
-
+                        </div>
                     </div>
+
                 </div>
             </div>
             <!-- End Card body -->
@@ -323,11 +325,11 @@
 <script>
 
     // Table rows clickable
-    jQuery(document).ready(function($) {
-        $(".clickable-row").click(function() {
-            window.location = $(this).data("href");
-        });
-    });
+    {#jQuery(document).ready(function($) {#}
+    {#    $(".clickable-row").click(function() {#}
+    {#        window.location = $(this).data("href");#}
+    {#    });#}
+    {# });#}
 
     // Pues a verlas venir...
     $(document).ready(function() {
