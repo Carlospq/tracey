@@ -72,10 +72,14 @@
 
                     <div class="row mb-3">
                     <div class="col-sm-12">
-                        {% if log %}<p style="color: red;">{{ log }}</p>{% endif %}
-                        {{ message }}
-                        {% for error in form.errors %}{{error}}{% endfor %}
-                        {% include "layouts/sequenceForm.html" %}
+                        {% if log %}
+                            <p style="color: red;">{{ log }}</p>
+                            {% for error in form.errors %}{{error}}{% endfor %}
+                        {%  else %}
+                            {{ message }}
+                            {% for error in form.errors %}{{error}}{% endfor %}
+                            {% include "layouts/sequenceForm.html" %}
+                        {% endif %}
                     </div>
                     </div>
 

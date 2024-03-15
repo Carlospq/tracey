@@ -24,11 +24,35 @@
           background-color: red;
           border-radius: 0.3rem;
         }
+        .ui-helper-hidden-accessible {
+            display: none;
+        }
+        .ui-autocomplete {
+            background: white;
+            border: 1px solid #ccc;
+            width: 200px;
+        }
+        .ui-menu .ui-menu-item a{
+            height:20px;
+            font-size:16px;
+            width: 100%;
+            display: block;
+        }
+        .ui-menu-item:hover {
+            background: lightgrey;
+        }
+        .ui-state-focus {
+            background: lightgrey;
+        }
+
     </style>
 </head>
 
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
 <script>
    function suggestNames() {
         var sequence = $("#id_sequence").val();
@@ -48,484 +72,539 @@
 			});
 		}
    }
+   function searchOpen() {
+       var search = $('#id_taxonomy').val()
+       var data = {
+           search: search
+       };
+       $.ajax({
+           url: '/search.json',
+           data: data,
+           dataType: 'jsonp',
+           jsonp: 'callback',
+           jsonpCallback: 'searchResult'
+       });
+   }
+   function searchResult(data) {
+       $( "#id_taxonomy" ).autocomplete ({
+           source: data
+       });
+   }
+   {#$(document).on('blur', '#id_taxonomy', function() {#}
+   {#function validateField(element, event) {#}
+   {#    console.log($(this));#}
+   {#    $('#motifForm').valid();#}
+   {# });#}
 </script>
 
 
 <form method='post' action='' name="motifForm" id="motifForm">
-		{% csrf_token %}
 
-		<!-- Row 1 -->
-		<div class="row mb-4">
-				<div class="col-lg-6 col-sm-6">
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
-										<td class="tdquestion">
-												<!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
-												<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue">
-													<abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr>
-												</a>
-                    					</td>
-										<td class="tdfield">
-												{{ form.sequenceshortname }}
-												{% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
-										</td>
-									   </tr>
-									   {% if suggestedNames %}
-									   <tr>
-										 <td class="tdlabel">Suggested Names:</td>
-										 <td class="tdquestion"><abbr data-toggle="tooltip" title="Suggested names based on BLAST against TRACEY sequences" style='color: blue; text-align: right'> ? </abbr></td>
-										 <td class="tdfield">{{ suggestedNames }}</td>
-									   </tr>
-									   {% endif %}
-								 </table>
-						</div>
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.aliases.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.aliases.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												{{ form.aliases }}
-												{% for error in form.errors.aliases %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.foreignannotation.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.foreignannotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												{{ form.foreignannotation }}
-												{% for error in form.errors.foreignannotation %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-				</div>
-				<div class="col-lg-6 col-sm-6 mb-1" style="display: inline">
-						<div class="row mb-1" style="height: 100%;">
-								<table><tr>
-										<td class="tdlabel" style="padding-left: 25px;">{{ form.sequence.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<div class="fieldWrapper" id="sequence">{{ form.sequence }}</div>
-												{% for error in form.errors.sequence %}<p class="perror"">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-								<table><tr>
-										<td class="tdlabel" style="padding-left: 25px; padding-right: 15px;"><input type="button" onclick="suggestNames()" value="Suggested names" style="font-size: 14px; white-space: normal;"></td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="Return suggested names based on sequence alignment against tracey sequences. It can take several minutes for very long sequences." style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<textarea id="suggestedNames" style="line-height: 31px; width: 100%; height: 62px; resize: none; overflow-y: auto;" disabled></textarea>
-												{% for error in form.errors.sequence %}<p class="perror"">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-				</div>
-		</div>
-
-		<!-- Row 2 -->
-		<div class="row mb-4">
-				<div class="col-lg-6 col-sm-6">
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.taxonomy.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.taxonomy.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												{{ form.taxonomy }}
-												{% for error in form.errors.taxonomy %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-						<div class="row mb-1">
-										<table><tr>
-												<td class="tdlabel">{{ form.sourcedatabase.label_tag }}</td>
-												<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sourcedatabase.help_text }}"> ? </abbr></td>
-												<td class="tdfield">
-														{{ form.sourcedatabase }}
-														{% for error in form.errors.sourcedatabase %}<p class="perror">{{ error }}</p>{% endfor %}
-												</td>
-										</tr></table>
-									</div>
-						<div class="row mb-1">
-							<table><tr>
-									<td class="tdlabel">{{ form.dbxref.label_tag }}</td>
-									<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.dbxref.help_text }}"> ? </abbr></td>
-									<td class="tdfield">
-											{{ form.dbxref }}
-											{% for error in form.errors.dbxref %}<p class="perror">{{ error }}</p>{% endfor %}
-									</td>
-							</tr></table>
-						</div>
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.gene.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.gene.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												{{ form.gene }}
-												{% for error in form.errors.gene %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-				</div>
-				<div class="col-lg-6 col-sm-6">
-						<div class="row mb-1" style="height: 100%">
-								<table><tr>
-										<td class="tdlabel" style="padding-left: 25px;">{{ form.annotation.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.annotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<div class="fieldWrapper">{{ form.annotation }}</div>
-												{% for error in form.errors.annotation %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-				</div>
-		</div>
-
-		<!-- Row 3 -->
-		<div class="row mb-4">
-				<div class="col-lg-6 col-sm-6">
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.sequencetype.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencetype.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<div class="fieldWrapper">{{ form.sequencetype }}</div>
-												{% for error in form.errors.sequencetype %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.sequencestatus.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencestatus.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<div class="fieldWrapper">{{ form.sequencestatus }}</div>
-												{% for error in form.errors.sequencestatus %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-						<div class="row mb-1">
-								<table><tr>
-										<td class="tdlabel">{{ form.private.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.private.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<div class="fieldWrapper">{{ form.private }}</div>
-												{% for error in form.errors.private %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-				</div>
-				<div class="col-lg-6 col-sm-6">
-						<div class="row mb-1" style="height: 100%">
-								<table><tr>
-										<td class="tdlabel" style="padding-left: 25px;">{{ form.sequencecomments.label_tag }}</td>
-										<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencecomments.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-										<td class="tdfield">
-												<div class="fieldWrapper">{{ form.sequencecomments }}</div>
-												{% for error in form.errors.sequencecomments %}<p class="perror">{{ error }}</p>{% endfor %}
-										</td>
-								</tr></table>
-						</div>
-				</div>
-		</div>
-		<!-- Row 4 -->
-		<div class="row mb-4">
-				<div class="col-lg-12 col-sm-12">
-						<div class="row mb-3">
-								{% if 'query-verify' in segment %}
-										<div class="col-lg-12 col-sm-12">
-												<div class="row mb-1" style="height: 100%">
-														<table>
-																<tr>
-																		<td class="tdlabel" style="width: 5.5%;">{{ form.newChangelog.label_tag }}</td>
-																		<td class="tdquestion"><abbr title="{{ form.newChangelog.help_text }}" style='color: blue; text-align: right;'> ? </abbr></td>
-																		<td class="tdfield" style="width: 100%;">
-																				<div class="fieldWrapper" style ="width: 100%">{{ form.newChangelog }}</div>
-																		</td>
-																</tr>
-																<tr>
-																		<td class="tdlabel" style="width: 5.5%;"> </td>
-																		<td class="tdquestion"> </td>
-																		<td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
-																				<div class="fieldWrapper";">{{ form.changelog }}</div>
-																				{% for error in form.errors.changelog %}<p class="perror">{{ error }}</p>{% endfor %}
-																		</td>
-																</tr>
-														</table>
-												</div>
-										</div>
-								{% endif %}
-						</div>
-            {% if 'query-verify' in segment %}
-            <hr>
-            <div class="row" style="display: flex; align-items: center; margin-top: 15px;">
-                <table>
-                    <tr>
-                        <td class="tdlabel" style="width: 5.5%; color: black;">BLAST sequence:</td>
-                        <td class="tdfield" style="width: 10%;">TRACEY
-							<a href="{% url 'query-verify-blast' db='TRACEYvs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
-							<a href="{% url 'query-verify-blast' db='TRACEYus' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
-							<a href="{% url 'query-verify-blast' db='TRACEYas' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
-						</td>
-                        <td class="tdfield" style="width: 10%;"><a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a></td>
-                    </tr>
-                </table>
+    {% csrf_token %}
+    <!-- Sequence fields from InsertSequence form model -->
+    <!-- Row 1 -->
+    <div class="row mb-4">
+            <div class="col-lg-6 col-sm-6">
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
+                                    <td class="tdquestion">
+                                            <!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
+                                            <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue">
+                                                <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr>
+                                            </a>
+                                    </td>
+                                    <td class="tdfield">
+                                            {{ form.sequenceshortname }}
+                                            {% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
+                                    </td>
+                                   </tr>
+                                   {% if suggestedNames %}
+                                   <tr>
+                                     <td class="tdlabel">Suggested Names:</td>
+                                     <td class="tdquestion"><abbr data-toggle="tooltip" title="Suggested names based on BLAST against TRACEY sequences" style='color: blue; text-align: right'> ? </abbr></td>
+                                     <td class="tdfield">{{ suggestedNames }}</td>
+                                   </tr>
+                                   {% endif %}
+                             </table>
+                    </div>
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.aliases.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.aliases.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            {{ form.aliases }}
+                                            {% for error in form.errors.aliases %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.foreignannotation.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.foreignannotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            {{ form.foreignannotation }}
+                                            {% for error in form.errors.foreignannotation %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
             </div>
-            {% endif %}
-			</div>
-	</div>
+            <div class="col-lg-6 col-sm-6 mb-1" style="display: inline">
+                    <div class="row mb-1" style="height: 100%;">
+                            <table><tr>
+                                    <td class="tdlabel" style="padding-left: 25px;">{{ form.sequence.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <div class="fieldWrapper" id="sequence">{{ form.sequence }}</div>
+                                            {% for error in form.errors.sequence %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                            <table><tr>
+                                    <td class="tdlabel" style="padding-left: 25px; padding-right: 15px;"><input type="button" onclick="suggestNames()" value="Suggested names" style="font-size: 14px; white-space: normal;"></td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="Return suggested names based on sequence alignment against tracey sequences. It can take several minutes for very long sequences." style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <textarea id="suggestedNames" style="line-height: 31px; width: 100%; height: 62px; resize: none; overflow-y: auto;" disabled></textarea>
+                                            {% for error in form.errors.sequence %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+            </div>
+    </div>
 
-<hr>
-<div class="mb-1" style="width: 100%; text-align: center;">
-    <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="margin-left: 50;">
-    <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
-    <input type="submit" value="Submit" style="margin-right: 50;">
-    {% if 'query-verify' in segment %}
-    <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
-    <a href="query-verify"><input type="submit" id="deleteSequence" value="Delete sequence" name="deleteSequence" style="display: inline-block;" onclick="return confirm('Are you sure you want to delete sequence {{ sequence.sequenceshortname }}?')"></a>
-    {% endif %}
+    <!-- Row 2 -->
+    <div class="row mb-4">
+            <div class="col-lg-6 col-sm-6">
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.taxonomy.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.taxonomy.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                        <div id="taxonomy_field" hx-select="#taxonomy_field" hx-trigger="blur from:find input" hx-target="#taxonomy_field"
+                                             hx-post={% if 'query-verify' in segment %}
+                                                         "{% url 'query-verify' sequence_id=sequence_id %}"
+                                                     {% else %}
+                                                         "{% url 'query-insert' %}"
+                                                     {% endif %}>
+                                            {{ form.taxonomy }}
+                                            {% for error in form.errors.taxonomy %}<p class="perror">{{ error }}</p>{% endfor %}
+                                        </div>
+                                    </td>
+                            </tr></table>
+                    </div>
+                    <div class="row mb-1">
+                                    <table><tr>
+                                            <td class="tdlabel">{{ form.sourcedatabase.label_tag }}</td>
+                                            <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sourcedatabase.help_text }}"> ? </abbr></td>
+                                            <td class="tdfield">
+                                                    {{ form.sourcedatabase }}
+                                                    {% for error in form.errors.sourcedatabase %}<p class="perror">{{ error }}</p>{% endfor %}
+                                            </td>
+                                    </tr></table>
+                                </div>
+                    <div class="row mb-1">
+                        <table>
+                            <tr>
+                                <td class="tdlabel">{{ form.dbxref.label_tag }}</td>
+                                <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.dbxref.help_text }}"> ? </abbr></td>
+                                <td class="tdfield">
+                                        {{ form.dbxref }}
+                                        {% for error in form.errors.dbxref %}<p class="perror">{{ error }}</p>{% endfor %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.gene.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.gene.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            {{ form.gene }}
+                                            {% for error in form.errors.gene %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+            </div>
+            <div class="col-lg-6 col-sm-6">
+                    <div class="row mb-1" style="height: 100%">
+                            <table><tr>
+                                    <td class="tdlabel" style="padding-left: 25px;">{{ form.annotation.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.annotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <div class="fieldWrapper">{{ form.annotation }}</div>
+                                            {% for error in form.errors.annotation %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+            </div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="row mb-4">
+            <div class="col-lg-6 col-sm-6">
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.sequencetype.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencetype.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <div class="fieldWrapper">{{ form.sequencetype }}</div>
+                                            {% for error in form.errors.sequencetype %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.sequencestatus.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencestatus.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <div class="fieldWrapper">{{ form.sequencestatus }}</div>
+                                            {% for error in form.errors.sequencestatus %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+                    <div class="row mb-1">
+                            <table><tr>
+                                    <td class="tdlabel">{{ form.private.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.private.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <div class="fieldWrapper">{{ form.private }}</div>
+                                            {% for error in form.errors.private %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+            </div>
+            <div class="col-lg-6 col-sm-6">
+                    <div class="row mb-1" style="height: 100%">
+                            <table><tr>
+                                    <td class="tdlabel" style="padding-left: 25px;">{{ form.sequencecomments.label_tag }}</td>
+                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencecomments.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+                                    <td class="tdfield">
+                                            <div class="fieldWrapper">{{ form.sequencecomments }}</div>
+                                            {% for error in form.errors.sequencecomments %}<p class="perror">{{ error }}</p>{% endfor %}
+                                    </td>
+                            </tr></table>
+                    </div>
+            </div>
+    </div>
+    <!-- Row 4 -->
+    <div class="row mb-4">
+            <div class="col-lg-12 col-sm-12">
+                    <div class="row mb-3">
+                            {% if 'query-verify' in segment %}
+                                    <div class="col-lg-12 col-sm-12">
+                                            <div class="row mb-1" style="height: 100%">
+                                                    <table>
+                                                            <tr>
+                                                                    <td class="tdlabel" style="width: 5.5%;">{{ form.newChangelog.label_tag }}</td>
+                                                                    <td class="tdquestion"><abbr title="{{ form.newChangelog.help_text }}" style='color: blue; text-align: right;'> ? </abbr></td>
+                                                                    <td class="tdfield" style="width: 100%;">
+                                                                            <div class="fieldWrapper" style ="width: 100%">{{ form.newChangelog }}</div>
+                                                                    </td>
+                                                            </tr>
+                                                            <tr>
+                                                                    <td class="tdlabel" style="width: 5.5%;"> </td>
+                                                                    <td class="tdquestion"> </td>
+                                                                    <td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
+                                                                            <div class="fieldWrapper">{{ form.changelog }}</div>
+                                                                            {% for error in form.errors.changelog %}<p class="perror">{{ error }}</p>{% endfor %}
+                                                                    </td>
+                                                            </tr>
+                                                    </table>
+                                            </div>
+                                    </div>
+                            {% endif %}
+                    </div>
+        {% if 'query-verify' in segment %}
+        <hr>
+        <div class="row" style="display: flex; align-items: center; margin-top: 15px;">
+            <table>
+                <tr>
+                    <td class="tdlabel" style="width: 5.5%; color: black;">BLAST sequence:</td>
+                    <td class="tdfield" style="width: 10%;">TRACEY
+                        <a href="{% url 'query-verify-blast' db='TRACEYvs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
+                        <a href="{% url 'query-verify-blast' db='TRACEYus' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
+                        <a href="{% url 'query-verify-blast' db='TRACEYas' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
+                    </td>
+                    <td class="tdfield" style="width: 10%;"><a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a></td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
+        </div>
 </div>
-{% if 'query-verify' in segment %}
 
-<div class="row mb-4 mt-4">
+    <hr>
+    <!-- Submit buttons for SequenceForm -->
+    <div class="mb-1" style="width: 100%; text-align: center;">
+        <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="margin-left: 50;">
+        <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
+        <input type="submit" value="Submit" style="margin-right: 50;">
+        {% if 'query-verify' in segment %}
+        <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
+        <a href="query-verify"><input type="submit" id="deleteSequence" value="Delete sequence" name="deleteSequence" style="display: inline-block;" onclick="return confirm('Are you sure you want to delete sequence {{ sequence.sequenceshortname }}?')"></a>
+        {% endif %}
+    </div>
+
+    {% if 'query-verify' in segment %}
+
+    <!-- Verifymotifs / Motifs -->
+    <div class="row mb-4 mt-4">
 		<div class="col-lg-12 col-sm-12">
 
-        <h4>Not verified motifs ({{ verifymotifs|length }})</h4>
-        <p> IMPORTANT: If "active" value is set to "1" Verifymotif will become active and new Mofit will be created. If set to -1 or 0 Verifymotif will become inactive and Motif linked to it will be deleted. If set to "delete" Verifymotif will be deleted an not accesible anymore </p>
-        <hr>
-				{% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
+            <!-- Verifymotifs -->
+            <!-- Header -->
+            <h4>Not verified motifs ({{ verifymotifs|length }})</h4>
+            <p> IMPORTANT: If "active" value is set to "1" Verifymotif will become active and new Mofit will be created. If set to -1 or 0 Verifymotif will become inactive and Motif linked to it will be deleted. If set to "delete" Verifymotif will be deleted an not accesible anymore </p>
+            <hr>
+            {% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
 
-				{% for m in verifymotifs %}
-				<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
-				<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
-				<table class="detailTable">
-				<tr>
-						<td class="td-data" style="width: 5%;">
-                <select name="verifymotif_id" id="{{ m.verifymotif_id }}" style="width: 100%; max-width: 60px; min-width: 40px;">
-                    <option value="-1:{{ m.verifymotif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
-                    <option value="0:{{ m.verifymotif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
-                    <option value="1:{{ m.verifymotif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
-                    <option value="delete:{{ m.verifymotif_id }}"> delete</option>
-                </select>
-								<!-- <input type="checkbox" id="{{ m.verifymotif_id }}" name='verifymotif_id' value="{{ m.verifymotif_id }}"> -->
-						</td>
-						<td class="td-data">
-								<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
-								<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
-										<table class="detailTable">
-												<tr>
-														<td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
-														<td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
-														<td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
-														<td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
-														<td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ verifymotifs|get_item:m|get_item:'length' }})</td>
-														<td class="td-data"><b>Functional Name: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
-												</tr>
-										</table>
-								<hr>
-								</div>
-								<div class="row mb-1" style="padding: 0px 15px 0px 15px;">
-										<table class="detailTable" style="table-layout: fixed;">
-												<tr>
-														<td class="td-header"><b></b></td>
-														<td class="td-data"><img src="data:image/png;base64,{{ verifymotifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
-												</tr>
-												<tr>
-														<td class="td-header"><b>Sequence with motif: </b></td>
-														<td class="td-data">
-																<div style="overflow-x:auto;">
-
-																		<table style="font-family: monospace; width: 100%; text-align: justify;">
-																				<tr><td style="border: red;">
-																				{% for leter in sequence.sequence %}
-																						<a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
-																				{% endfor %}
-																				</td></tr>
-																		</table>
-																</div>
-														</td>
-												</tr>
-										</table>
-								</div>
-								<div class="row mb-3" style="padding: 0px 15px 0px 15px;">
-										<table class="detailTable" style="table-layout: fixed;">
-												<tr>
-														<td class="td-header" style="table-layout: fixed;">
-																<table style="table-layout: fixed; width:100%;">
-																		<tr><td><b>Hmm-Consensus: </b></td></tr>
-																		<tr><td><b>Similarity: </b></td></tr>
-																		<tr><td><b>Found Motif: </b></td></tr>
-																</table>
-														</td>
-
-														<td class="td-data" style="table-layout: fixed;">
-																<div style="overflow-x:auto;">
-																		<table style="width:100%;">
-																			<tr>
-																					{% for leter in verifymotifs|get_item:m|get_item:'consensus' %}
-																							<td style="text-align: left;">{{ leter }}</td>
-																					{% endfor %}
-																			</tr>
-																			<tr>
-																					{% for leter in verifymotifs|get_item:m|get_item:'similarity' %}
-																							<td style="text-align: justify;">{{ leter }}</td>
-																					{% endfor %}
-																			</tr>
-																			<tr>
-																					{% for leter in verifymotifs|get_item:m|get_item:'motif' %}
-																							<td>{{ leter }}</td>
-																					{% endfor %}
-																			</tr>
-																		</table>
-																</div>
-														</td>
-												</tr>
-										</table>
-								</div>
-
-                <hr>
-                <div class="row mb-3" style="display: flex; align-items: center;">
-                    <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
-                    <div class="col-4" style="padding: 0;">TRACEY
-							<a href="{% url 'query-verify-blast' db='TRACEYvv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
-							<a href="{% url 'query-verify-blast' db='TRACEYuv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
-							<a href="{% url 'query-verify-blast' db='TRACEYav' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
-                    </div>
-                    <div class="col-4" style="padding: 0;">
-                        <a href="{% url 'query-verify-blast' db='NCBIv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a>
-                    </div>
-                </div>
-
-								</div>
-						</td>
-				</tr>
-
-				</table>
-        </form>
-				</div>
-				</div>
-				{% endfor %}
-        <input class="mb-5" type="submit" value="Submit">
-
-        <h4>Verified motifs ({{ motifs|length }})</h4>
-        <p>IMPORTANT: If "active" value is set to "delete" then Motif will be deleted and the "active" value of the Verifymotif linked to it will be set to "0". If no Verifymotif linked to Motif then a new Verifymotive will be created. Setting "active" value to any other value will have no effect on Verifymotifs</p>
-        <hr>
-        {% for m in motifs %}
-        <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
-        <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
-        <table class="detailTable">
-        <tr>
-            <td class="td-data" style="width: 5%;">
-                <select name='motif_id' id="{{ m.motif_id }}" style="width: 100%; max-width: 60px; min-width: 40px;">
-                    <option value="-1:{{ m.motif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
-                    <option value="0:{{ m.motif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
-                    <option value="1:{{ m.motif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
-                    <option value="delete:{{ m.motif_id }}"> delete</option>
-                </select>
-                <!-- <input type="checkbox" id="{{ m.motif_id }}" name='motif_id' value="{{ m.motif_id }}"> -->
-            </td>
-            <td class="td-data">
-                <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+            <!-- Generate 1 div for each Verifymotif -->
+            {% for m in verifymotifs %}
+            <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
                 <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
                     <table class="detailTable">
                         <tr>
-                            <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
-                            <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
-                            <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
-                            <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
-                            <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length' }})</td>
-                            <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
-                        </tr>
-                    </table>
-                <hr>
-                </div>
-                <div class="row mb-1" style="padding: 0px 15px 0px 15px;">
-                    <table class="detailTable" style="table-layout: fixed;">
-                        <tr>
-                            <td class="td-header"><b></b></td>
-                            <td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
-                        </tr>
-                        <tr>
-                            <td class="td-header"><b>Sequence with motif: </b></td>
+                            <!-- Select button for motif 'Active' value -->
+                            <td class="td-data" style="width: 5%;">
+                                <select name="verifymotif_id" id="{{ m.verifymotif_id }}" style="width: 100%; max-width: 60px; min-width: 40px;">
+                                    <option value="-1:{{ m.verifymotif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
+                                    <option value="0:{{ m.verifymotif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
+                                    <option value="1:{{ m.verifymotif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
+                                    <option value="delete:{{ m.verifymotif_id }}"> delete</option>
+                                </select>
+                                <!-- <input type="checkbox" id="{{ m.verifymotif_id }}" name='verifymotif_id' value="{{ m.verifymotif_id }}"> -->
+                            </td>
+                            <!-- Verifymotif details -->
                             <td class="td-data">
-                                <div style="overflow-x:auto;">
-
-                                    <table style="font-family: monospace; width: 100%; text-align: justify;">
-                                        <tr><td style="border: red;">
-                                        {% for leter in sequence.sequence %}
-                                            <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
-                                        {% endfor %}
-                                        </td></tr>
-                                    </table>
+                                <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+                                    <!-- header -->
+                                    <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+                                        <table class="detailTable">
+                                            <tr>
+                                                <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+                                                <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
+                                                <td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
+                                                <td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
+                                                <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ verifymotifs|get_item:m|get_item:'length' }})</td>
+                                                <td class="td-data"><b>Functional Name: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+                                            </tr>
+                                        </table>
+                                        <hr>
+                                    </div>
+                                    <!-- Motif image and sequence -->
+                                    <div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+                                        <table class="detailTable" style="table-layout: fixed;">
+                                            <!-- Motif image -->
+                                            <tr>
+                                                <td class="td-header"><b></b></td>
+                                                <td class="td-data"><img src="data:image/png;base64,{{ verifymotifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+                                            </tr>
+                                            <!-- Sequence with motif -->
+                                            <tr>
+                                                <td class="td-header"><b>Sequence with motif: </b></td>
+                                                <td class="td-data">
+                                                    <div style="overflow-x:auto;">
+                                                        <table style="font-family: monospace; width: 100%; text-align: justify;">
+                                                            <tr><td style="border: red;">
+                                                                {% for leter in sequence.sequence %}
+                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                                                {% endfor %}
+                                                            </td></tr>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <!-- Motif alignment with consensus sequence -->
+                                    <div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+                                        <table class="detailTable" style="table-layout: fixed;">
+                                            <tr>
+                                                <!-- headers -->
+                                                <td class="td-header" style="table-layout: fixed;">
+                                                    <table style="table-layout: fixed; width:100%;">
+                                                        <tr><td><b>Hmm-Consensus: </b></td></tr>
+                                                        <tr><td><b>Similarity: </b></td></tr>
+                                                        <tr><td><b>Found Motif: </b></td></tr>
+                                                    </table>
+                                                </td>
+                                                <!-- alignments -->
+                                                <td class="td-data" style="table-layout: fixed;">
+                                                    <div style="overflow-x:auto;">
+                                                        <table style="width:100%;">
+                                                            <tr>
+                                                                {% for leter in verifymotifs|get_item:m|get_item:'consensus' %}
+                                                                    <td style="text-align: left;">{{ leter }}</td>
+                                                                {% endfor %}
+                                                            </tr>
+                                                            <tr>
+                                                                {% for leter in verifymotifs|get_item:m|get_item:'similarity' %}
+                                                                    <td style="text-align: justify;">{{ leter }}</td>
+                                                                {% endfor %}
+                                                            </tr>
+                                                            <tr>
+                                                                {% for leter in verifymotifs|get_item:m|get_item:'motif' %}
+                                                                    <td>{{ leter }}</td>
+                                                                {% endfor %}
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <hr>
+                                    <!-- BLAST motif links -->
+                                    <div class="row mb-3" style="display: flex; align-items: center;">
+                                        <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
+                                        <div class="col-4" style="padding: 0;">TRACEY
+                                            <a href="{% url 'query-verify-blast' db='TRACEYvv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
+                                            <a href="{% url 'query-verify-blast' db='TRACEYuv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
+                                            <a href="{% url 'query-verify-blast' db='TRACEYav' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
+                                        </div>
+                                        <div class="col-4" style="padding: 0;">
+                                            <a href="{% url 'query-verify-blast' db='NCBIv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     </table>
                 </div>
-                <div class="row mb-3" style="padding: 0px 15px 0px 15px;">
-                    <table class="detailTable" style="table-layout: fixed;">
+            </div>
+            {% endfor %}
+
+            <input class="mb-5" type="submit" value="Submit">
+
+            <!-- Motifs -->
+            <!-- Header -->
+            <h4>Verified motifs ({{ motifs|length }})</h4>
+            <p>IMPORTANT: If "active" value is set to "delete" then Motif will be deleted and the "active" value of the Verifymotif linked to it will be set to "0". If no Verifymotif linked to Motif then a new Verifymotive will be created. Setting "active" value to any other value will have no effect on Verifymotifs</p>
+            <hr>
+
+            <!-- Generate 1 div for each Motif -->
+            {% for m in motifs %}
+            <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+                <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+                    <table class="detailTable">
                         <tr>
-                            <td class="td-header" style="table-layout: fixed;">
-                                <table style="table-layout: fixed; width:100%;">
-                                    <tr><td><b>Hmm-Consensus: </b></td></tr>
-                                    <tr><td><b>Similarity: </b></td></tr>
-                                    <tr><td><b>Found Motif: </b></td></tr>
-                                </table>
+                            <!-- Select button for motif 'Active' value -->
+                            <td class="td-data" style="width: 5%;">
+                                <select name='motif_id' id="{{ m.motif_id }}" style="width: 100%; max-width: 60px; min-width: 40px;">
+                                    <option value="-1:{{ m.motif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
+                                    <option value="0:{{ m.motif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
+                                    <option value="1:{{ m.motif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
+                                    <option value="delete:{{ m.motif_id }}"> delete</option>
+                                </select>
+                                <!-- <input type="checkbox" id="{{ m.motif_id }}" name='motif_id' value="{{ m.motif_id }}"> -->
                             </td>
-
-                            <td class="td-data" style="table-layout: fixed;">
-                                <div style="overflow-x:auto;">
-                                    <table style="width:100%;">
-                                      <tr>
-                                          {% for leter in motifs|get_item:m|get_item:'consensus' %}
-                                              <td style="text-align: left;">{{ leter }}</td>
-                                          {% endfor %}
-                                      </tr>
-                                      <tr>
-                                          {% for leter in motifs|get_item:m|get_item:'similarity' %}
-                                              <td style="text-align: justify;">{{ leter }}</td>
-                                          {% endfor %}
-                                      </tr>
-                                      <tr>
-                                          {% for leter in motifs|get_item:m|get_item:'motif' %}
-                                              <td>{{ leter }}</td>
-                                          {% endfor %}
-                                      </tr>
-                                    </table>
+                            <!-- Motif details -->
+                            <td class="td-data">
+                                <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+                                    <!-- header -->
+                                    <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+                                        <table class="detailTable">
+                                            <tr>
+                                                <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+                                                <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
+                                                <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
+                                                <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+                                                <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length' }})</td>
+                                                <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+                                            </tr>
+                                        </table>
+                                        <hr>
+                                    </div>
+                                    <!-- Motif image and sequence -->
+                                    <div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+                                        <table class="detailTable" style="table-layout: fixed;">
+                                            <!-- Motif image -->
+                                            <tr>
+                                                <td class="td-header"><b></b></td>
+                                                <td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+                                            </tr>
+                                            <!-- Sequence with motif -->
+                                            <tr>
+                                                <td class="td-header"><b>Sequence with motif: </b></td>
+                                                <td class="td-data">
+                                                    <div style="overflow-x:auto;">
+                                                        <table style="font-family: monospace; width: 100%; text-align: justify;">
+                                                            <tr><td style="border: red;">
+                                                                {% for leter in sequence.sequence %}
+                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                                                {% endfor %}
+                                                            </td></tr>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <!-- Motif alignment with consensus sequence -->
+                                    <div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+                                        <table class="detailTable" style="table-layout: fixed;">
+                                            <tr>
+                                                <!-- headers -->
+                                                <td class="td-header" style="table-layout: fixed;">
+                                                    <table style="table-layout: fixed; width:100%;">
+                                                        <tr><td><b>Hmm-Consensus: </b></td></tr>
+                                                        <tr><td><b>Similarity: </b></td></tr>
+                                                        <tr><td><b>Found Motif: </b></td></tr>
+                                                    </table>
+                                                </td>
+                                                <!-- alignments -->
+                                                <td class="td-data" style="table-layout: fixed;">
+                                                    <div style="overflow-x:auto;">
+                                                        <table style="width:100%;">
+                                                            <tr>
+                                                                {% for leter in motifs|get_item:m|get_item:'consensus' %}
+                                                                    <td style="text-align: left;">{{ leter }}</td>
+                                                                {% endfor %}
+                                                            </tr>
+                                                            <tr>
+                                                                {% for leter in motifs|get_item:m|get_item:'similarity' %}
+                                                                    <td style="text-align: justify;">{{ leter }}</td>
+                                                                {% endfor %}
+                                                            </tr>
+                                                            <tr>
+                                                                {% for leter in motifs|get_item:m|get_item:'motif' %}
+                                                                    <td>{{ leter }}</td>
+                                                                {% endfor %}
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <hr>
+                                    <!-- BLAST motif links -->
+                                    <div class="row mb-3" style="display: flex; align-items: center;">
+                                        <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
+                                        <div class="col-4" style="padding: 0;">TRACEY
+                                            <a href="{% url 'query-verify-blast' db='TRACEYvm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
+                                            <a href="{% url 'query-verify-blast' db='TRACEYum' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
+                                            <a href="{% url 'query-verify-blast' db='TRACEYam' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
+                                        </div>
+                                        <div class="col-4" style="padding: 0;">
+                                            <a href="{% url 'query-verify-blast' db='NCBIm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     </table>
                 </div>
+            </div>
+            {% endfor %}
 
-                <hr>
-                <div class="row mb-3" style="display: flex; align-items: center;">
-                    <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
-                    <div class="col-4" style="padding: 0;">TRACEY
-							<a href="{% url 'query-verify-blast' db='TRACEYvm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
-							<a href="{% url 'query-verify-blast' db='TRACEYum' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
-							<a href="{% url 'query-verify-blast' db='TRACEYam' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
-                    </div>
-                    <div class="col-4" style="padding: 0;">
-                        <a href="{% url 'query-verify-blast' db='NCBIm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a>
-                    </div>
-                </div>
-
-                </div>
-            </td>
-        </tr>
-
-        </table>
         </div>
-        </div>
-        {% endfor %}
-		</div>
-</div>
+    </div>
 
-<div style="width: 100%; display: inline;">
-    <input type="submit" value="Submit">
-    <input type="submit" name="deleteSequence" value="Delete sequence" style="position: absolute; right: 2%;">
-</div>
-{% endif %}
+    <div style="width: 100%; display: inline;">
+        <input type="submit" value="Submit">
+        <input type="submit" name="deleteSequence" value="Delete sequence" style="position: absolute; right: 2%;">
+    </div>
+
+    {% endif %}
 
 </form>

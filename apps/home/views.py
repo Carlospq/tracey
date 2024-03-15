@@ -8,6 +8,7 @@ import time, datetime
 import subprocess
 import mimetypes
 import pyhmmer
+import json as simplejson
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -138,7 +139,8 @@ def get_sequences(query, verify=False):
 
 	# Filter seqs if shortname/foreignAnnotation or taxonomy is provided
 	if 'shortname' in query and notEmpty(query, 'shortname'):
-		seqs = seqs.filter(sequenceshortname__icontains = query['shortname'][0])
+		taxonomies = Taxonomies.objects.filter(taxonomyshortname__startswith = query['shortname'][0])
+		seqs = seqs.filter(taxonomy__in=taxonomies)
 
 	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
 		pattern = re.compile("^gi\|([0-9]+)$")
@@ -310,27 +312,26 @@ def load_domaingroups_rank2(request):
 
 			if int(parent_id) in domaingroupparent_id:
 				name_list = "-" * (int(domaingroup.analysislevel)-2) + domaingroup.domaingroupname
-				if domaingroup.analysislevel > 2:
-					childs_list.append(name_list)
+				if domaingroup.analysislevel > 2 and (any(domaingroup.motifs_set.all()) or any(domaingroup.verifymotifs_set.all())):
+					children_list.append(name_list)
 				if Domaingroups.objects.filter(domaingroupparent_id=domaingroup.domaingroup_id):
 					get_names_list(domaingroup.domaingroup_id)
 
-		return childs_list
+		return children_list
 
-	childs_list = []
+	children_list = []
 	domainname = request.GET.get('domainname')
 	rank = request.GET.get('domaingroup_rank')
 	if not rank and not domainname:
-		childs_list = []#[ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
+		children_list = []#[ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
 	else:
 		if rank:
 			parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
-			childs_list = get_names_list(parent_id)
+			children_list = get_names_list(parent_id)
 		else:
 			domain = Domains.objects.filter(domainname = domainname)
-			childs_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel > 2 ]
-
-	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': childs_list})
+			children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel > 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
+	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
 
 def load_queryverifysequences(request):
@@ -1189,15 +1190,16 @@ def QueryVerifyView(request, sequence_id):
 	user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
 	segment = request.path.split('/')[-2]
 	context = {'segment': segment}
+	context['sequence_id'] = sequence_id
 
 	try:
 		seq = Sequences.objects.get(pk=sequence_id)
 		context["sequence"] = seq
 	except:
-		seq = Sequences()
-		form = InsertSequence(instance=seq, )
+		#seq = Sequences()
+		#form = InsertSequence(instance=seq)
 		context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
-		context['form'] = form
+		#context['form'] = form
 		return render(request, 'home/query-verify.html', context)
 
 	if 'deleteSequence' in request.POST:
@@ -1211,14 +1213,12 @@ def QueryVerifyView(request, sequence_id):
 		ncbigene_id = seq.gene.ncbigene_id
 
 	# Retrive verifyMotifs
-	motifs = Motifs.objects.filter(sequence_id = sequence_id)
-	verifymotifs = Verifymotifs.objects.filter(sequence_id = sequence_id)
+	motifs = seq.motifs_set.all()
+	verifymotifs = seq.verifymotifs_set.all()
 	context["motifs"] = {}
 	context["verifymotifs"] = {}
 
-	# suggestedNames = suggested_names(seq.sequenceshortname, seq.sequence)
-	# context['suggestedNames'] = ",    ".join(suggestedNames)
-
+	# Gather information of Motifs/VerifyMotifs and pass it to context
 	for type, motifs in zip(['motifs', 'verifymotifs'], [motifs, verifymotifs]):
 		for m in motifs:
 			context[type][m] = {}
@@ -1353,6 +1353,9 @@ def QueryVerifyView(request, sequence_id):
 
 		if form.is_valid():
 			context['form'] = form
+			if request.htmx:
+				# The submitted form is valid, just render it `as is` for htmx.
+				return render(request, 'home/query-verify.html', context)
 			try:
 				form.save()
 				context['message'] = 'Sequence updated successfully'
@@ -1362,9 +1365,21 @@ def QueryVerifyView(request, sequence_id):
 		else:
 			context['form'] = form
 	else:
-		context['form'] = InsertSequence(instance=seq, initial={'gene': ncbigene_id, })
+		context['form'] = InsertSequence(instance=seq, initial={'gene': ncbigene_id, 'taxonomy': seq.taxonomy.scientificname})
 
 	return render(request, 'home/query-verify.html', context)
+
+
+def autocompleteModel(request):
+	search_qs = Taxonomies.objects.filter(scientificname__istartswith=request.GET['search'])
+	results = []
+	if len(request.GET['search']) >= 3 or len(search_qs) < 150:
+		for r in search_qs:
+			results.append(r.scientificname)
+	else:
+		results.append('No results found')
+	resp = request.GET['callback'] + '(' + simplejson.dumps(results) + ');'
+	return HttpResponse(resp, content_type='home/search.json')
 
 
 # TRACEY Features

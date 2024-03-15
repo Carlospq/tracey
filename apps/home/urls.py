@@ -41,7 +41,7 @@ urlpatterns = [
     path('query-verify', views.QueryVerifyMenuView, name='query-verify-menu'),
     path('query-verify/<int:sequence_id>', views.QueryVerifyView, name='query-verify'),
     path('query-verify/traceyBLAST/<str:db>/<int:query_id>', views.QueryVerifyBlastView, name='query-verify-blast'),
-    
+    path('search.json', views.autocompleteModel, name='search.json'),
 
     # Taxonomy update results
     path('update_taxonomy_results', views.read_update_taxonomy_results, name='read_update_taxonomy_results'),
