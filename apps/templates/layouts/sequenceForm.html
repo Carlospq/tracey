@@ -31,6 +31,9 @@
             background: white;
             border: 1px solid #ccc;
             width: 200px;
+            height: auto;
+            max-height: 400px;
+            overflow-y: scroll;
         }
         .ui-menu .ui-menu-item a{
             height:20px;
@@ -335,9 +338,9 @@
     <hr>
     <!-- Submit buttons for SequenceForm -->
     <div class="mb-1" style="width: 100%; text-align: center;">
-        <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="margin-left: 50;">
+        <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="margin-left: 50px;">
         <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
-        <input type="submit" value="Submit" style="margin-right: 50;">
+        <input type="submit" value="Submit" style="margin-right: 50px;">
         {% if 'query-verify' in segment %}
         <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
         <a href="query-verify"><input type="submit" id="deleteSequence" value="Delete sequence" name="deleteSequence" style="display: inline-block;" onclick="return confirm('Are you sure you want to delete sequence {{ sequence.sequenceshortname }}?')"></a>

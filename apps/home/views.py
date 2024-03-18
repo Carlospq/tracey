@@ -1371,7 +1371,7 @@ def QueryVerifyView(request, sequence_id):
 
 
 def autocompleteModel(request):
-	search_qs = Taxonomies.objects.filter(scientificname__istartswith=request.GET['search'])
+	search_qs = Taxonomies.objects.filter(scientificname__istartswith=request.GET['search']).filter(taxonomyrank__in=["species", "strain"])
 	results = []
 	if len(request.GET['search']) >= 3 or len(search_qs) < 150:
 		for r in search_qs:
