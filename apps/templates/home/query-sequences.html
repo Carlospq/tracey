@@ -51,8 +51,8 @@
                         <input type="text" name="private" value="1" hidden></input>
                         {% csrf_token %}
 
-                        <!-- Selection of domain -->
-                        <div class="row mb-5">
+                        	<!-- Selection of domain -->
+                        	<div class="row mb-5">
                             <div class="col-lg-6 col-sm-6">
                                 <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}"> Domain Name </label>
                                 <select style="width: 100%" name="domainname" id="domainname">
@@ -78,10 +78,10 @@
                                 <label for="sequencestatus"> Only active sequences</label>
                             </div>
                         </div>
-                        <hr>
+                        	<hr>
 
-                        <!-- Full frame -->
-                        <div class="row mb-4">
+                        	<!-- Full frame -->
+                        	<div class="row mb-4">
                         <div class="col-sm-12">
                             <!-- Row 1 -->
                             {% if is_staff %}
@@ -160,9 +160,10 @@
                             <!-- End Row 2 -->
                         </div>
                         </div>
-                        <!-- End Full frame -->
-                        <hr>
-                        <input type="submit" value="Submit">
+                        	<!-- End Full frame -->
+                        	<hr>
+                        	<input type="submit" value="Submit">
+						</form>
                     </div>
                     <!-- End of Form -->
                 </div>

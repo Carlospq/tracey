@@ -37,64 +37,74 @@
         <div class="card border-0 shadow components-section">
             <div class="card-body">
 
-              <div class="row mb-3">
-                  <h1><strong> {{ sequence }} </strong></h1>
-                  <hr>
-              </div>
-              {% if log %}<p style="color: red;">{{ log }}</p>{% endif %}
-              {{ message }}
-              {% for error in form.errors %}{{error}}{% endfor %}
-              <div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
+				<div class="row mb-3">
+					<h1><strong> {{ sequence }} </strong></h1>
+					<hr>
+				</div>
+				{% if log %}<p style="color: red;">{{ log }}</p>{% endif %}
+				{{ message }}
+				{% for error in form.errors %}{{error}}{% endfor %}
+				<div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
 
-                  <table class="detailTable">
-                      <tr>
-                          <td class="td-header">Short name:</td>
-                          <td class="td-data">{{ sequence.sequenceshortname }}</td>
-                      </tr>
-                      <tr>
-                          <td class="td-header">Aliases:</td>
-                          <td class="td-data">{% if sequence.aliases == "null" %}{% else %}{{ sequence.aliases }}{% endif %}</td>
-                      </tr>
-                      <tr>
-                          <td class="td-header">Species:</td>
-                          <td class="td-data">{{ speciesname }}</td>
-                      </tr>
-                      <tr>
-                          <td class="td-header">Status:</td>
-                          <td class="td-data">{{ sequence.sequencestatus }}</td>
-                      </tr>
-                      <tr>
-                          <td class="td-header">dbxref:</td>
-                          <td class="td-data"><a href="https://www.ncbi.nlm.nih.gov/protein/{{ sequence.dbxref }}" target="_blank" style="color: blue;">{{ sequence.dbxref }}</a></td>
-                      </tr>
-                      <tr>
-                          <td class="td-header">Source database:</td>
-                          <td class="td-data">{{ sequence.sourcedatabase }}</td>
-                      </tr>
-                      {% if pdb %}
-                      <tr>
-                          <td class="td-header">PDB:</td>
-                          <td class="td-data"><a href="https://www.rcsb.org/structure/{{ pdb }}" target="_blank" style="color: blue;">{{ pdb }}</a> {{ pdb_name }}</td>
-                      </tr>
-                      {% endif %}
-                      <tr>
-                          <td class="td-header">Foreign annotation:</td>
-                          <td class="td-data">{{ sequence.foreignannotation }}</td> <!-- <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.foreignannotation }}</textarea> -->
-                      </tr>
-                      <tr>
-                          <td class="td-header">Sequence:</td>
-                          <td class="td-data">
-                              <textarea style="resize: none; width:100%; vertical-align: middle;" disabled>{{ sequence.sequence }}</textarea>
-                          </td>
-                      </tr>
-                      <tr>
-                          <td class="td-header"></td>
-                          <td class="td-data">
-                              <a href="/fastaFormat/{{sequence.sequence_id}}/" target="popup" onclick="window.open('/details/fastaFormat/{{sequence.sequence_id}}/','popup','width=600,height=300'); return false;" style="color: blue"> Fasta format </a>
-                          </td>
-                      </tr>
-                  </table>
-              </div>
+					<table class="detailTable">
+						<tr>
+							<td class="td-header">Short name:</td>
+							<td class="td-data">{{ sequence.sequenceshortname }}</td>
+						</tr>
+						<tr>
+							<td class="td-header">Aliases:</td>
+							<td class="td-data">{% if sequence.aliases == "null" %}{% else %}{{ sequence.aliases }}{% endif %}</td>
+						</tr>
+						<tr>
+							<td class="td-header">Species:</td>
+							<td class="td-data">{{ speciesname }}</td>
+						</tr>
+						<tr>
+							<td class="td-header">Status:</td>
+							<td class="td-data">{{ sequence.sequencestatus }}</td>
+						</tr>
+						<tr>
+							<td class="td-header">dbxref:</td>
+							<td class="td-data"><a href="https://www.ncbi.nlm.nih.gov/protein/{{ sequence.dbxref }}" target="_blank" style="color: blue;">{{ sequence.dbxref }}</a></td>
+						</tr>
+						<tr>
+							<td class="td-header">Source database:</td>
+							<td class="td-data">{{ sequence.sourcedatabase }}</td>
+						</tr>
+						{% if pdb %}
+							<tr>
+								<td class="td-header">PDB:</td>
+								<td class="td-data"><a href="https://www.rcsb.org/structure/{{ pdb }}" target="_blank" style="color: blue;">{{ pdb }}</a> {{ pdb_name }}</td>
+							</tr>
+						{% endif %}
+						<tr>
+							<td class="td-header">Foreign annotation:</td>
+							<td class="td-data">{{ sequence.foreignannotation }}</td> <!-- <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.foreignannotation }}</textarea> -->
+						</tr>
+						<tr>
+							<td class="td-header">Sequence:</td>
+							<td class="td-data">
+								<textarea style="resize: none; width:100%; vertical-align: middle;" disabled>{{ sequence.sequence }}</textarea>
+							</td>
+						</tr>
+						<tr>
+							<td class="td-header"></td>
+							<td class="td-data">
+								<a href="/fastaFormat/{{sequence.sequence_id}}/" target="popup" onclick="window.open('/details/fastaFormat/{{sequence.sequence_id}}/','popup','width=600,height=300'); return false;" style="color: blue"> Fasta format </a>
+							</td>
+						</tr>
+						{% if is_staff %}
+						<tr>
+							<td class="td-header"></td>
+							<td class="td-data">
+								<form action="/query-verify/{{ sequence.sequence_id }}">
+									<input type="submit" value="Verify Sequence" formtarget="_blank"/>
+								</form>
+							</td>
+						</tr>
+						{% endif %}
+					</table>
+				</div>
 
               <div class="row mb-3">
                   <h4> Motif Data </h4>
