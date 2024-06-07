@@ -39,7 +39,7 @@ TaxonomyUpdate.report.txt
 apps/static/assets/img/images/TRACEY_phylogeneticTree.png
 apps/static/assets/img/tmpTrees/*
 taxonomyGraph.pdf
-utils/traceySequenceUpdater/traceySequenceUpdater.*.log
+utils/traceySequenceUpdater/traceySequencesUpdater.*.log
 
 # Blast bin and databases
 utils/ncbi-blast-2.13.0+/bin
