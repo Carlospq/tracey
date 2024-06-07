@@ -1,8 +1,9 @@
 # Run code when run as script
-# python manage.py shell < utils\traceySequenceUpdater\domaingroupsNamesReduction.py
+# python manage.py shell < utils/traceySequenceUpdater/domaingroupsNamesReduction.py
 
 if __name__ == "django.core.management.commands.shell":
 
+	from apps.home.models import *
 	domaingroupsNames = {'Qa.I': ['Syx18', 'Ufe1'],
 					 'Qa.II': ['Syx5', 'Sed5', 'Syp3-plants'],
 					 'Qa.III.a': ['Syx16', 'Tlg2', 'Syp4-plants'],

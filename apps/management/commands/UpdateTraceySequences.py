@@ -24,8 +24,11 @@ class Command(BaseCommand):
         # Check if species is specified and if it exists in TRACEY
         if options['species']:
             try:
-                Taxonomies.objects.get(Q(taxonomyshortname=options['species']) | Q(scientificname=options['species']))
+                taxonomies = Taxonomies.objects.filter(Q(taxonomyshortname=options['species']) | Q(scientificname=options['species']))
             except Taxonomies.DoesNotExist:
+                sys.exit("Species name not found in TRACEY. Please confirm that the given species name is correct.")
+
+            if len(taxonomies) == 0:
                 sys.exit("Species name not found in TRACEY. Please confirm that the given species name is correct.")
 
         # Continue update from last log file

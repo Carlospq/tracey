@@ -92,6 +92,7 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
 
 
 def get_sequences(query, verify=False):
+	print(query)
 	# Gets all domaingroups (and their children) matching query 'domaingroup(s)'
 	if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
 		domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
