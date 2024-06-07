@@ -546,7 +546,8 @@ def getMotifPlot_fromMotif(start, end, length, label):
 
 def QuerySequencesDetails(request, sequence_id):
 	segment = request.path.split('/')[-4]
-	context = {"segment": segment}
+	context = {"segment": segment,
+			   'is_staff': request.user.is_staff}
 
 	try:
 		context['sequence'] = Sequences.objects.get(pk=sequence_id)
@@ -844,7 +845,7 @@ def suggested_names(sequence, shortname="Query"):
 	sn = shortname.split("_")[0]
 	with open(file_path, 'w') as fasta_file:
 		fasta_file.write( '>'+shortname+'\n'+sequence )
-	blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp", outfmt = 6)
+	blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = "utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyverify", outfmt = 6)
 	stdout, stderr = blastp_cline()
 	shortnames = [ y[1].split("|")[0][y[1].find('_')+1:] for y in [ x.split("\t") for x in stdout.split("\n") if len(x) > 1 ] if float(y[2]) > 95]
 	suggestedNames = common_name(shortnames, sn)
