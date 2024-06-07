@@ -12,6 +12,7 @@ import json as simplejson
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import pandas as pd
+import django_tables2 as tables
 import numpy as np
 from random import randrange
 from dna_features_viewer import GraphicFeature, GraphicRecord
@@ -30,6 +31,8 @@ from django.shortcuts import render, redirect
 from django.http import Http404
 from django.contrib import messages
 from django.utils.timezone import now
+from django_tables2.config import RequestConfig
+from django_tables2.export.export import TableExport
 
 from .forms import *
 from .models import *
@@ -461,6 +464,15 @@ def QuerySequencesResults(request):
 	return render(request, 'home/query-sequences-results.html', context)
 
 
+class SequencesResultsTable(tables.Table):
+	name = tables.Column()
+	speciesshortname = tables.Column()
+	motifs = tables.Column()
+	sourcedatabase = tables.Column()
+	foreignannotation = tables.Column()
+	sequence = tables.Column()
+
+
 def QuerySequencesFastaFormat(request):
 	if request.method == 'POST':
 		boxes = request.POST.getlist('checkbox')
@@ -470,6 +482,19 @@ def QuerySequencesFastaFormat(request):
 	except Sequences.DoesNotExist:
 		raise Http404("Sequences does not exist")
 
+	if 'download_table' in request.POST:
+		data = [{'name': x.sequenceshortname,
+				 'speciesshortname': x.taxonomy.taxonomyshortname,
+				 'motifs': ", ".join([m.motifname for m in x.motifs_set.all()]),
+				 'sourcedatabase': x.sourcedatabase,
+				 'foreignannotation': x.foreignannotation,
+				 'sequence': x.sequence} for x in sequences]
+		table = SequencesResultsTable(data)
+		RequestConfig(request).configure(table)
+		export_format = 'tsv'
+		if TableExport.is_valid_format(export_format):
+			exporter = TableExport(export_format, table)
+			return exporter.response(f"sequencesResult.{export_format}")
 
 	if 'fasta_seq' in request.POST or 'fasta_motif' in request.POST:
 		if 'fasta_seq' in request.POST:
