@@ -682,10 +682,12 @@ def motifScan(sequence, motifname):
 		hits_d['error'] = 'Sequence format is nos valid. Please provide only one sequence and check that there is no new line character and the end of the sequence.'
 		return hits_d
 
+	# Convert sequence to pyhmmer format
 	alphabet = pyhmmer.easel.Alphabet.amino()
 	background = pyhmmer.plan7.Background(alphabet)
 	seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
+	# Fetch HMMs
 	M = motifname[0].upper()
 	if M == "ALL":
 		hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
@@ -696,8 +698,14 @@ def motifScan(sequence, motifname):
 				hmm = hmm_file.read()
 				hmms.append(hmm)
 
+	# Convert hmms to optimized profiles -> optimizad block
+	optimized_block = pyhmmer.plan7.OptimizedProfileBlock(alphabet=alphabet)
+	for h in hmms:
+		optimized_block.append(h.to_profile().to_optimized())
+
+	# Scan the sequence for hits
 	pipeline = pyhmmer.plan7.Pipeline(pyhmmer.easel.Alphabet.amino())
-	hits = pipeline.scan_seq(seq1, hmms)
+	hits = pipeline.scan_seq(seq1, optimized_block)
 
 	for h in hits:
 		h_name = h.name.decode('UTF-8')
@@ -708,6 +716,7 @@ def motifScan(sequence, motifname):
 			motifname = str(d.alignment).split("\n")[1].split()[0]
 			dgs = Domaingroups.objects.filter(domaingroupname = motifname)
 			for dg in dgs:
+				print(dg)
 				domain = Domains.objects.get(domain_id = dg.domain_id).domainname
 				if dg.domaingroupparent_id == None:
 					dg_parent = motifname
