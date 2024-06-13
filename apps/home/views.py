@@ -583,7 +583,7 @@ def QuerySequencesDetails(request, sequence_id):
 
 	context["speciesname"] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = context['sequence'].taxonomy_id)][0]
 	if 'pdb' in context['sequence'].foreignannotation:
-		m = re.search(r'pdb\|([A-Z0-9]+)\|[A-Za-z]\s([A-Za-z\s]+)', context['sequence'].foreignannotation)
+		m = re.search(r'pdb\|([A-Z0-9]+)\|([A-z0-9\s]+)', context['sequence'].foreignannotation)
 		context["pdb"] = m.group(1)
 		context["pdb_name"] = m.group(2)
 
