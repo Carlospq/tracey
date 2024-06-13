@@ -787,8 +787,10 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 		snareSeqsNCBI = [s for s in snareSeqsNCBI if s.sequencestatus == 'live']
 	print("Sequences to analyze: %d" % len(snareSeqsNCBI))
 
+	counter = 0
 	for sequence in snareSeqsNCBI:
 
+		counter += 1
 		logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
 
 		# Skip sequence if already updated
@@ -819,7 +821,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 		# Update sequence if needed and print log into logFile
 		updateLog = sequenceUpdate(sequence, summary_output, sequencesAnalysed)
 		print(updateLog)
-		logFile.write("Similarity block:\n")
+		logFile.write("Similarity block (%d/%d):\n" % (counter, len(snareSeqsNCBI)))
 		for updateId in updateLog:
 			if not updateId in sequencesAnalysed:
 				sequencesAnalysed.append(updateId)
@@ -845,7 +847,7 @@ if __name__ == "django.core.management.commands.shell":
 
 
 # TEST CODE
-# sequence = Sequences.objects.get(pk=190788)
+# sequence = Sequences.objects.get(pk=522)
 # ncbi_id = get_ncbi_id(sequence)
 # summary_output, summary_error = esummary(ncbi_id)
 #
