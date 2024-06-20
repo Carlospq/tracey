@@ -45,6 +45,7 @@ urlpatterns = [
 
     # Taxonomy update results
     path('update_taxonomy_results', views.read_update_taxonomy_results, name='read_update_taxonomy_results'),
+    path('update_sequences_results', views.read_update_sequences_results, name='read_update_sequences_results'),
 
     # Ajax views
     path('ajax/load-taxonomy-rank/', views.load_taxonomy_rank, name='ajax_load_taxonomy_rank'),
@@ -54,6 +55,7 @@ urlpatterns = [
     path('ajax/load-sequenceshortnames/', views.load_sequenceshortnames, name='ajax_load_sequenceshortnames'),
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
     path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
+    path('ajax/update-sequences/', views.update_sequences, name='ajax_update_sequences'),
     path('ajax/ajax-update-tree/', views.update_tree, name='ajax_update_tree'),
     path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"),
     path('ajax/updateSequenceStatus', views.updateSequenceStatus, name="ajax_updateSequenceStatus"),
