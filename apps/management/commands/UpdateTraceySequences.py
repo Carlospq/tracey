@@ -45,7 +45,7 @@ class Command(BaseCommand):
                     sys.exit("Update cancelled.")
             # If log files, continue from the last one
             else:
-                print("Checking previous log file...")
+                # print("Checking previous log file...")
                 oldDate = ".".join(oldLogs[-1].split('.')[-4:-1])
                 logFileNameOld = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % oldDate
                 logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
