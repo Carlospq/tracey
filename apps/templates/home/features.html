@@ -167,6 +167,34 @@
                                 <div class="feature-header">Generate HMM models</div>
                                 <div class="feature-body"> This section will be updated in the future...</div>
                             </div>
+							<div class="feature-card">
+                                <div class="feature-header">Update TRACEY Sequences</div>
+                                <div class="feature-body">
+									<form method='post' action='#' name="UpdateSequencesForm" id="UpdateSequencesForm">
+										{% csrf_token %}
+										<div class="feature-body-main">
+											<p style="margin-bottom: 15px;">'Live' sequences from TRACEY containing NCBI Id will be updated according to NCBI data.</p>
+											<p style="margin-bottom: 15px;">'Live' sequences without NCBI Id will remain as they are.</p>
+											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
+											<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
+										</div>
+										<div class="feature-body-footer">
+											{% if last_sequences_update_end != "Update in progress" %}
+												<input type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
+											{% endif %}
+											<i><p class="p-footer" id='sequences_last_update'>Last update on: {{last_sequences_update}}</p></i>
+											<i><p id='last_sequences_update_end'><b>{{ last_sequences_update_end }}</b></p></i>
+										</div>
+										<div class="progress-bar" style="background: transparent;">
+											<div id="loader_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+												<div class="loader"></div>
+											</div>
+											<div id="loader_msg_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+										</div>
+
+									</form>
+								</div>
+                            </div>
                             <span class="stretch"></span>
                         </div>
 
@@ -238,5 +266,35 @@
         });
     });
 
+    $(document).on('submit','#UpdateSequencesForm', function(e){
+        // Loading animation
+		e.preventDefault();
+        var sequences_last_update = document.getElementById("sequences_last_update").innerHTML;
+        var loader = document.getElementById("loader_sequences");
+        var msg = document.getElementById("loader_msg_sequences");
+        document.getElementById("sequences_last_update").innerHTML = "This will take several hours... Go for a coffee!";
+        document.getElementById("last_sequences_update_end").innerHTML = "";
+        document.getElementById("update_sequences").style.display = "none";
+        loader.style.display = "flex";
+        msg.style.display = "none";
+		console.log(sequences_last_update);
+        $.ajax({
+          url: "{% url 'ajax_update_sequences' %}",
+          data: {
+            'sequences_last_update': sequences_last_update,
+          },
+
+          success: function (data) {
+            $("#loader_msg_sequences").html(data);
+            document.getElementById("sequences_last_update").innerHTML = "Last update on: Today";
+            loader.style.display = "none";
+            msg.style.display = "flex";
+          }
+        });
+    });
+
+    $(document).ajaxStop(function(){
+        window.location.reload();
+    });
 </script>
 {% endblock javascripts %}

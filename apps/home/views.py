@@ -33,11 +33,13 @@ from django.contrib import messages
 from django.utils.timezone import now
 from django_tables2.config import RequestConfig
 from django_tables2.export.export import TableExport
+from django.core.management import call_command
 
 from .forms import *
 from .models import *
 from utils.ncbi_taxonomy import TaxonomyUpdater
 from utils.ncbi_taxonomy import TreeUpdater
+from utils.traceySequenceUpdater import traceySequencesUpdater
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
 
 from django import template
@@ -609,7 +611,7 @@ def QuerySequencesDetails(request, sequence_id):
 			context["motifs"][m][x.tag] = x.text
 		context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
 		context["motifs"][m]["length"] = m.stopposition - m.startposition + 1
-		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroupparent"])
+		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
 
 	context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
 	return render(request, 'home/query-sequences-details.html', context)
@@ -653,9 +655,9 @@ def getMotifPlot_fromPyhammer(hit, sequence):
 	import urllib, base64
 
 	buf = io.BytesIO()
-	fig, ax = plt.subplots(nrows=1, figsize=(15, 2), sharex=True)
+	fig, ax = plt.subplots(nrows=1, figsize=(15, 1.5), sharex=True)
 	features = [
-				GraphicFeature(start=d.alignment.target_from-1, end=d.alignment.target_to, label=str(d.alignment).split("\n")[1].split()[0]+" (%s)"%(format(d.pvalue, '.1E')))
+				GraphicFeature(start=d.alignment.target_from-1, end=d.alignment.target_to, label=str(d.alignment).split("\n")[1].split()[0]+" (%s)"%(format(d.pvalue, '.1E')), color="#ffcccc")
 				for d in hit.domains
 			]
 	record = GraphicRecord(sequence_length=len(sequence), features=features)
@@ -711,12 +713,13 @@ def motifScan(sequence, motifname):
 		h_name = h.name.decode('UTF-8')
 		hits_d[h_name] = {}
 		hits_d[h_name]['plot'] = plot = getMotifPlot_fromPyhammer(h, sequence)
+		hits_d[h_name]['split_sequence'] = [letter for letter in sequence]
+		hits_d[h_name]['domainname'] = Domaingroups.objects.get(domaingroupname = h_name).domain.domainname
 		hits_d[h_name]['domains'] = []
 		for d in h.domains:
 			motifname = str(d.alignment).split("\n")[1].split()[0]
 			dgs = Domaingroups.objects.filter(domaingroupname = motifname)
 			for dg in dgs:
-				print(dg)
 				domain = Domains.objects.get(domain_id = dg.domain_id).domainname
 				if dg.domaingroupparent_id == None:
 					dg_parent = motifname
@@ -728,7 +731,7 @@ def motifScan(sequence, motifname):
 					 'pvalue': d.pvalue,
 					 'env_from': d.env_from,
 					 'env_to': d.env_to,
-					 'length': d.env_to - d.env_from,
+					 'length': d.env_to - d.env_from + 1,
 					 'alignment': d.alignment,
 					 'dg': dg.domaingroupname,
 					 'dg_parent': dg_parent,
@@ -1279,7 +1282,7 @@ def QueryVerifyView(request, sequence_id):
 			for x in data:
 				context[type][m][x.tag] = x.text
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
-			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroupparent"])
+			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroup"])
 
 	if request.method == 'POST':
 		form = InsertSequence(request.POST, instance=seq, initial={'gene': ncbigene_id, })
@@ -1428,12 +1431,29 @@ def features(request):
 		user.save()
 
 	taxonomy_file = 'utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt'
+	sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
 	tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
 	if os.path.isfile(taxonomy_file):
 		last_taxonomy_update = open(taxonomy_file, 'r').readlines()[0].split("(Date: ")[1].split(" ")[0][:-1]
 		last_taxonomy_update = ['Today' if last_taxonomy_update == str(datetime.datetime.now().date()) else last_taxonomy_update][0]
 	else:
 		last_taxonomy_update = 'Last update not found'
+	if sequences_file:
+		last_sequences_update = "-".join(sequences_file.split(".")[1:-1])
+		runout = subprocess.run(['ps', 'aux'], capture_output=True)
+		psLine = [x for x in str(runout.stdout.decode("utf-8")).strip().split("\n") if "UpdateTraceySequences" in x]
+		if psLine:
+			status = psLine[0].split()[7]
+		else:
+			status = ''
+		# If update is running...
+		if "R" in status or "S" in status:
+			last_sequences_update_end = "Update in progress"
+		else:
+			last_sequences_update_end = [0 if "Update completed" in open('utils/traceySequenceUpdater/'+sequences_file, 'r').readlines()[-1] else "Update not completed"][0]
+	else:
+		last_sequences_update = 'Last update not found'
+		last_sequences_update_end = ''
 	if os.path.isfile(tree_file):
 		if open(tree_file, 'r').readlines()[0] == "In progress":
 			last_tree_update = "In progress"
@@ -1446,6 +1466,8 @@ def features(request):
 	context = {"segment": segment,
 			   # "users": AuthUser.objects.all(),
 			   "last_taxonomy_update": last_taxonomy_update,
+			   "last_sequences_update": last_sequences_update,
+			   "last_sequences_update_end": last_sequences_update_end,
 			   "last_tree_update": last_tree_update,
 			   }
 	return render(request, 'home/features.html', context)
@@ -1463,6 +1485,17 @@ def update_taxonomy(request):
 
 @login_required(login_url="/noPermits.html")
 @staff_login_required
+def update_sequences(request):
+	if dict(request.GET)['sequences_last_update'] == ['Last update on: Today']:
+		return HttpResponse('Sequences already up to date.')
+	else:
+		# outcome = call_command('UpdateTraceySequences', '--continue', '--onlyActive')
+		# outcome = traceySequencesUpdater.updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=True)
+		outcome = subprocess.run(['python', 'manage.py', 'UpdateTraceySequences', '--continue', '--onlyActive'], capture_output=True)
+		return HttpResponse(outcome)
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
 def update_tree(request):
 	if dict(request.GET)['tree_last_update'] == ['Last update on: Today']:
 		return HttpResponse('Tree already up to date.')
@@ -1475,6 +1508,16 @@ def update_tree(request):
 @staff_login_required
 def read_update_taxonomy_results(request):
 	f = open('utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt', 'r')
+	file_content = f.read()
+	f.close()
+	return HttpResponse(file_content, content_type="text/plain")
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def read_update_sequences_results(request):
+	fileName = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
+	f = open('utils/traceySequenceUpdater/'+fileName, 'r')
 	file_content = f.read()
 	f.close()
 	return HttpResponse(file_content, content_type="text/plain")

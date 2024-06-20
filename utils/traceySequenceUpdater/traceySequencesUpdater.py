@@ -1,6 +1,6 @@
 ##############################################################################################################################
 #### IMPORTS ####
-import os, sys
+import os, sys, django
 import subprocess
 import xmltodict
 import re
@@ -20,7 +20,7 @@ def writeLog(logFile, traceyID, ncbiID, shortname, newshortname, comment):
 	logFile.write("%s\t%s\t%s\t%s\t%s\n" % (traceyID, ncbiID, shortname, newshortname, comment))
 
 def get_ncbi_id(seq):
-	# possibles IDs sources: ['gi', 'gb', 'emb', 'ref', 'dbj', 'pir', 'prf', 'sp', 'pdb', 'tpe', 'none', 'tpg']
+	ncbiSources = ['gi', 'gb', 'emb', 'ref', 'dbj', 'pir', 'prf', 'sp', 'pdb', 'tpe', 'none', 'tpg']
 	fids = seq.foreignannotation.split("|")
 	if len(fids) == 1:
 		idx = fids[0].split()[0]
@@ -33,7 +33,9 @@ def get_ncbi_id(seq):
 		for i in range(len(fids)):
 			if fids[i] in ncbiDictionary: continue
 			if len(fids[i]) < 4 and fids[i]:
+				if not fids[i] in ncbiSources: continue
 				ncbiDictionary[fids[i]] = fids[i + 1]
+		if not ncbiDictionary: return None
 		if "gi" in ncbiDictionary:
 			ncbiIdx = ncbiDictionary["gi"]
 		else:
@@ -77,7 +79,8 @@ def efetch(idx, db="sequences"):
 	cmd = 'efetch -db %s -id %s -format gb -mode xml' % (db, idx)
 	process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	output, error = process.communicate()
-	output = xmltodict.parse(output)['GBSet']['GBSeq']
+	if output:
+		output = xmltodict.parse(output)['GBSet']['GBSeq']
 	return [output, error]
 
 def getChildren(model, parent, parent_id, child_parent_id, childs=[], search_type='iexact'):
@@ -151,7 +154,7 @@ def getSimilarSequences(sequence, summary_output, sequencesAnalysed):
 												   'status': 'NotUpdated',
 												   'ncbi_id': '',
 												   'main': False,
-												   'error': 'Identical sequence to tracey ID %s but no ncbi_id found; Not updated' % sequence.sequence_id}
+												   'error': 'Identical sequence to tracey ID %s but no ncbi_id found; Not updated; ' % sequence.sequence_id}
 				continue
 			new_summary_output, summary_error = esummary(ncbi_id)
 			status = ['live' if not 'Status' in new_summary_output else new_summary_output['Status']][0]
@@ -173,7 +176,7 @@ def getSimilarSequences(sequence, summary_output, sequencesAnalysed):
 def selectMainFromIdenticalSequences(identicalSequences):
 	# Check SourceDb. Give priority to refseq, then swiss_prot, then insd (International Nucleotide Sequence Database), then pir (Protein Information Resource), then prf (Protein Research Foundation)
 	dbSoruces = ['refseq', 'swiss_prot', 'insd', 'pdb', 'pir', 'prf']
-	nSourceDb = Counter([identicalSequences[idx]['summary_output']['SourceDb'] for idx in identicalSequences])
+	nSourceDb = Counter([identicalSequences[idx]['summary_output']['SourceDb'] if 'SourceDb' in identicalSequences[idx]['summary_output'] else 'noSourceDb' for idx in identicalSequences])
 	mainSequences = {}
 	secondarySequence = {}
 
@@ -184,12 +187,12 @@ def selectMainFromIdenticalSequences(identicalSequences):
 	for source in dbSoruces:
 		if nSourceDb[source] == 0: continue
 		if nSourceDb[source] == 1:
-			idx = [idx for idx in identicalSequences if identicalSequences[idx]['summary_output']['SourceDb'] == source][0]
+			idx = [idx for idx in identicalSequences if 'SourceDb' in identicalSequences[idx]['summary_output'] and identicalSequences[idx]['summary_output']['SourceDb'] == source][0]
 			if 'Status' in identicalSequences[idx]['summary_output']: continue
 			mainSequences[idx] = identicalSequences[idx]
 		if nSourceDb[source] > 1:
-			sourceIdxs = [idx for idx in identicalSequences if identicalSequences[idx]['summary_output']['SourceDb'] == source]
-			taxIdxs = [identicalSequences[idx]['sequence'].taxonomy.taxonomystatus for idx in identicalSequences if identicalSequences[idx]['summary_output']['SourceDb'] == source]
+			sourceIdxs = [idx for idx in identicalSequences if 'SourceDb' in identicalSequences[idx]['summary_output'] and identicalSequences[idx]['summary_output']['SourceDb'] == source]
+			taxIdxs = [identicalSequences[idx]['sequence'].taxonomy.taxonomystatus for idx in identicalSequences if 'SourceDb' in identicalSequences[idx]['summary_output'] and identicalSequences[idx]['summary_output']['SourceDb'] == source]
 			mainRefCount = Counter(taxIdxs)['main reference']
 
 			if mainRefCount == 0:
@@ -276,13 +279,13 @@ def regexProteinName(protname):
 				'use': 'use(1)|use-(1)',
 				'bet': 'bet(1)|bet-(1)',
 				'tom': 'tomosyn',
-				'vti': 'vti([-0-9A-z]*)|vesicle transport through interaction with t-SNAREs.*?([-0-9A-z]*)',
-				'snap': 'snap.*?([-0-9A-z]*)|synaptosom[a-z]*-associated protein ([-0-9A-z]*)|sec9',
-				'membrin': 'membrin\W?([-0-9A-z]*)|memb([-0-9A-z]+)|Golgi SNAP receptor',
+				'vti': 'vti([\w-]*)|vesicle transport through interaction with t-SNAREs.*?([\w-]*)',
+				'snap': 'snap.*?([\w-]+)|synaptosom[a-z]*-associated protein ([\w-]+)|sec9',
+				'membrin': 'membrin\W?([-0-9A-z]*)|memb[^rane]([-0-9A-z]+)|Golgi SNAP receptor',
 				'endobrevin': 'endobrevin',
-				'syxbp': 'syntaxin\s*-?\s*binding protein ([-0-9A-z]*)|stxbp.*?([-0-9A-z]*[l]?)',
+				'syxbp': 'syntaxin\s*-?\s*binding protein ([\w-]*)|stxbp.*?([\w-]*[l]?)',
 				'syb': 'syb[^l]\D*?(\d*)|synaptobrevin[^-like]\s*(\d+)|synaptobrevin[-\s](\d+)',
-				'syx': 'syntaxin[\s]*\D*([-0-9A-z]*)|syn[^aptobrevin]([-0-9A-z]*)|stx([-0-9A-z]*)',
+				'syx': 'syntaxin[\sA-z-]*?([A-z]*[0-9]+[0-z]*\\b)|syn[^aptobrevin]([\w-]*)|stx([\w-]*)',
 				'sec': 'sec[\s]*([\d\w]*)?',
 				'vamp': 'v\D*a\D*m\D*p\D*(\d*)?',
 				'lamin': 'lamin\s',
@@ -299,6 +302,7 @@ def regexProteinName(protname):
 		if match:
 			try:
 				num = [x for x in match.groups() if x][0]
+				if "]" in num or "[" in num: return ""
 				if num:
 					return prot+num+iso
 				else:
@@ -325,7 +329,10 @@ def getDescription(identicalSequence):
 
 def predictShortname(identicalSequence):
 	shortname = identicalSequence['sequence'].taxonomy.taxonomyshortname.split("_")[0]
-	name = identicalSequence['summary_output']['Title']
+	try:
+		name = identicalSequence['summary_output']['Title']
+	except:
+		name = ''
 	accession = identicalSequence['summary_output']['AccessionVersion']
 
 	try:
@@ -355,8 +362,9 @@ def predictShortnameByTraceyId(traceySeqId):
 	shortname = seq.taxonomy.taxonomyshortname.split("_")[0]
 	ncbiId = get_ncbi_id(seq)
 	efetch_out, efetch_err = efetch(ncbiId)
+	esummary_out, esummary_err = esummary(ncbiId)
 
-	name = ''
+	name = esummary_out['Title']
 	try:
 		GBQ = [x for x in efetch_out['GBSeq_feature-table']['GBFeature'] if x['GBFeature_key'] in ['Protein', 'CDS']]
 		GBQ = [x['GBFeature_quals']['GBQualifier'] for x in GBQ]
@@ -636,8 +644,13 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 		# Update dbxref: gi to accession version
 		accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
 		if seq.dbxref != accessionVersion:
-			seq.dbxref = accessionVersion
-			seq.save()
+			try:
+				seq.dbxref = accessionVersion
+				seq.save()
+			except django.db.utils.IntegrityError:
+				accessionVersion += "/"
+				seq.dbxref = accessionVersion
+				seq.save()
 			comment += 'dbxref updated to %s; ' % accessionVersion
 
 
@@ -681,7 +694,7 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 					seq.sequencestatus = 'crystal structure'
 					seq.save()
 				elif seq.sequencestatus != 'live':
-					comment += "Sequencestatus changed from %s to live;" % seq.sequencestatus
+					comment += "Sequencestatus changed from %s to live; " % seq.sequencestatus
 					seq.sequencestatus = 'live'
 				else:
 					comment += "No changes needed. Sequence status already live;"
@@ -744,9 +757,12 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 		# Check for shortname in last "live" sequence
 		if not seq.sequenceshortname or seq.sequenceshortname.count("_") >= 2:
 			if any([sId for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog]):
-				seq.sequenceshortname = [identicalSequences[sId]['sequence'].sequenceshortname for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog][0]
+				previousLiveShortname = [identicalSequences[sId]['sequence'].sequenceshortname for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog][0]
+				seq.sequenceshortname = previousLiveShortname
+				updateLog[seqId]['comment'] += 'Shortname updated from %s to %s; ' % (seq.sequenceshortname, previousLiveShortname)
 			else:
 				seq.sequenceshortname = predictShortname(mainSequences[seq.sequence_id])
+				updateLog[seqId]['comment'] += 'Shortname set to %s; ' % seq.sequenceshortname
 		seq.save()
 
 	return updateLog
@@ -790,6 +806,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 	counter = 0
 	for sequence in snareSeqsNCBI:
 
+		print(sequence.sequence_id)
 		counter += 1
 		logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
 
@@ -799,13 +816,13 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 
 		# If summary_error from NCBI: write sequence ID and error into log file and continue
 		if sequence.foreignannotation == "none":
-			comment = "ERROR with sequence tracey_id %s: Foreignannotation missing\n" % (sequence.sequence_id)
+			comment = "ERROR with sequence tracey_id %s: Foreignannotation missing; " % (sequence.sequence_id)
 			writeLog(logFile, sequence.sequence_id, '', sequence.sequenceshortname, '', comment)
 			continue
 
 		ncbi_id = get_ncbi_id(sequence)
 		if not ncbi_id:
-			comment = "ERROR with sequence tracey_id %s: No NCBI ID found\n" % (sequence.sequence_id)
+			comment = "ERROR with sequence tracey_id %s: No NCBI ID found; " % (sequence.sequence_id)
 			writeLog(logFile, sequence.sequence_id, '', sequence.sequenceshortname, '', comment)
 			continue
 
@@ -814,7 +831,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 
 		# If summary_error from NCBI: write sequence ID and error into log file and continue
 		if summary_error:
-			comment = "ERROR with sequence tracey_id %s: Not able to get summary from NCBI\n" % (sequence.sequence_id)
+			comment = "ERROR with sequence tracey_id %s: Not able to get summary from NCBI Id %s; %s" % (sequence.sequence_id, ncbi_id, summary_error)
 			writeLog(logFile, sequence.sequence_id, ncbi_id, sequence.sequenceshortname, '', comment)
 			continue
 
@@ -835,7 +852,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 		logFile.close()
 
 	logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
-	logFile.write("Update completed")
+	logFile.write("Update completed\n")
 	logFile.close()
 
 
@@ -843,16 +860,3 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 if __name__ == "django.core.management.commands.shell":
 	sequencesAnalysed = []
 	updateSequences(sequencesAnalysed)
-
-
-
-# TEST CODE
-# sequence = Sequences.objects.get(pk=522)
-# ncbi_id = get_ncbi_id(sequence)
-# summary_output, summary_error = esummary(ncbi_id)
-#
-# sequencesAnalysed = []
-# updateLog = {}
-# newReplacedSequences = {}
-#
-# identicalSequences, errorSequences = getSimilarSequences(sequence, summary_output, sequencesAnalysed)
