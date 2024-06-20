@@ -111,22 +111,23 @@
                   <hr>
               </div>
 
-              {% for m in motifs %}
-              <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
-              <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
-                  <table class="detailTable">
-                      <tr>
-                          <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
-                          <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
-                          <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
-                          <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
-                          <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length' }})</td>
-                          <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
-                      </tr>
-                  </table>
-              <hr>
-              </div>
-              <div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+				{% for m in motifs %}
+				<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+					<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
+						<table class="detailTable">
+							<tr>
+								<td class="td-data" style="width: auto"><b>Motif: </b> {{ m.motifname }} </td>
+								<td class="td-data" style="width: auto"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
+								<!-- <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td> -->
+								<!-- <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td> -->
+								<td class="td-data" style="width: auto"><b>Hmm-Model/Domaingroup: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+								<td class="td-data" style="width: auto"><b>Position: </b>{{ m.startposition|add:"1" }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length'|add:"-1" }})</td>
+								<td class="td-data" style="width: auto"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+							</tr>
+						</table>
+						<hr>
+					</div>
+				<div class="row mb-1" style="padding: 0px 15px 0px 15px;">
                   <table class="detailTable" style="table-layout: fixed;">
                       <tr>
                           <td class="td-header"><b></b></td>
@@ -139,7 +140,7 @@
                                   <table style="font-family: monospace; width: 100%; text-align: justify;">
                                       <tr><td>
                                       {% for leter in sequence.sequence %}
-                                          <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %}; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</a>
+                                          <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition|add:"1" and forloop.counter <= m.stopposition %} red {% endif %}; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</a>
                                       {% endfor %}
                                       </td></tr>
                                   </table>
