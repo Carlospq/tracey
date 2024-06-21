@@ -180,7 +180,19 @@
 										</div>
 										<div class="feature-body-footer">
 											{% if last_sequences_update_end != "Update in progress" %}
-												<input type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
+												<select id="shortName" name="shortName">
+													<option value="All">All</option>
+													<option value="HoSa">Homo sapiens</option>
+													<option value="MuMu">Mus musculus</option>
+													<option value="RaNo">Rattus norvergicus</option>
+													<option value="DaRe">Danio rerio</option>
+													<option value="SaCe">Saccharomyces c.</option>
+												</select>
+												<select id="continue" name="continue">
+													<option value="continue">Continue</option>
+													<option value="force">Force new</option>
+												</select>
+												<input class="mt-1" type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
 											{% endif %}
 											<i><p class="p-footer" id='sequences_last_update'>Last update on: {{last_sequences_update}}</p></i>
 											<i><p id='last_sequences_update_end'><b>{{ last_sequences_update_end }}</b></p></i>
@@ -270,6 +282,8 @@
         // Loading animation
 		e.preventDefault();
         var sequences_last_update = document.getElementById("sequences_last_update").innerHTML;
+        var shortName = document.getElementById("shortName").value;
+        var continueVal = document.getElementById("continue").value;
         var loader = document.getElementById("loader_sequences");
         var msg = document.getElementById("loader_msg_sequences");
         document.getElementById("sequences_last_update").innerHTML = "This will take several hours... Go for a coffee!";
@@ -277,11 +291,12 @@
         document.getElementById("update_sequences").style.display = "none";
         loader.style.display = "flex";
         msg.style.display = "none";
-		console.log(sequences_last_update);
         $.ajax({
           url: "{% url 'ajax_update_sequences' %}",
           data: {
-            'sequences_last_update': sequences_last_update,
+              'sequences_last_update': sequences_last_update,
+			  'shortName': shortName,
+			  'continueVal': continueVal,
           },
 
           success: function (data) {
@@ -290,7 +305,7 @@
             loader.style.display = "none";
             msg.style.display = "flex";
           }
-        });
+         });
     });
 
     $(document).ajaxStop(function(){

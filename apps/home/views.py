@@ -1450,7 +1450,7 @@ def features(request):
 		if "R" in status or "S" in status:
 			last_sequences_update_end = "Update in progress"
 		else:
-			last_sequences_update_end = [0 if "Update completed" in open('utils/traceySequenceUpdater/'+sequences_file, 'r').readlines()[-1] else "Update not completed"][0]
+			last_sequences_update_end = ["" if "Update completed" in open('utils/traceySequenceUpdater/'+sequences_file, 'r').readlines()[-1] else "Update not completed"][0]
 	else:
 		last_sequences_update = 'Last update not found'
 		last_sequences_update_end = ''
@@ -1486,12 +1486,14 @@ def update_taxonomy(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_sequences(request):
-	if dict(request.GET)['sequences_last_update'] == ['Last update on: Today']:
+	if dict(request.GET)['sequences_last_update'] == ['Last update on: %s' % str(datetime.datetime.now().date())] and request.GET['continueVal'] != 'force':
 		return HttpResponse('Sequences already up to date.')
 	else:
-		# outcome = call_command('UpdateTraceySequences', '--continue', '--onlyActive')
-		# outcome = traceySequencesUpdater.updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=True)
-		outcome = subprocess.run(['python', 'manage.py', 'UpdateTraceySequences', '--continue', '--onlyActive'], capture_output=True)
+		cmd = ['python', 'manage.py', 'UpdateTraceySequences', '--onlyActive', "--" + request.GET['continueVal']]
+		if request.GET['shortName'] != "All":
+			cmd.append("--species")
+			cmd.append(request.GET['shortName'])
+		outcome = subprocess.run(cmd, capture_output=True)
 		return HttpResponse(outcome)
 
 @login_required(login_url="/noPermits.html")
