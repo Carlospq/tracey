@@ -50,7 +50,7 @@ def esummary(idx, db="protein"):
 	# Example: esummary("NP_004594.1", db="protein")
 	if not idx:
 		return ['', 'No idx']
-	cmd = "v -db %s -id %s"%(db, idx)
+	cmd = "esummary -db %s -id %s"%(db, idx)
 	process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	output, error = process.communicate()
 	if b'ERROR' in output.upper() or b'Otherdb' in output:
