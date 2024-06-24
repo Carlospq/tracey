@@ -1435,8 +1435,11 @@ def features(request):
 	sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
 	tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
 	if os.path.isfile(taxonomy_file):
-		last_taxonomy_update = open(taxonomy_file, 'r').readlines()[0].split("(Date: ")[1].split(" ")[0][:-1]
-		last_taxonomy_update = ['Today' if last_taxonomy_update == str(datetime.datetime.now().date()) else last_taxonomy_update][0]
+		try:
+			last_taxonomy_update = open(taxonomy_file, 'r').readlines()[0].split("(Date: ")[1].split(" ")[0][:-1]
+			last_taxonomy_update = ['Today' if last_taxonomy_update == str(datetime.datetime.now().date()) else last_taxonomy_update][0]
+		except:
+			last_taxonomy_update = 'Last update not found'
 	else:
 		last_taxonomy_update = 'Last update not found'
 	if sequences_file:
@@ -1487,15 +1490,12 @@ def update_taxonomy(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_sequences(request):
-	if dict(request.GET)['sequences_last_update'] == ['Last update on: %s' % str(datetime.datetime.now().date())] and request.GET['continueVal'] != 'force':
-		return HttpResponse('Sequences already up to date.')
-	else:
-		cmd = ['python', 'manage.py', 'UpdateTraceySequences', '--onlyActive', "--" + request.GET['continueVal']]
-		if request.GET['shortName'] != "All":
-			cmd.append("--species")
-			cmd.append(request.GET['shortName'])
-		outcome = subprocess.run(cmd, capture_output=True)
-		return HttpResponse(outcome)
+	cmd = ['python3', 'manage.py', 'UpdateTraceySequences', '--onlyActive', "--" + request.GET['continueVal']]
+	if request.GET['shortName'] != "All":
+		cmd.append("--species")
+		cmd.append(request.GET['shortName'])
+	outcome = subprocess.run(cmd, capture_output=True)
+	return HttpResponse(outcome)
 
 @login_required(login_url="/noPermits.html")
 @staff_login_required
