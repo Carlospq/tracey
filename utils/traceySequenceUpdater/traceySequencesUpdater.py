@@ -803,6 +803,11 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 		snareSeqsNCBI = [s for s in snareSeqsNCBI if s.sequencestatus == 'live']
 	print("Sequences to analyze: %d" % len(snareSeqsNCBI))
 
+	if snareSeqsNCBI == 0:
+		logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
+		logFile.write("All sequences selected are up to date\nUpdate completed\n")
+		return
+
 	counter = 0
 	for sequence in snareSeqsNCBI:
 
