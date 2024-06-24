@@ -103,12 +103,24 @@ def create_ncbi_taxonomy(ncbi_id, ncbi, report_file=''):
         taxonomy_parent = Taxonomies.objects.get(ncbi_taxonomy_id=node['parent_tax_id'])
     except:
         taxonomy_parent = create_ncbi_taxonomy(node['parent_tax_id'], ncbi)
+    # Check if shortname exists
+    name = [name['name_txt'].split(" ") if len(name['name_txt'].split(" ")) > 1 else ''][0]
+    if not name or len(name) < 2:
+        tax_shortname = ''
+    else:
+        lengths = [[2,2], [2,3], [3,2], [3,3]]
+        for l in lengths:
+            tax_shortname = name[0][:l[0]].title()+name[1][:l[1]].title()
+            if not Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
+                break
+        if Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
+            tax_shortname = ''
     taxonomy = Taxonomies(scientificname = name['name_txt'],
                           taxonomycomments = 'automatically Added by TaxonomyUpdater',
                           taxonomyparent_id = int(taxonomy_parent.taxonomy_id),
                           analysislevel = '-1',
                           taxonomyrank = node['rank'],
-                          taxonomyshortname = [name['name_txt'].split(" ")[0][:2].title()+name['name_txt'].split(" ")[1][:2].title() if len(name['name_txt'].split(" ")) > 1 else ''][0],
+                          taxonomyshortname = tax_shortname,
                           ncbi_taxonomy_id = int(ncbi_id),
                           taxonomystatus = 'main reference')
     taxonomy.save()
