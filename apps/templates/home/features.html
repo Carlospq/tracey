@@ -149,8 +149,7 @@
                                     <form method='post' action='#' name="UpdateTreeForm" id="UpdateTreeForm">
                                     {% csrf_token %}
                                     <div class="feature-body-main">
-                                        <p style="margin-bottom: 15px;">Reconstructs tree of life using all taxonomies in TRACEY.</p>
-                                        <p style="margin-bottom: 15px;">This tree will follow the current NCBI phylogeny.</p>
+                                        <p style="margin-bottom: 15px;">Reconstructs tree of life using all taxonomies in TRACEY. This tree will follow the current NCBI phylogeny. It is recomended to update TRACEY taxonomies before running this feature.</p>
                                         <img src="{{ASSETS_ROOT}}/img/images/treeoflife.png" style="margin: auto; margin-top: 10px; width: 200px; height: 200px; border-radius: 10px 10px 10px 10px;">
                                         <p style="font-size: 13px;"> Download current tree (<a href="{% url 'download_file' 'TRACEY_phylogeneticTree.newick' %}">newick</a>/
                                                                                             <a href="{% url 'download_file' 'TRACEY_phylogeneticTree.pdf' %}">PDF</a>)
