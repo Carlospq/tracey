@@ -1431,10 +1431,21 @@ def features(request):
 		user.last_login = now()
 		user.save()
 
+	runout = subprocess.run(['ps', 'aux'], capture_output=True)
+
 	taxonomy_file = 'utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt'
 	sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
 	tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
-	if os.path.isfile(taxonomy_file):
+
+	# Check UpdateTraceyTaxonomy status
+	psLine = [x for x in str(runout.stdout.decode("utf-8")).strip().split("\n") if "UpdateTraceyTaxonomies" in x]
+	if psLine:
+		taxonomyStatus = psLine[0].split()[7]
+	else:
+		taxonomyStatus = ''
+	if "R" in taxonomyStatus or "S" in taxonomyStatus:
+		last_taxonomy_update = "Update in progress"
+	elif os.path.isfile(taxonomy_file):
 		try:
 			last_taxonomy_update = open(taxonomy_file, 'r').readlines()[0].split("(Date: ")[1].split(" ")[0][:-1]
 			last_taxonomy_update = ['Today' if last_taxonomy_update == str(datetime.datetime.now().date()) else last_taxonomy_update][0]
@@ -1442,9 +1453,10 @@ def features(request):
 			last_taxonomy_update = 'Last update not found'
 	else:
 		last_taxonomy_update = 'Last update not found'
+
+	# Check UpdateTraceySequences status
 	if sequences_file:
 		last_sequences_update = "-".join(sequences_file.split(".")[1:-1])
-		runout = subprocess.run(['ps', 'aux'], capture_output=True)
 		psLine = [x for x in str(runout.stdout.decode("utf-8")).strip().split("\n") if "UpdateTraceySequences" in x]
 		if psLine:
 			status = psLine[0].split()[7]
@@ -1458,9 +1470,11 @@ def features(request):
 	else:
 		last_sequences_update = 'Last update not found'
 		last_sequences_update_end = ''
+
+	# Check UpdateTraceyTree status
 	if os.path.isfile(tree_file):
 		if open(tree_file, 'r').readlines()[0] == "In progress":
-			last_tree_update = "In progress"
+			last_tree_update = "Tree in progress"
 		else:
 			last_tree_update = str(datetime.datetime.fromtimestamp(os.stat(tree_file).st_mtime)).split(" ")[0]
 			last_tree_update = ['Today' if last_tree_update == str(datetime.datetime.now().date()) else last_tree_update][0]
@@ -1474,6 +1488,7 @@ def features(request):
 			   "last_sequences_update_end": last_sequences_update_end,
 			   "last_tree_update": last_tree_update,
 			   }
+
 	return render(request, 'home/features.html', context)
 
 
@@ -1483,7 +1498,9 @@ def update_taxonomy(request):
 	if dict(request.GET)['taxonomy_last_update'] == ['Last update on: Today']:
 		return HttpResponse('Taxonomy already up to date.')
 	else:
-		outcome = TaxonomyUpdater.update_tracey_taxonomies()
+		# outcome = TaxonomyUpdater.update_tracey_taxonomies()
+		cmd = ['python3', 'manage.py', 'UpdateTraceyTaxonomies']
+		outcome = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		return HttpResponse(outcome)
 
 
@@ -1494,7 +1511,8 @@ def update_sequences(request):
 	if request.GET['shortName'] != "All":
 		cmd.append("--species")
 		cmd.append(request.GET['shortName'])
-	outcome = subprocess.run(cmd, capture_output=True)
+	# outcome = subprocess.run(cmd, capture_output=True)
+	outcome = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 	return HttpResponse(outcome)
 
 @login_required(login_url="/noPermits.html")
@@ -1503,7 +1521,9 @@ def update_tree(request):
 	if dict(request.GET)['tree_last_update'] == ['Last update on: Today']:
 		return HttpResponse('Tree already up to date.')
 	else:
-		outcome = TreeUpdater.update_tracey_tree()
+		# outcome = TreeUpdater.update_tracey_tree()
+		cmd = ['python3', 'manage.py', 'UpdateTraceyTree']
+		outcome = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		return HttpResponse(outcome)
 
 
