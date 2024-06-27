@@ -1433,7 +1433,10 @@ def features(request):
 	runout = subprocess.run(['ps', 'aux'], capture_output=True)
 
 	taxonomy_file = 'utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt'
-	sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
+	try:
+		sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
+	except:
+		sequences_file = ''
 	tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
 
 	# Check UpdateTraceyTaxonomy status
@@ -1465,7 +1468,10 @@ def features(request):
 		if "R" in status or "S" in status:
 			last_sequences_update_end = "Update in progress"
 		else:
-			last_sequences_update_end = ["" if "Update completed" in open('utils/traceySequenceUpdater/'+sequences_file, 'r').readlines()[-1] else "Update not completed"][0]
+			try:
+				last_sequences_update_end = ["" if "Update completed" in open('utils/traceySequenceUpdater/'+sequences_file, 'r').readlines()[-1] else "Update not completed"][0]
+			except:
+				last_sequences_update_end = "Update not completed"
 	else:
 		last_sequences_update = 'Last update not found'
 		last_sequences_update_end = ''

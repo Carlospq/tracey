@@ -538,8 +538,8 @@ def newSequenceEntryFromEfetch(esummary_out, efetch_out, seqId, updateLog):
 		newSeq.sequenceshortname = predictShortname({'sequence': newSeq, 'summary_output': esummary_out})
 	else:
 		newSeq.sequenceshortname = replacedSequenceShortname
-	updateLog[seqId]['comment'] += 'Shornamte changed from %s to %s; ' % (replacedSequenceShortname, replacedSequenceShortname + "_replaced")
-	replacedSequence.shortname = replacedSequenceShortname + "_replaced"
+	updateLog[seqId]['comment'] += 'Shortname changed from %s to %s; ' % (replacedSequenceShortname, replacedSequenceShortname + "_replaced")
+	replacedSequence.sequenceshortname = replacedSequenceShortname + "_replaced"
 	replacedSequence.save()
 
 	if newSeq.sequenceshortname == "Not SNARE":
@@ -755,7 +755,8 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 	for seqId in mainSequences:
 		seq = mainSequences[seqId]['sequence']
 		# Check for shortname in last "live" sequence
-		if not seq.sequenceshortname or seq.sequenceshortname.count("_") >= 2:
+		# if not seq.sequenceshortname or seq.sequenceshortname.count("_") >= 2:
+		if not seq.sequenceshortname or re.search('_.+old$', seq.sequenceshortname):
 			if any([sId for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog]):
 				previousLiveShortname = [identicalSequences[sId]['sequence'].sequenceshortname for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog][0]
 				seq.sequenceshortname = previousLiveShortname
@@ -786,7 +787,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 	if species:
 		try:
 			taxonomy = Taxonomies.objects.get(Q(taxonomyshortname=species) | Q(scientificname=species))
-			if taxonomy.taxonomyrank == "strain":
+			if taxonomy.taxonomyrank in ["strain", "varietas", "no rank"]:
 				taxonomy_parent = Taxonomies.objects.get(taxonomy_id=taxonomy.taxonomyparent_id)
 				snareSeqs = snareSeqs.filter(taxonomy__in=[taxonomy.taxonomy_id, taxonomy_parent.taxonomy_id])
 			else:
