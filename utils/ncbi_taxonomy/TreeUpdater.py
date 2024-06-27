@@ -42,8 +42,9 @@ def update_tracey_tree(taxa = taxa):
     replacement = [":", "-", "'", "*", "+", "#", "(", ")", ".", ",", "=", "/", ";", "\t"]
     h2 = soup.find_all('h2')
     tax_ids = {}
-    for tag in h2:
-        trTags = tag.find_all("tr")
+    for tag_ in h2:
+        trTags = tag_.find_all("tr")
+        if not trTags: continue
         for tag in trTags:
             tdTags = tag.find_all("td")
             if len(tdTags) < 3: continue
@@ -67,7 +68,13 @@ def update_tracey_tree(taxa = taxa):
     # Generate tree from active TRACEY ids
     bashCommand = ['/home/cpulidoq/.cargo/bin/fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
     runout = subprocess.run(bashCommand, capture_output=True)
-    tree = str(runout.stdout.decode("utf-8")).strip().replace('"', "")
+    while runout.stderr:
+        stderr = runout.stderr.decode("utf-8").replace('fastax: No such ID: ', "").strip()
+        for idx in stderr.split():
+            active_ids.remove(idx)
+        bashCommand = ['/home/cpulidoq/.cargo/bin/fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
+        runout = subprocess.run(bashCommand, capture_output=True)
+    tree = str(runout.stdout.decode("utf-8")).strip()
 
     # Find all NCBI_IDs in the newick tree
     matches = re.finditer('\d+', tree)
