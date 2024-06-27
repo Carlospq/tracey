@@ -104,13 +104,13 @@ def create_ncbi_taxonomy(ncbi_id, ncbi, report_file=''):
     except:
         taxonomy_parent = create_ncbi_taxonomy(node['parent_tax_id'], ncbi)
     # Check if shortname exists
-    name = [name['name_txt'].split(" ") if len(name['name_txt'].split(" ")) > 1 else ''][0]
-    if not name or len(name) < 2:
+    _name = [name['name_txt'].split(" ") if len(name['name_txt'].split(" ")) > 1 else ''][0]
+    if not _name or len(_name) < 2:
         tax_shortname = ''
     else:
         lengths = [[2,2], [2,3], [3,2], [3,3]]
         for l in lengths:
-            tax_shortname = name[0][:l[0]].title()+name[1][:l[1]].title()
+            tax_shortname = _name[0][:l[0]].title()+_name[1][:l[1]].title()
             if not Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
                 break
         if Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
@@ -134,6 +134,7 @@ def merge_ncbi_taxonomy(taxonomy, ncbi, report_file=''):
     # Default values
     time_now = datetime.datetime.now().date()
     # Search for merged taxonomy - create parent taxonomy if does not exists
+    ncbi_id = str(taxonomy.ncbi_taxonomy_id)
     ncbi_merged_id = ncbi['dict_merged'][ncbi_id]['new_tax_id']
     taxonomy.taxonomystatus = 'merged by ncbi'
     taxonomy.taxonomycomments = taxonomy.taxonomycomments + '; %s - automatically Updated by TaxonomyUpdater: merged into %s by NCBI' % (str(time_now), ncbi_merged_id)
@@ -145,7 +146,7 @@ def merge_ncbi_taxonomy(taxonomy, ncbi, report_file=''):
     # Update reportFile
     if report_file:
         with open(report_file, 'a') as rf:
-            rf.write("MERGED Taxonomy (id:%s): %s - merged into %s (id:%s) by NCBI\n" % (tracey_id, taxonomy.scientificname, merged_taxonomy.scientificname, merged_taxonomy.taxonomy_id))
+            rf.write("MERGED Taxonomy (id:%s): %s - merged into %s (id:%s) by NCBI\n" % (taxonomy.taxonomy_id, taxonomy.scientificname, merged_taxonomy.scientificname, merged_taxonomy.taxonomy_id))
     # Make sequences from old taxonomies to point to new taxonomy
     for seq in taxonomy.sequences_set.all():
         seq.taxonomy_id = merged_taxonomy.taxonomy_id
@@ -202,13 +203,18 @@ def update_ncbi_taxonomy(taxonomy, ncbi, report_file=''):
                 rf.write("UPDATED Taxonomy (id:%s): %s\n updated fields - %s\n"%(taxonomy.taxonomy_id, taxonomy.scientificname, ", ".join(updated_fields)))
 
     return taxonomy
+
+
 def update_tracey_taxonomies(path = 'utils/ncbi_taxonomy/taxdmp/', report_file_name='TaxonomyUpdate.report.txt'):
     time_now = datetime.datetime.now().date()
     # Check date of last update in report_file_name
     if not os.path.isdir(path):
         os.mkdir(path)
     if report_file_name in os.listdir(path):
-        fheader = open(path+report_file_name, 'r').readlines()[0]
+        try:
+            fheader = open(path+report_file_name, 'r').readlines()[0]
+        except:
+            fheader = ''
         if str(time_now) in fheader:
             return '\nALERT: Last update of TRACEY taxonomies in %s is today (%s)'%(report_file_name, str(time_now))
     # Download current NCBI taxonomy files
@@ -248,7 +254,7 @@ def update_tracey_taxonomies(path = 'utils/ncbi_taxonomy/taxdmp/', report_file_n
     ## Merge Taxonomies that have been merged by NCBI
     print("Merging Taxonomies that have been merged by NCBI")
     for ncbi_id in ncbi['dict_merged']:
-        try: # Check if taxonomy exists and merge it
+        try: # Check if taxonomy exists in TRACEY and merge it
             taxonomy = Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_id)
             merge_ncbi_taxonomy(taxonomy, ncbi, report_file=path+report_file_name)
         except:
