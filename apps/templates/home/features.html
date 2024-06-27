@@ -113,6 +113,8 @@
 
 
                         <div class="features-container">
+
+							<!-- Update Taxonomies -->
                             <div class="feature-card">
                                 <div class="feature-header">Update Taxonomies</div>
                                 <div class="feature-body">
@@ -125,7 +127,9 @@
                                         <p style="font-size: 13px;"> Check last update results <a href="update_taxonomy_results" target="_blank">here</a></p>
                                     </div>
                                     <div class="feature-body-footer">
-                                        <input type="submit" value="Update Taxonomy" name='update_taxonomy' id='update_taxonomy'>
+                                        {% if last_taxonomy_update != "Update in progress" %}
+											<input type="submit" value="Update Taxonomy" name='update_taxonomy' id='update_taxonomy'>
+										{% endif %}
                                         <i><p class="p-footer" id='taxonomy_last_update'>Last update on: {{last_taxonomy_update}}</p></i>
                                     </div>
                                     <div class="progress-bar" style="background: transparent;">
@@ -137,6 +141,8 @@
                                     </form>
                                 </div>
                             </div>
+
+							<!-- Build Phylogenetic Tree -->
                             <div class="feature-card">
                                 <div class="feature-header">Build Phylogenetic Tree</div>
                                 <div class="feature-body">
@@ -151,7 +157,9 @@
                                         </p>
                                     </div>
                                     <div class="feature-body-footer">
-                                        <input type="submit" value="Update Tree" name='update_tree' id='update_tree'>
+										{% if last_tree_update != "Tree in progress" %}
+											<input type="submit" value="Update Tree" name='update_tree' id='update_tree'>
+										{% endif %}
                                         <i><p class="p-footer" id='tree_last_update'>Last update on: {{last_tree_update}}</p></i>
                                     </div>
                                     <div class="progress-bar" style="background: transparent;">
@@ -163,10 +171,14 @@
                                     </form>
                                 </div>
                             </div>
+
+							<!-- Generate HMM models -->
                             <div class="feature-card">
                                 <div class="feature-header">Generate HMM models</div>
                                 <div class="feature-body"> This section will be updated in the future...</div>
                             </div>
+
+							<!-- Update Sequences -->
 							<div class="feature-card">
                                 <div class="feature-header">Update TRACEY Sequences</div>
                                 <div class="feature-body">
@@ -176,7 +188,9 @@
 											<p style="margin-bottom: 15px;">'Live' sequences from TRACEY containing NCBI Id will be updated according to NCBI data.</p>
 											<p style="margin-bottom: 15px;">'Live' sequences without NCBI Id will remain as they are.</p>
 											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
-											<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
+											{% if last_sequences_update_end != "Update in progress" %}
+												<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
+											{% endif %}
 										</div>
 										<div class="feature-body-footer">
 											{% if last_sequences_update_end != "Update in progress" %}
@@ -207,7 +221,9 @@
 									</form>
 								</div>
                             </div>
+
                             <span class="stretch"></span>
+
                         </div>
 
                     </div>
