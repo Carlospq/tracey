@@ -168,7 +168,7 @@ def get_sequences(query, verify=False):
 		taxonomy_names = [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyIDs)]
 		ncbi_taxonomy_ids = []
 		for t in taxonomy_names:
-			arr = list(df[(df.eq(t).any(1))].index.values)
+			arr = list(df[(df.eq(t).any(axis=1))].index.values)
 			ncbi_taxonomy_ids = ncbi_taxonomy_ids + arr
 		taxonomy_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=ncbi_taxonomy_ids)]
 		seqs = seqs.filter(taxonomy_id__in=taxonomy_ids)
@@ -926,7 +926,7 @@ def plotTrees(request):
 	values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
 	taxonomy_ids = []
 	for v in values:
-		arr = list(df[df.eq(v).any(1)].index.values)
+		arr = list(df[df.eq(v).any(axis=1)].index.values)
 		taxonomy_ids = taxonomy_ids + arr
 
 	colname = ''
