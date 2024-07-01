@@ -267,7 +267,7 @@ def load_species(request):
 	values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
 	taxonomy_ids = []
 	for v in values:
-		arr = list(df[ (df.eq(v).any(1)) & (df['species']!="-") ].index.values)
+		arr = list(df[ (df.eq(v).any(axis=1)) & (df['species']!="-") ].index.values)
 		taxonomy_ids = taxonomy_ids + arr
 
 	# species_list = []
