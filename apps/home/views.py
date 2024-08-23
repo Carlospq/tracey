@@ -469,6 +469,7 @@ def QuerySequencesResults(request):
 class SequencesResultsTable(tables.Table):
 	name = tables.Column()
 	speciesshortname = tables.Column()
+	scientificname = tables.Column()
 	motifs = tables.Column()
 	sourcedatabase = tables.Column()
 	foreignannotation = tables.Column()
@@ -487,6 +488,7 @@ def QuerySequencesFastaFormat(request):
 	if 'download_table' in request.POST:
 		data = [{'name': x.sequenceshortname,
 				 'speciesshortname': x.taxonomy.taxonomyshortname,
+				 'scientificname': x.taxonomy.scientificname,
 				 'motifs': ", ".join([m.motifname for m in x.motifs_set.all()]),
 				 'sourcedatabase': x.sourcedatabase,
 				 'foreignannotation': x.foreignannotation,
