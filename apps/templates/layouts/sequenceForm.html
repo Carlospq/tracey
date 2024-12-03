@@ -355,23 +355,21 @@
             <!-- Verifymotifs -->
             <!-- Header -->
             <h4>Not verified motifs ({{ verifymotifs|length }})</h4>
-            <p> IMPORTANT: If "active" value is set to "1" Verifymotif will become active and new Mofit will be created. If set to -1 or 0 Verifymotif will become inactive and Motif linked to it will be deleted. If set to "delete" Verifymotif will be deleted an not accesible anymore </p>
-            <hr>
             {% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
 
             <!-- Generate 1 div for each Verifymotif -->
             {% for m in verifymotifs %}
-            <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+			<div class="row" style="background-color: #f05b4f; padding: 20px 0px 0px 15px; border-radius: 15px 15px 0px 0px"></div>
+            <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 0px 0px 15px 15px; padding: 0px 0px 0px 15px;">
                 <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
                     <table class="detailTable">
                         <tr>
                             <!-- Select button for motif 'Active' value -->
                             <td class="td-data" style="width: 5%;">
-                                <select name="verifymotif_id" id="{{ m.verifymotif_id }}" style="width: 100%; max-width: 60px; min-width: 40px;">
-                                    <option value="-1:{{ m.verifymotif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
-                                    <option value="0:{{ m.verifymotif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
-                                    <option value="1:{{ m.verifymotif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
-                                    <option value="delete:{{ m.verifymotif_id }}"> delete</option>
+                                <select name="verifymotif_id" id="{{ m.verifymotif_id }}" style="width: 100%; max-width: 80px; min-width: 40px;">
+                                    <option value="-:{{ m.verifymotif_id }}" selected>-</option>
+                                    <option value="verify:{{ m.verifymotif_id }}">Verify</option>
+                                    <option value="delete:{{ m.verifymotif_id }}">Delete</option>
                                 </select>
                                 <!-- <input type="checkbox" id="{{ m.verifymotif_id }}" name='verifymotif_id' value="{{ m.verifymotif_id }}"> -->
                             </td>
@@ -480,22 +478,21 @@
             <!-- Motifs -->
             <!-- Header -->
             <h4>Verified motifs ({{ motifs|length }})</h4>
-            <p>IMPORTANT: If "active" value is set to "delete" then Motif will be deleted and the "active" value of the Verifymotif linked to it will be set to "0". If no Verifymotif linked to Motif then a new Verifymotive will be created. Setting "active" value to any other value will have no effect on Verifymotifs</p>
             <hr>
 
             <!-- Generate 1 div for each Motif -->
             {% for m in motifs %}
-            <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+			<div class="row" style="background-color: #3FB8AF; padding: 20px 0px 0px 15px; border-radius: 15px 15px 0px 0px"></div>
+            <div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 0px 0px 15px 15px; padding: 0px 0px 0px 15px;">
                 <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
                     <table class="detailTable">
                         <tr>
                             <!-- Select button for motif 'Active' value -->
                             <td class="td-data" style="width: 5%;">
-                                <select name='motif_id' id="{{ m.motif_id }}" style="width: 100%; max-width: 60px; min-width: 40px;">
-                                    <option value="-1:{{ m.motif_id }}" {% if m.active == -1 %} selected {% endif %}>-1</option>
-                                    <option value="0:{{ m.motif_id }}"  {% if m.active ==  0 %} selected {% endif %}> 0</option>
-                                    <option value="1:{{ m.motif_id }}"  {% if m.active ==  1 %} selected {% endif %}> 1</option>
-                                    <option value="delete:{{ m.motif_id }}"> delete</option>
+                                <select name='motif_id' id="{{ m.motif_id }}" style="width: 100%; max-width: 80px; min-width: 40px;">
+                                    <option value="-:{{ m.motif_id }}" selected>-</option>
+                                    <option value="unverify:{{ m.motif_id }}">Unverify</option>
+                                    <option value="delete:{{ m.motif_id }}">Delete</option>
                                 </select>
                                 <!-- <input type="checkbox" id="{{ m.motif_id }}" name='motif_id' value="{{ m.motif_id }}"> -->
                             </td>

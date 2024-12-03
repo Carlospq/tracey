@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 """
 Copyright (c) 2019 - present AppSeed.us
 """
@@ -41,6 +40,7 @@ from utils.ncbi_taxonomy import TaxonomyUpdater
 from utils.ncbi_taxonomy import TreeUpdater
 from utils.traceySequenceUpdater import traceySequencesUpdater
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
+from utils.motifPredictor.predictor import *
 
 from django import template
 
@@ -145,7 +145,8 @@ def get_sequences(query, verify=False):
 
 	# Filter seqs if shortname/foreignAnnotation or taxonomy is provided
 	if 'shortname' in query and notEmpty(query, 'shortname'):
-		taxonomies = Taxonomies.objects.filter(taxonomyshortname__startswith = query['shortname'][0])
+		# taxonomies = Taxonomies.objects.filter(taxonomyshortname__iexact = query['shortname'][0])
+		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0]) if t.taxonomyshortname.lower() == query['shortname'][0].lower() or t.taxonomyshortname.lower().startswith(query['shortname'][0].lower()+"_") ]
 		seqs = seqs.filter(taxonomy__in=taxonomies)
 
 	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
@@ -254,14 +255,7 @@ def load_taxonomy_rank(request):
 
 def load_species(request):
 	df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
-	# rank = request.GET.get('taxonomy_rank')
 	ranks = [x for x in request.GET.getlist('taxonomy_list[]') if x != ''][-1]
-
-	# domain = Domains.objects.get(domainname="SNARE")
-	# domaingroups = Domaingroups.objects.filter(domain_id=domain.domain_id)
-	# motifs = Motifs.objects.filter(domaingroup_id__in=[x.domaingroup_id for x in domaingroups])
-	# if 'verify' in request.GET:
-	# 	vmotifs = Verifymotifs.objects.filter(domaingroup_id__in=[x.domaingroup_id for x in domaingroups])
 
 	reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[ranks]
 	values = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyID)]
@@ -270,15 +264,6 @@ def load_species(request):
 		arr = list(df[ (df.eq(v).any(axis=1)) & (df['species']!="-") ].index.values)
 		taxonomy_ids = taxonomy_ids + arr
 
-	# species_list = []
-	# for t in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids):
-	# 	sequences = t.sequences_set.all()
-	# 	if motifs.filter(sequence_id__in=sequences):
-	# 		species_list.append(t.scientificname)
-	# 	if vmotifs.filter(sequence_id__in=sequences):
-	# 		if not t.scientificname in species_list:
-	#			species_list.append(t.scientificname)
-	# species_list.sort()
 	species_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids) ] )))
 	return render(request, 'home/query-sequences-family-species.html', {'species_list': species_list})
 
@@ -299,7 +284,8 @@ def load_sequenceshortnames(request):
 	domainID = Domains.objects.get(domainname = domainname).domain_id
 	domaingroups = Domaingroups.objects.filter(domain_id = domainID)
 	motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
-	shortnames = sorted(list( set([ x.sequenceshortname.split("_")[0] for x in Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id')) if x.sequenceshortname.split("_")[0] != "" ]) ))
+	sequences = Sequences.objects.filter(sequence_id__in=motifs.values('sequence_id'))
+	shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomy_id__in=sequences.values('taxonomy_id')) ]) ))
 	return render(request, 'home/query-sequences-family-sequenceshortnames.html', {'shortnames': shortnames})
 
 
@@ -559,13 +545,47 @@ def getMotifPlot_fromMotif(start, end, length, label):
 	import io
 	import urllib, base64
 
+	motifColors = {"SNARE": "#5cb206", "Habc": "#0666b2", "C2": "#fcc12d"}
 	buf = io.BytesIO()
 	fig, ax = plt.subplots(nrows=1, figsize=(20, 1.5), sharex=True)
-	features = [ GraphicFeature(start=start, end=end, label=label, color="#ffcccc"), ]
+	features = [ GraphicFeature(start=start, end=end, label=label,
+								color=motifColors[label] if label in motifColors else "#ffcccc"),
+				 ]
 
 	record = GraphicRecord(sequence_length=length, features=features)
 	record.plot(ax=ax)
 	fig.tight_layout()
+	fig.savefig(buf, format='png')
+	buf.seek(0)
+	string = base64.b64encode(buf.read())
+	uri = urllib.parse.quote(string)
+	return uri
+
+
+def getLayoutPlot(sequence):
+	import io
+	import urllib, base64
+
+	motifColors = {"SNARE": "#5cb206", "Habc": "#0666b2", "C2": "#fcc12d"}
+	buf = io.BytesIO()
+	fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(20, 2), sharex=True, gridspec_kw={"height_ratios": [5, 1]})
+	# fig, ax = plt.subplots(nrows=1, figsize=(20, 2), sharex=True)
+	features = [
+				GraphicFeature(start=m.startposition+1, end=m.stopposition-1,
+							   label=m.motifname + " | " + m.domaingroup.domaingroupname, color=motifColors[m.motifname] if m.motifname in motifColors else "#ffcccc",
+							   linewidth=0.75,
+							   fontdict={'fontsize': 8})
+				for m in sequence.motifs_set.all()
+			]
+	record = GraphicRecord(sequence_length=len(sequence.sequence), features=features)
+	record.plot(ax=ax1, with_ruler=False)
+	ax2.spines['top'].set_visible(False)
+	ax2.spines['right'].set_visible(False)
+	ax2.spines['bottom'].set_visible(False)
+	ax2.spines['left'].set_visible(False)
+	plt.yticks([])
+	fig.tight_layout(pad=5)
+	fig.subplots_adjust(left=0.01, bottom=0.3, right=0.99, top=1, wspace=0.05, hspace=0.1)
 	fig.savefig(buf, format='png')
 	buf.seek(0)
 	string = base64.b64encode(buf.read())
@@ -591,7 +611,8 @@ def QuerySequencesDetails(request, sequence_id):
 		context["pdb"] = m.group(1)
 		context["pdb_name"] = m.group(2)
 
-	motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id)
+	context["layout"] = getLayoutPlot(context['sequence'])
+	motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id).order_by('startposition')
 
 	context["motifs"]  = {}
 	for m in motifs:
@@ -615,7 +636,7 @@ def QuerySequencesDetails(request, sequence_id):
 		context["motifs"][m]["length"] = m.stopposition - m.startposition + 1
 		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
 
-	context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
+	# context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
 	return render(request, 'home/query-sequences-details.html', context)
 
 
@@ -632,7 +653,7 @@ def DetailsSequencesFastaFormat(request, sequence_id):
 def QueryMotifsView(request):
 	segment = request.path.split('/')[-1]
 	context = {"segment": segment,
-			   "motifs": sorted(list( set([ x.domainname for x in Domains.objects.all() ]) ))
+			   "motifs": sorted(list( set([ x.domainname for x in Domains.objects.all() ]+["HabcSNARE"]) ))
 			  }
 
 	if request.method == "POST":
@@ -659,7 +680,9 @@ def getMotifPlot_fromPyhammer(hit, sequence):
 	buf = io.BytesIO()
 	fig, ax = plt.subplots(nrows=1, figsize=(15, 1.5), sharex=True)
 	features = [
-				GraphicFeature(start=d.alignment.target_from-1, end=d.alignment.target_to, label=str(d.alignment).split("\n")[1].split()[0]+" (%s)"%(format(d.pvalue, '.1E')), color="#ffcccc")
+				GraphicFeature(start=d.alignment.target_from-1, end=d.alignment.target_to,
+							   label=[str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else
+							          str(d.alignment).split("\n")[1].split()[0]][0] + " (%s)"%(format(d.pvalue, '.1E')), color="#ffcccc")
 				for d in hit.domains
 			]
 	record = GraphicRecord(sequence_length=len(sequence), features=features)
@@ -719,7 +742,9 @@ def motifScan(sequence, motifname):
 		hits_d[h_name]['domainname'] = Domaingroups.objects.get(domaingroupname = h_name).domain.domainname
 		hits_d[h_name]['domains'] = []
 		for d in h.domains:
-			motifname = str(d.alignment).split("\n")[1].split()[0]
+			split_alignment = str(d.alignment).split("\n")
+			motifname = split_alignment[0].split()[0] if split_alignment[0].split()[-1] not in ["RF", "SC"] else split_alignment[1].split()[0]
+			# motifname = str(d.alignment).split("\n")[1].split()[0]
 			dgs = Domaingroups.objects.filter(domaingroupname = motifname)
 			for dg in dgs:
 				print(dg)
@@ -751,17 +776,15 @@ def QueryMotifsResultsView(request):
 
 	if 'context' in request.session:
 		context = request.session['context']
-		# context['motifname'] = dict(request.POST)['motifname']
 		del request.session['context']
 	elif request.method == "POST":
-	# if request.method == "POST":
 		context = dict(request.POST)
 	else:
 		context = dict(request.GET)
 
 	segment = request.path.split('/')[-1]
 	context["segment"] = segment
-	context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ])))
+	context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ] + ["HabcSNARE"] )))
 	context["hits_d"] = {}
 
 	if notEmpty(context, 'protseq'):
@@ -783,12 +806,17 @@ def QueryMotifsResultsView(request):
 		context['hits_d'] = {}
 		# return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
+	# Predict domain if any SNARE motif is selected
+	if context['motifname'][0] in ["HabcSNARE"]:
+		bothDomains = True
+	elif context['motifname'][0] in ["all", "Habc", "SNARE"]:
+		bothDomains = False
+	if context['motifname'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
+		bypass=context['motifname'][0] if context['motifname'][0] in ["Habc", "SNARE"] else ''
+		context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
+
 	if request.method == "POST":
 		context['error_seq'] = ''
-		# context['protseq'] = [request.POST['protseq']]
-		# context['motifname'] = [request.POST['motifname']]
-		# context['csrfmiddlewaretoken'] = request.POST['csrfmiddlewaretoken']
-		# request.session['context'] = context
 		try:
 			if len(context['protseq'][0]) > 2000:
 				context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
@@ -796,8 +824,6 @@ def QueryMotifsResultsView(request):
 				context['error_seq'] = 'Please provide a protein sequence to analyze.'
 		except:
 			context['error_seq'] = 'Please provide a protein sequence to analyze.'
-
-
 
 	return render(request, 'home/query-motifs-results.html', context)
 
@@ -1183,14 +1209,16 @@ def QueryVerifyBlastView(request, db, query_id):
 		db_type = 'unverify'
 		db_path = 'utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyunverify'
 
-
-	context = {'db': db[:-2]+'_'+db_type,
-			   'query_id': query_id,
+	context = {'query_id': query_id,
 			   'name': shortname,
 			   'motif_length': len(query_sequence),
 			   'blast_error': '',
 			   'blast_result': '',
 			   'header': ['query acc.ver', 'subject acc.ver', '% identity', 'alignment length', 'mismatches', 'gap opens', 'q. start', 'q. end', 's. start', 's. end', 'evalue', 'bit score']}
+	if "NCBI" in db:
+		context['db'] = "NCBI"
+	else:
+		context['db'] = db[:-2] + '_' + db_type
 	context['fasta_sequence'] = '>'+context['name']+"\n%s"%(query_sequence)
 
 	file_path = 'utils/ncbi-blast-2.13.0+/query_vm.fasta'
@@ -1202,6 +1230,11 @@ def QueryVerifyBlastView(request, db, query_id):
 
 		blastp_cline = NcbiblastpCommandline(cmd = blastp_path, query = file_path, db = db_path, num_alignments = 500, max_hsps = 1, outfmt = 4)
 		stdout, stderr = blastp_cline()
+
+		blastp_cline_pairwise = NcbiblastpCommandline(cmd=blastp_path, query=file_path, db=db_path, num_alignments=500, max_hsps=1, outfmt=0)
+		stdout_pairwise, stderr_pairwise = blastp_cline_pairwise()
+
+		context['pairwise'] = stdout_pairwise
 		if stderr:
 			context['blast_error'] = stderr
 		else:
@@ -1255,8 +1288,8 @@ def QueryVerifyView(request, sequence_id):
 		ncbigene_id = seq.gene.ncbigene_id
 
 	# Retrive verifyMotifs
-	motifs = seq.motifs_set.all()
-	verifymotifs = seq.verifymotifs_set.all()
+	motifs = seq.motifs_set.all().order_by('startposition')
+	verifymotifs = seq.verifymotifs_set.all().order_by('startposition')
 	context["motifs"] = {}
 	context["verifymotifs"] = {}
 
@@ -1290,15 +1323,15 @@ def QueryVerifyView(request, sequence_id):
 	if request.method == 'POST':
 		form = InsertSequence(request.POST, instance=seq, initial={'gene': ncbigene_id, })
 
-		# remember old state
+		# remember old state of FORM
 		_mutable = form.data._mutable
-		# set to mutable
+		# set it to mutable
 		form.data._mutable = True
-		# сhange the values you want
+		# сhange the values of FORM you want
 		if form.data['newChangelog']:
 			form.data['newChangelog'] = " %s %s - %s;"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, form.data['newChangelog'])
 
-		#Verify motifs if not verified yet
+		# Verify motifs if not verified yet
 		for vm_id in request.POST.getlist('verifymotif_id'):
 
 			requestValue, vm_id = vm_id.split(":")
@@ -1308,87 +1341,52 @@ def QueryVerifyView(request, sequence_id):
 				# Delete VerifyMotif
 				vm.delete()
 				form.data['newChangelog'] += " %s %s - VerifyMotif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
-				continue
-
-			# Create motif from vm
-			m = Motifs(sequence = seq,
-					   motifname = vm.motifname,
-					   startposition = vm.startposition,
-					   stopposition = vm.stopposition,
-					   motifcomments = vm.verifymotifcomments,
-					   domaingroup = vm.domaingroup,
-					   # motif_id = models.AutoField(primary_key=True),
-					   gaps = vm.gaps,
-					   active = 1,
-					   method = vm.method,
-					   motifrank = vm.verifymotifrank,
-					   asciioutput = vm.asciioutput,
-					   binaryoutput = vm.binaryoutput)
-
-			if int(requestValue) == int(vm.active):
-
-				continue
-
-			elif requestValue == "0" or requestValue == "-1":
-
-				# Delete Motif if already exists
-				if vm.active == 1:
-					for activeMotif in Motifs.objects.filter( sequence_id = vm.sequence_id ):
-						if activeMotif.sequence_id == vm.sequence_id and activeMotif.asciioutput == vm.asciioutput:
-							activeMotif.delete()
-
-				vm.active = int(requestValue)
-				vm.save()
-				form.data['newChangelog'] += " %s %s - VerifyMotif deactivated: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
-
-			elif requestValue == '1':
-
-				# Save active Motif if does not exist
-				activeMotifs = Motifs.objects.filter( sequence_id = vm.sequence_id )
-				if vm in activeMotifs:
-					continue
-				else:
-					m.save()
-					form.data['newChangelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
-				vm.active = 1
-				vm.save()
+			elif requestValue == 'verify':
+				# Create Motif from VerifyMotif and delete VerifyMotif
+				m = Motifs(sequence = seq,
+						   motifname = vm.motifname,
+						   startposition = vm.startposition,
+						   stopposition = vm.stopposition,
+						   motifcomments = vm.verifymotifcomments,
+						   domaingroup = vm.domaingroup,
+						   # motif_id = models.AutoField(primary_key=True),
+						   gaps = vm.gaps,
+						   active = 1,
+						   method = vm.method,
+						   motifrank = vm.verifymotifrank,
+						   asciioutput = vm.asciioutput,
+						   binaryoutput = vm.binaryoutput)
+				m.save()
+				form.data['newChangelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
+				vm.delete()
 
 		for m_id in request.POST.getlist('motif_id'):
+
 			requestValue, m_id = m_id.split(":")
-			motif = Motifs.objects.get(motif_id=m_id)
+			motif = Motifs.objects.filter(motif_id=m_id)[0]
 
 			if requestValue == 'delete':
-				# Delete VerifyMotif
-				linked_vm = ''
-				for vm in Verifymotifs.objects.filter( sequence_id = motif.sequence_id ):
-					if motif.sequence_id == vm.sequence_id and motif.asciioutput == vm.asciioutput:
-						linked_vm = vm
-				# If linked_vm set 'active' to 0 else create new linked_vm
-				if linked_vm:
-					linked_vm.active = 0
-				else:
-					linked_vm = Verifymotifs( sequence  = motif.sequence,
-											  motifname = motif.motifname,
-											  startposition = motif.startposition,
-											  stopposition = motif.stopposition,
-											  verifymotifcomments = motif.motifcomments,
-											  domaingroup = motif.domaingroup,
-											  gaps = motif.gaps,
-											  active = 0,
-											  method = motif.method,
-											  verifymotifrank = motif.motifrank,
-											  asciioutput = motif.asciioutput,
-											  binaryoutput = motif.binaryoutput
-											  )
-				linked_vm.save()
+				# Delete yMotif
 				motif.delete()
-				form.data['newChangelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
-				continue
-			elif int(requestValue) == int(motif.active):
-				continue
-			else:
-				motif.active = int(requestValue)
-				motif.save()
+				form.data['newChangelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
+			elif requestValue == 'unverify':
+				# Create VerifyMotif from Motif and delete Motif
+				vm = Verifymotifs(sequence=motif.sequence,
+								  motifname=motif.motifname,
+								  startposition=motif.startposition,
+								  stopposition=motif.stopposition,
+								  verifymotifcomments=motif.motifcomments,
+								  domaingroup=motif.domaingroup,
+								  gaps=motif.gaps,
+								  active=0,
+								  method=motif.method,
+								  verifymotifrank=motif.motifrank,
+								  asciioutput=motif.asciioutput,
+								  binaryoutput=motif.binaryoutput
+								  )
+				vm.save()
+				form.data['newChangelog'] += " %s %s - Unerified motif: '%s';" % (strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
+				motif.delete()
 
 		# set mutable flag back
 		form.data._mutable = _mutable
