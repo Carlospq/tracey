@@ -289,32 +289,39 @@
     </div>
     <!-- Row 4 -->
     <div class="row mb-4">
-            <div class="col-lg-12 col-sm-12">
-                    <div class="row mb-3">
-                            {% if 'query-verify' in segment %}
-                                    <div class="col-lg-12 col-sm-12">
-                                            <div class="row mb-1" style="height: 100%">
-                                                    <table>
-                                                            <tr>
-                                                                    <td class="tdlabel" style="width: 5.5%;">{{ form.newChangelog.label_tag }}</td>
-                                                                    <td class="tdquestion"><abbr title="{{ form.newChangelog.help_text }}" style='color: blue; text-align: right;'> ? </abbr></td>
-                                                                    <td class="tdfield" style="width: 100%;">
-                                                                            <div class="fieldWrapper" style ="width: 100%">{{ form.newChangelog }}</div>
-                                                                    </td>
-                                                            </tr>
-                                                            <tr>
-                                                                    <td class="tdlabel" style="width: 5.5%;"> </td>
-                                                                    <td class="tdquestion"> </td>
-                                                                    <td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
-                                                                            <div class="fieldWrapper">{{ form.changelog }}</div>
-                                                                            {% for error in form.errors.changelog %}<p class="perror">{{ error }}</p>{% endfor %}
-                                                                    </td>
-                                                            </tr>
-                                                    </table>
-                                            </div>
-                                    </div>
-                            {% endif %}
-                    </div>
+		<div class="col-lg-12 col-sm-12">
+			<div class="row mb-3">
+				{% if 'query-verify' in segment %}
+				<div class="col-lg-12 col-sm-12">
+					<div class="row mb-1" style="height: 100%">
+						<table>
+							<tr>
+								<td class="tdlabel" style="width: 5.5%;">{{ form.newChangelog.label_tag }}</td>
+								<td class="tdquestion"><abbr title="{{ form.newChangelog.help_text }}" style='color: blue; text-align: right;'> ? </abbr></td>
+								<td class="tdfield" style="width: 100%;">
+									<div class="fieldWrapper" style ="width: 100%">{{ form.newChangelog }}</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="tdlabel" style="width: 5.5%;"> </td>
+								<td class="tdquestion"> </td>
+								<td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
+									<div class="fieldWrapper">{{ form.changelog }}</div>
+									{% for error in form.errors.changelog %}<p class="perror">{{ error }}</p>{% endfor %}
+								</td>
+							</tr>
+							<tr>
+								<td class="tdlabel" style="width: 5.5%; height: 100%; color: black; vertical-align: middle">Protein Layout</td>
+								<td class="tdquestion"> </td>
+								<td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
+									<img src="data:image/png;base64,{{ layout }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; margin-bottom: 10px">
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+				{% endif %}
+			</div>
         {% if 'query-verify' in segment %}
         <hr>
         <div class="row" style="display: flex; align-items: center; margin-top: 15px;">

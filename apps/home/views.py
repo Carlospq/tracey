@@ -1270,6 +1270,7 @@ def QueryVerifyView(request, sequence_id):
 	try:
 		seq = Sequences.objects.get(pk=sequence_id)
 		context["sequence"] = seq
+		context["layout"] = getLayoutPlot(seq)
 	except:
 		#seq = Sequences()
 		#form = InsertSequence(instance=seq)
