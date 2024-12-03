@@ -1,0 +1,14 @@
+#                                                                --- full sequence ---- --- best 1 domain ---- --- domain number estimation ----
+# target name         accession  query name           accession    E-value  score  bias   E-value  score  bias   exp reg clu  ov env dom rep inc description of target
+# ------------------- ---------- -------------------- ---------- --------- ------ ----- --------- ------ -----   --- --- --- --- --- --- --- --- ---------------------
+CeAt_Syx18|Qa.I.Syx18 -          Qa.I.Syx18           -            6.9e-32   95.3   5.3   7.4e-32   95.2   5.3   1.0   1   0   0   1   1   1   1 -
+#
+# Program:         hmmsearch
+# Version:         3.3.2 (Nov 2020)
+# Pipeline mode:   SEARCH
+# Query file:      /mnt/c/Users/cpulidoq/Documents/traceyDB/utils/motifPredictor/../hmmModels/SNARE/Qa.I.Syx18.hmm
+# Target file:     /mnt/c/Users/cpulidoq/Documents/traceyDB/utils/motifPredictor/tmp.fasta
+# Option settings: hmmsearch --tblout /mnt/c/Users/cpulidoq/Documents/traceyDB/utils/motifPredictor/tmp.domtblout --cpu 4 /mnt/c/Users/cpulidoq/Documents/traceyDB/utils/motifPredictor/../hmmModels/SNARE/Qa.I.Syx18.hmm /mnt/c/Users/cpulidoq/Documents/traceyDB/utils/motifPredictor/tmp.fasta 
+# Current dir:     /mnt/c/Users/cpulidoq/Documents/traceyDB
+# Date:            Mon Sep  9 15:27:13 2024
+# [ok]

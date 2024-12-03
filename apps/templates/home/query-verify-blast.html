@@ -69,9 +69,10 @@ body {
   margin: 0px 12px;
   position: relative;
   width: calc(95vw + 1px);
-  height: 60vh;
+  height: 70vh;
   text-align: center;
   display: block;
+  border: black solid 1px
 }
 .header {
   width: calc(95vw - 1px);
@@ -177,6 +178,7 @@ body {
     <div class="tab">
         <button class="tablinks active" onclick="openTab(event, 'Tophits')">Top hits</button>
         <button class="tablinks" onclick="openTab(event, 'Alignment')">Alignment</button>
+		<button class="tablinks" onclick="openTab(event, 'Pairwise')">Pairwise</button>
     </div>
     <!-- Top hits tab -->
     <div id="Tophits" class="tabcontent" style="display: block;">
@@ -197,7 +199,7 @@ body {
               {% for name in scores %}
               {% with scr=scores|get_item:name %}
               <tr>
-                  <td>{{scr|get_item:'seqID'}}</td>
+				  <td><b>{{ name }}</b> ({{scr|get_item:'seqID'}})</td>
                   <td style="text-align: center;">{{scr|get_item:'bits'}}</td>
                   <td style="text-align: center;">{{scr|get_item:'e-value'}}</td>
               </tr>
@@ -208,7 +210,6 @@ body {
     </div>
     <!-- Alignment tab -->
     <div id="Alignment" class="tabcontent">
-
         <div class='mb-5' style="padding: 12px;">
             <p style="font-size: 24px; margin: 0 0 10 0"> BLAST results against {{ db }}.</p>
             <p style="font-size: 24px; margin: 0 0 10 0"> Query_1: {{ name }}</p>
@@ -287,6 +288,20 @@ body {
         </div>
 
     </div>
+	<!-- Pairwise tab -->
+	<div id="Pairwise" class="tabcontent">
+		<div class='mb-5' style="padding: 12px;">
+            <p style="font-size: 24px; margin: 0 0 10 0"> BLAST results against {{ db }}.</p>
+            <p style="font-size: 24px; margin: 0 0 10 0"> Query_1: {{ name }}</p>
+            <p style="font-size: 18px; margin: 0 0 10 0"> Length of motif: {{ motif_length }}aa</p>
+        </div>
+
+        <div class="container" style="text-align: left; overflow-y: auto;">
+			<div style="white-space:pre; padding-left: 10px">
+				{{ pairwise }}
+			</div>
+		</div>
+	</div>
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
