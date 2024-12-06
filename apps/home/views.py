@@ -97,37 +97,65 @@ def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_i
 
 
 def get_sequences(query, verify=False):
+
 	print(query)
-	# Gets all domaingroups (and their children) matching query 'domaingroup(s)'
+	# Check if at least Domain or ProteinLayout are provided
+	if 'domainname' not in query and 'proteinlayout' not in query:
+		context = {'error': "At least one of 'Domain name' or 'Protein Layout' fields are required"}
+		return context
+
+	# Get domaingroups list filtering by query fields
 	if 'domaingroup' in query and notEmpty(query, 'domaingroup'):
+
 		domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
 		domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in = domaingroup_list)
 		domaingroups_children  = get_childs(Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", childs=[])
 		children_ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
 		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
+
 	elif 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
+
 		domainname = query['domainname'][0]
 		domaingrouprank = Domaingroups.objects.filter(domain = Domains.objects.get(domainname=domainname))
 		domaingrouprank = domaingrouprank.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
 		domaingrouprank_children = get_childs(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", childs=[])
-		# domaingrouprank_childs = get_childs_raw(Domaingroups, "domaingroups", domaingrouprank, "domaingroup_id", "domaingroup_id", "domaingroupparent_id")
 		children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
 		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
-	elif 'domainname' in query and notEmpty(query, 'domainname'):
-		domainname = query['domainname'][0]
-		domain = Domains.objects.get(domainname = domainname)
-		domaingroups = Domaingroups.objects.filter(domain_id = domain.domain_id)
+
+	elif ('proteinlayout' in query and notEmpty(query, 'proteinlayout')) or ('domainname' in query and notEmpty(query, 'domainname')):
+
+		print(query)
+		if 'proteinlayout' in query and notEmpty(query, 'proteinlayout'):
+			proteinlayout = Proteinlayouts.objects.get(proteinlayoutname=query['proteinlayout'][0])
+			proteinlayoutgroups = Proteinlayoutgroups.objects.filter(proteinlayout=proteinlayout)
+			p2d = P2Dmapping.objects.filter(proteinlayoutgroup__in=proteinlayoutgroups)
+			domaingroupsProteinlayout = Domaingroups.objects.filter(domaingroup_id__in=p2d.values('domaingroup_id'))
+
+		if 'domainname' in query and notEmpty(query, 'domainname'):
+			domain = Domains.objects.get(domainname=query['domainname'][0])
+			domaingroupsDomainname = Domaingroups.objects.filter(domain_id=domain.domain_id)
+
+		if ('proteinlayout' in query and notEmpty(query, 'proteinlayout')) and ('domainname' in query and notEmpty(query, 'domainname')):
+			domaingroups = domaingroupsProteinlayout & domaingroupsDomainname
+		elif 'proteinlayout' in query and notEmpty(query, 'proteinlayout'):
+			domaingroups = domaingroupsProteinlayout
+		elif 'domainname' in query and notEmpty(query, 'domainname'):
+			domaingroups = domaingroupsDomainname
+
 	else:
-		if verify:
-			domaingroups = Domaingroups.objects.all()
-		else:
-			context = {'error': "At least 'Domain name', 'Domain group' or 'Subgroup' fields are required"}
-			return context
+		domaingroups = Domaingroups.objects.all()
+	# else:
+	# 	if verify:
+	# 		domaingroups = Domaingroups.objects.all()
+	# 	else:
+	# 		context = {'error': "At least one of 'Domain name', 'Domain group' or 'Subgroup' fields is required"}
+	# 		return context
 
 	# Filter sequences using domaingroups obtained in previous step
 	motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
 	seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
+	# Filter sequences using other query fields
 	if verify:
 		verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
 		verifyseqs = Sequences.objects.filter(sequence_id__in = verifymotifs.values('sequence_id'))
@@ -267,62 +295,67 @@ def load_species(request):
 	species_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids) ] )))
 	return render(request, 'home/query-sequences-family-species.html', {'species_list': species_list})
 
+def proteinlayoutToDomaingroups(proteinLayoutname):
+	proteinlayout = Proteinlayouts.objects.get(proteinlayoutname=proteinLayoutname)
+	proteinlayoutgroups = proteinlayout.proteinlayoutgroups_set.all()
+	p2d = P2Dmapping.objects.filter(proteinlayoutgroup__in=proteinlayoutgroups)
+	domaingroups = Domaingroups.objects.filter(domaingroup_id__in=p2d.values('domaingroup_id'))
+	return domaingroups
+
+def proteinlayoutToDomains(proteinLayoutname):
+	domaingroups = proteinlayoutToDomaingroups(proteinLayoutname)
+	domains = Domains.objects.filter(domain_id__in=domaingroups.values('domain_id'))
+	return domains
+
+def load_domains(request):
+	if request.GET.get('proteinlayout'):
+		pl = Proteinlayouts.objects.get(proteinlayoutname=request.GET.get('proteinlayout'))
+		plgs = pl.proteinlayoutgroups_set.all()
+		domains = set([d2p.domaingroup.domain.domainname for plg in plgs for d2p in plg.p2dmapping_set.all()])
+	else:
+		domains = [x.domainname for x in Domains.objects.all()]
+	return render(request, 'home/query-sequences-family-domains.html', {'domains': domains})
 
 def load_domaingroups_rank1(request):
+	proteinlayout = request.GET.get('proteinlayout')
 	domainname = request.GET.get('domainname')
+	domain = Domains.objects.filter(domainname=domainname)
 	domaingroup_rank = request.GET.get('domaingroup_rank')
-	if domainname == '':
-		domainGroupNames = sorted([ x.domaingroupname for x in Domaingroups.objects.filter(analysislevel = 2) ])
+
+	if domainname:
+		domainGroupNames = sorted([x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in=domain.values('domain_id')) if x.analysislevel == 2])
+	elif proteinlayout:
+		domainGroupNames = sorted( [x.domaingroupname for x in proteinlayoutToDomaingroups(proteinlayout) if x.analysislevel == 2] )
 	else:
-		domain = Domains.objects.filter(domainname = domainname)
-		domainGroupNames = [ x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel == 2 ]
+		domainGroupNames = sorted([ x.domaingroupname for x in Domaingroups.objects.filter(analysislevel = 2) ])
+
 	return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames, 'domaingroup_rank': domaingroup_rank})
 
 
 def load_sequenceshortnames(request):
-	domainname = request.GET.get('domainname')
-	domainID = Domains.objects.get(domainname = domainname).domain_id
-	domaingroups = Domaingroups.objects.filter(domain_id = domainID)
-	motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
-	sequences = Sequences.objects.filter(sequence_id__in=motifs.values('sequence_id'))
+	if request.GET.get('domainname'):
+		domainID = Domains.objects.get(domainname = request.GET.get('domainname')).domain_id
+		domaingroups = Domaingroups.objects.filter(domain_id = domainID)
+		sequence_ids = set( Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id', flat=True) )
+	if request.GET.get('proteinlayout'):
+		domaingroups = proteinlayoutToDomaingroups(request.GET.get('proteinlayout'))
+		sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))] )
+	else:
+		sequence_ids = set([m.sequence_id for m in Motifs.objects.all()])
+	sequences = Sequences.objects.filter(sequence_id__in=sequence_ids)
 	shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomy_id__in=sequences.values('taxonomy_id')) ]) ))
 	return render(request, 'home/query-sequences-family-sequenceshortnames.html', {'shortnames': shortnames})
 
 
 def load_domaingroups_rank2(request):
 
-	def get_names_list(parent_id):
-		# for domaingroup in Domaingroups.objects.filter(domaingroupparent_id=parent_id):
-		for domaingroup in Domaingroups.objects.all():
-			domaingroupparent_id = domaingroup.domaingroupparent_id
-			if domaingroupparent_id == None: continue
-
-			if ";" in domaingroupparent_id:
-				domaingroupparent_id = [ int(x) for x in domaingroupparent_id.split(";") ]
-			else:
-				domaingroupparent_id = [ int(domaingroupparent_id) ]
-
-			if int(parent_id) in domaingroupparent_id:
-				name_list = "-" * (int(domaingroup.analysislevel)-2) + domaingroup.domaingroupname
-				if domaingroup.analysislevel > 2 and (any(domaingroup.motifs_set.all()) or any(domaingroup.verifymotifs_set.all())):
-					children_list.append(name_list)
-				if Domaingroups.objects.filter(domaingroupparent_id=domaingroup.domaingroup_id):
-					get_names_list(domaingroup.domaingroup_id)
-
-		return children_list
-
 	children_list = []
-	domainname = request.GET.get('domainname')
 	rank = request.GET.get('domaingroup_rank')
-	if not rank and not domainname:
+	if not rank:
 		children_list = []#[ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
 	else:
-		if rank:
-			parent_id = Domaingroups.objects.filter(domaingroupname=rank)[0].domaingroup_id
-			children_list = get_names_list(parent_id)
-		else:
-			domain = Domains.objects.filter(domainname = domainname)
-			children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in = domain.values('domain_id')) if x.analysislevel > 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
+		children_list = get_childs(Domaingroups, Domaingroups.objects.filter(domaingroupname=rank), "domaingroup_id", "domaingroupparent_id", childs=children_list)
+		children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in children_list if x.analysislevel > 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
 	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
 
@@ -363,8 +396,8 @@ def QuerySequences(request):
 	form = FamilyForm
 
 	## GET QUERIES ##
-	domains = Domains.objects.all()
-	domainsList = sorted(list( set([ x.domainname for x in domains ]) ))
+	domainsList = sorted([ x.domainname for x in Domains.objects.filter(domainname__in = ["SNARE", "Habc", "LGL"]) ])
+	proteinLayoutsList = sorted([x.proteinlayoutname for x in Proteinlayouts.objects.all()])
 
 	SNAREdomainID = Domains.objects.get(domainname = "SNARE").domain_id
 	SNAREdomaingroups = Domaingroups.objects.filter(domain_id = SNAREdomainID)
@@ -379,6 +412,7 @@ def QuerySequences(request):
 	context = {'segment': segment,
 			   'domainsList': domainsList,
 			   'domainGroupNames': SNAREdomaingroupnames,
+			   'proteinLayoutsList': proteinLayoutsList,
 			   'shortnames': shortnames,
 			   'taxonomy_ranks': taxonomy_ranks,
 			   'domaingroup_rank': SNAREdomaingroupnames,
@@ -747,7 +781,7 @@ def motifScan(sequence, motifname):
 			# motifname = str(d.alignment).split("\n")[1].split()[0]
 			dgs = Domaingroups.objects.filter(domaingroupname = motifname)
 			for dg in dgs:
-				print(dg)
+				# print(dg)
 				domain = Domains.objects.get(domain_id = dg.domain_id).domainname
 				if dg.domaingroupparent_id == None:
 					dg_parent = motifname
@@ -813,7 +847,8 @@ def QueryMotifsResultsView(request):
 		bothDomains = False
 	if context['motifname'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
 		bypass=context['motifname'][0] if context['motifname'][0] in ["Habc", "SNARE"] else ''
-		context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
+		# TODO: Change hmmmsearch using cmd to pyhmmer
+		#context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
 
 	if request.method == "POST":
 		context['error_seq'] = ''
@@ -843,6 +878,7 @@ def staff_login_required(view_func):
 
 def saveVerifyMotifs(sequence_id, hits):
 
+	# TODO: Check if match found is already identical to a motif in the database for the same sequence
 	def countGaps(alignment):
 		gaps = []
 		count = 0
@@ -864,15 +900,21 @@ def saveVerifyMotifs(sequence_id, hits):
 	for motif in hits:
 		motifInfo = hits[motif]
 		for d in motifInfo['domains']:
+			try:
+				method = Methods.objects.get(domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id)
+			except:
+				method = Methods(domaingroup_id=Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id,
+								 input='', type='hmm', parameter='')
+				method.save()
 			vm = Verifymotifs(sequence_id = sequence_id,
-							 motifname = motif,
-							 startposition = d['env_from']+1,
-							 stopposition = d['env_to']-1,
-							 verifymotifcomments = '',
-							 domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id,
-							 gaps = countGaps(d['alignment'].target_sequence),
-							 active = 0,
-							 method = Methods.objects.get(domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id), #Review this field
+							  motifname = motif,
+							  startposition = d['env_from']+1,
+							  stopposition = d['env_to']-1,
+							  verifymotifcomments = '',
+							  domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id,
+							  gaps = countGaps(d['alignment'].target_sequence),
+							  active = 0,
+							  method = method, #Review this field
 							 verifymotifrank = 1000000,
 							 asciioutput = '<asciiOutput>\r\t<consensus>%s</consensus>\r\t<similarity>%s\t</similarity>\r\t<motif>%s</motif>\r\t<eValue>%s</eValue>\r\t<bitscore>321</bitscore>\r</asciiOutput>'%(d['alignment'].hmm_sequence, d['alignment'].identity_sequence, d['alignment'].target_sequence, d['evalue']),
 							 binaryoutput = '')
@@ -1068,15 +1110,6 @@ def QueryInsertView(request):
 @staff_login_required
 def QueryVerifyMenuView(request):
 	user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
-	# taxonomy_ranks = ['superkingdom', 'kingdom', 'superphylum', 'phylum', 'subphylum', 'superclass', 'class', 'subclass', 'superorder', 'order', 'suborder', 'infraorder', 'superfamily', 'family', 'genus', 'subgenus', 'species subgroup', 'species', 'subspecies', 'strain']
-	# def get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = []):
-	#     for t in rt:
-	#         indentation = n*['-' if n == 1 else '+'][0]
-	#         nameslist.append(indentation+t)
-	#         if rt[t]:
-	#             get_taxonomy_names(rt = rt[t], n=n+1, nameslist = nameslist)
-	#     return nameslist
-	# taxonomy_ranks = get_taxonomy_names(rt = reducedTRACEYtaxonomies, n=0, nameslist = [])
 	taxonomy_ranks = [x for x in reducedTRACEYtaxonomies]
 	context = {'segment': request.path.split('/')[-1],
 			   'sequences': Sequences.objects.none(),
@@ -1272,14 +1305,10 @@ def QueryVerifyView(request, sequence_id):
 		context["sequence"] = seq
 		context["layout"] = getLayoutPlot(seq)
 	except:
-		#seq = Sequences()
-		#form = InsertSequence(instance=seq)
 		context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
-		#context['form'] = form
 		return render(request, 'home/query-verify.html', context)
 
 	if 'deleteSequence' in request.POST:
-		# TODO: Rise a warning before accepting deletion
 		seq.delete()
 		return render(request, 'home/query-verify-menu.html')
 
@@ -1287,6 +1316,9 @@ def QueryVerifyView(request, sequence_id):
 		ncbigene_id = 'not_specified:-1:%s'%(seq.gene.gene_id)
 	else:
 		ncbigene_id = seq.gene.ncbigene_id
+
+	# Domains list
+	context['domainsList'] = [d.domainname for d in Domains.objects.all()]
 
 	# Retrive verifyMotifs
 	motifs = seq.motifs_set.all().order_by('startposition')
@@ -1321,8 +1353,15 @@ def QueryVerifyView(request, sequence_id):
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
 			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroup"])
 
+	context["verifymotifs"] = {k:v for k,v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
+
 	if request.method == 'POST':
 		form = InsertSequence(request.POST, instance=seq, initial={'gene': ncbigene_id, })
+
+		# scan sequence for new motifs if Scan button is pressed
+		if request.POST.get("scan"):
+			hits_d = motifScan(form.data['sequence'], [form.data['domain']])
+			saveVerifyMotifs(sequence_id, hits_d)
 
 		# remember old state of FORM
 		_mutable = form.data._mutable
@@ -1350,7 +1389,6 @@ def QueryVerifyView(request, sequence_id):
 						   stopposition = vm.stopposition,
 						   motifcomments = vm.verifymotifcomments,
 						   domaingroup = vm.domaingroup,
-						   # motif_id = models.AutoField(primary_key=True),
 						   gaps = vm.gaps,
 						   active = 1,
 						   method = vm.method,

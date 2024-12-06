@@ -47,6 +47,15 @@ class FamilyForm(forms.Form):
                 )
     domainname.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
+    # ProteinLayout
+    proteinlayout = forms.CharField(
+        label="Protein Layout",
+        required=False,
+        initial="SNARE",
+        widget=forms.Select(choices=[(x.proteinlayoutname, x.proteinlayoutname) for x in Proteinlayouts.objects.all()])
+    )
+    proteinlayout.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+
     # Shortname
     shortname = forms.CharField(
                     label= "shortname",
@@ -91,7 +100,7 @@ class FamilyForm(forms.Form):
                         required = False,
                     )
     domaingroup.widget.attrs.update({'size': 7,
-                                     'style': 'width: 100%; margin-top: 6px'})
+                                     'style': 'width: 100%; margin-top: 6px; height: 14.5em'})
 
 
 def get_taxonomy_choices():

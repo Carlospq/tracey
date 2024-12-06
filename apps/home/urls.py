@@ -49,6 +49,7 @@ urlpatterns = [
 
     # Ajax views
     path('ajax/load-taxonomy-rank/', views.load_taxonomy_rank, name='ajax_load_taxonomy_rank'),
+    path('ajax/load-domains/', views.load_domains, name='ajax_load_domains'),
     path('ajax/load-domaingroups-rank1/', views.load_domaingroups_rank1, name='ajax_load_domaingroups_rank1'),
     path('ajax/load-domaingroups-rank2/', views.load_domaingroups_rank2, name='ajax_load_domaingroups_rank2'),
     path('ajax/load-species/', views.load_species, name='ajax_load_species'),

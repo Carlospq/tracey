@@ -315,7 +315,7 @@
             </div>
             <form name="queryFasta" target="_blank" action="/query/fastaFormat/" method="post">
             {% csrf_token %}
-            <div class="dt-length-div" style="padding: 10px; display: flex">
+            <div class="dt-length-div" style="padding: 10px; display: flex; padding-bottom: 0px">
                 <div class="dt-length" style="width: 20%; margin: auto; padding: inherit;">
                     <select name="table_length" aria-controls="example" class="dt-input" id="dt-length-0" onchange="changeLength(this.value)">
                         <option value="10">10</option>
@@ -328,6 +328,7 @@
                 <div class="pager" style="width: 75%; margin-left:20%;">
                 </div>
             </div>
+			<p style="padding-left: 1.5rem;">This query retrived <b>{{ sequences|length }}</b> sequence(s).</p>
             <div class="scrollingTable mb-3" style="border: 1px solid lightgrey; height: auto; min-height: 200px">
                 <!--<table class="hoverTable sortable" id="myTable">-->
                 <table class="hoverTable paginated" id="myTable">
@@ -350,7 +351,6 @@
                     {% endfor %}
                 </table>
 			</div>
-            <p style="padding-left: 1rem;">This query retrived <b>{{ sequences|length }}</b> sequence(s).</p>
 			<p><input type="submit" value="Download table" name="download_table" style="margin-left: 1rem; width: 150px;" /></p>
             <div class="row mt-4 mb-4" style="padding-left: 1rem; width: 100%">
                 <hr>

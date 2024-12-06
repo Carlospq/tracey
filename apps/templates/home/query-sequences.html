@@ -14,95 +14,100 @@
 {% block content %}
 
 <div class="row mt-4">
-    <div class="container">
-
-        <!-- Nav tabs -->
-        <!-- <ul class="nav nav-tabs">
-            {% for t in tabs %}
-                <li class="nav-item">
-                    <a class="nav-link {% if t in segment %} active {% endif %}" data-toggle="tab" href="query-sequences-{{ t }}">
-                        <span style='font-size: 12px' class="sidebar-text">{{ t }}</span>
-                    </a>
-                </li>
-            {% endfor %}
-        </ul> -->
+	<div class="container">
 
         <!-- Tab panes -->
         <div class="card border-0 shadow components-section">
 
-                <!-- Begining of protein family form -->
-                <div class="col-12 mb-4">
-                    <div class="card-body">
-                        <div style="padding-bottom: 5px" >
-                            <h1><strong> Protein Sequences Query </strong></h1>
-                            <p><i> Search Tracey database for sequences fulfilling the selected parameters. </i></p>
-                            {% if error %}<p style="color: red"> {{ error }} </p>{% endif %}
-                            <hr>
-                        </div>
+			<!-- Begining of protein family form -->
+			<div class="col-12 mb-4">
+				<div class="card-body">
+					<div style="padding-bottom: 5px" >
+						<h1><strong> Protein Sequences Query </strong></h1>
+						<p><i> Search Tracey database for sequences fulfilling the selected parameters. </i></p>
+						{% if error %}<p style="color: red"> {{ error }} </p>{% endif %}
+						<hr>
+					</div>
 
-                        <!-- Beggining of Form -->
-                        <form method='get' action='query-sequences-results' name="FamilyForm" id="FamilyForm"
-                            data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
-                            data-load-species-url="{% url 'ajax_load_species' %}"
-                            data-load-sequenceshortnames-url="{% url 'ajax_load_sequenceshortnames' %}"
-                            data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
-                            data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
-                        <input type="text" name="motif" value="{{ family }}" hidden></input>
-                        <input type="text" name="private" value="1" hidden></input>
-                        {% csrf_token %}
+                    <!-- Beggining of Form -->
+					<form method='get' action='query-sequences-results' name="FamilyForm" id="FamilyForm"
+						  data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
+						  data-load-species-url="{% url 'ajax_load_species' %}"
+						  data-load-domains-url="{% url 'ajax_load_domains' %}"
+						  data-load-sequenceshortnames-url="{% url 'ajax_load_sequenceshortnames' %}"
+						  data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+						  data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
+						<input type="text" name="motif" value="{{ family }}" hidden></input>
+						<input type="text" name="private" value="1" hidden></input>
+						{% csrf_token %}
 
-                        	<!-- Selection of domain -->
-                        	<div class="row mb-5">
-                            <div class="col-lg-6 col-sm-6">
-                                <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}"> Domain Name </label>
-                                <select style="width: 100%" name="domainname" id="domainname">
+                        <!-- Selection of layout/domain/domaingroup -->
+						<div class="row mb-5">
+
+							<!-- ProteinLayout Name -->
+							<div class="col-lg-3 col-sm-3">
+                                <label style="vertical-align: top;" for="{{ form.proteinlayout.id_for_label }}"> Protein Layout </label>
+                                <select style="width: 100%" name="proteinlayout" id="proteinlayout">
                                     <option value= ""> </option>
-                                    {% for val in domainsList %}
+                                    {% for val in proteinLayoutsList %}
                                         <option value= "{{ val }}" "{% if 'SNARE' in val %} selected {% endif %}"> {{ val }} </option>
                                     {% endfor %}
                                 </select>
                             </div>
 
+							<!-- Domain Name -->
                             <div class="col-lg-3 col-sm-3">
-                                <!-- Foreign annotation -->
-                                    <label style="vertical-align: top;" for="{{ form.foreignannotation.id_for_label }}">Foreign annotation
-                                        <abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue;'> ? </abbr>
-                                    </label>
-                                      {{ form.foreignannotation }}
-                                      {% if error %}<p style="color: red">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
-                                <!-- End Foreign annotation -->
+                                <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}"> Domain Name </label>
+                                <select style="width: 100%" name="domainname" id="domainname">
+                                    <option value= ""> </option>
+                                    {% for val in domainsList %}
+                                        <option value= "{{ val }}"> {{ val }} </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <div class="col-lg-3 col-sm-3">
-                                <label style="vertical-align: top; width: 100%" for="sequencestatus"> Sequence status </label>
-                                <input type="checkbox" id="sequencestatus" name="sequencestatus" value="1" checked>
-                                <label for="sequencestatus"> Only active sequences</label>
-                            </div>
-                        </div>
-                        	<hr>
 
-                        	<!-- Full frame -->
-                        	<div class="row mb-4">
+							<!-- Domain Groups -->
+							<div class="fieldWrapper col-lg-3 col-sm-3">
+								<!-- domainGroup_rank -->
+								<label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
+								<a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue">
+									<abbr data-toggle="tooltip" title='Click for full description' style='color: blue;'> ? </abbr>
+								</a>
+								<select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank">
+									<option value= ""> </option>
+									{% for val in domaingroup_rank %}
+										<option value= "{{ val }}"> {{ val }} </option>
+									{% endfor %}
+								</select>
+								<!-- domainGroups -->
+								<div class="fieldWrapper" style="height: 14.5em">
+									{{ form.domaingroup }}
+								</div>
+							</div>
+
+							{% if is_staff %}
+							<div class="col-lg-3 col-sm-3">
+								<label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
+								<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>
+								<select style="width: 100%" name="shortname" id="shortname" >
+										<option value=""> </option>
+									{% for val in shortnames %}
+										<option value= "{{ val }}"> {{ val }} </option>
+									{% endfor %}
+								</select>
+							</div>
+							{% endif %}
+
+                        </div>
+                        <hr>
+
+                        <!-- Full frame -->
+                        <div class="row mb-4">
                         <div class="col-sm-12">
-                            <!-- Row 1 -->
-                            {% if is_staff %}
-                            <div class="row mb-3">
-                                <!-- Shortname -->
-                                <div class="col-lg-6 col-sm-6">
-                                    <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
-                                    <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue"> ?</a>
-                                    <select style="width: 100%" name="shortname" id="shortname" >
-                                            <option value=""> </option>
-                                        {% for val in shortnames %}
-                                            <option value= "{{ val }}"> {{ val }} </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <!-- End Shortname -->
-                            </div>
-                            {% endif %}
-                            <!-- End Row 1 -->
-                            <!-- Row 2 -->
+
+                            <!-- Row | Taxonomy & Foreign annotation -->
                             <div class="row">
+
                                 <!-- Taxonoy -->
                                 <div class="fieldWrapper col-lg-6 col-sm-6">
 
@@ -125,37 +130,31 @@
                                             </div>
                                         </div
                                         ><div style="width: 50%; vertical-align: top; height: 100%; padding-left: 10px; display: inline-block;">
-                                            <select name="species_list" id="species_list" multiple style="width: 100%; height: 100%">
+                                            <select name="species_list" id="species_list" multiple style="width: 100%; height: 14.5em">
                                             </select>
                                         </div>
                                     </div>
 
                                     <!-- taxa -->
-                                    <!-- <div class="fieldWrapper">
-                                        {{ form.taxonomy }}
-                                    </div> -->
                                     <p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
+
                                 </div>
-                                <!-- End Taxonomy -->
-                                <!-- Domain Groups -->
-                                <div class="fieldWrapper col-lg-6 col-sm-6">
-                                    <!-- domainGroup_rank -->
-                                    <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
-                                    <a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue">
-                                        <abbr data-toggle="tooltip" title='Click for full description' style='color: blue;'> ? </abbr>
-                                    </a>
-                                    <select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank">
-                                        <option value= ""> </option>
-                                        {% for val in domaingroup_rank %}
-                                            <option value= "{{ val }}"> {{ val }} </option>
-                                        {% endfor %}
-                                    </select>
-                                    <!-- domainGroups -->
-                                    <div class="fieldWrapper">
-                                        {{ form.domaingroup }}
-                                    </div>
-                                </div>
-                                <!-- End Domain Groups -->
+
+                                <!-- Foreign annotation -->
+								<div class="col-lg-3 col-sm-3">
+
+										<label style="vertical-align: top;" for="{{ form.foreignannotation.id_for_label }}">Foreign annotation <abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue;'> ? </abbr></label>
+										  {{ form.foreignannotation }}
+										  {% if error %}<p style="color: red">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
+								</div>
+
+								<!-- Sequence Status -->
+								<div class="col-lg-3 col-sm-3">
+									<label style="vertical-align: top; width: 100%" for="sequencestatus"> Sequence status </label>
+									<input type="checkbox" id="sequencestatus" name="sequencestatus" value="1" checked>
+									<label for="sequencestatus"> Only active sequences</label>
+								</div>
+
                             </div>
                             <!-- End Row 2 -->
                         </div>
@@ -192,8 +191,8 @@
         var current_id = parseInt(child.id.split('taxonomy_rank_')[1]);
         if (parseInt(current_id) >= parseInt(rankNum)) {
           child.remove()
-        };
-      };
+        }
+      }
 
       // create new child rank
       var selectList = document.createElement("select");
@@ -240,58 +239,95 @@
           $("#species_list").html(data);
         }
       });
-    };
+    }
 
-    // Load shortnames
+	// Change in Protein Layout
+	$("#proteinlayout").change(function () {
+        var urldomains = $("#FamilyForm").attr("data-load-domains-url");
+		var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
+        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
+        var proteinlayout = $(this).val();
+
+        // Load domain names
+        $.ajax({
+			url: urldomains,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				$("#domainname").html(data);
+			}
+		});
+
+        // Load Domain Group rank1
+        $.ajax({
+			url: urldomaingroupsrank1,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				 $("#domaingroup_rank").html(data);	 // Update rank1
+                 $("#id_domaingroup").html("");		 // Clear rank2
+			}
+		});
+
+        // Load shortnames
+        $.ajax({
+			url: urlshortnames,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				$("#shortname").html(data);
+			}
+		});
+    })
+
+    // Change in Domain Name
     $("#domainname").change(function () {
-      var url = $("#FamilyForm").attr("data-load-sequenceshortnames-url");  // get the url of the `load_cities` view
-      var domainname = $(this).val();                                 // get the selected country ID from the HTML input
+		var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
+        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
+		var domainname = $(this).val();
 
-      $.ajax({                                        // initialize an AJAX request
-        url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
-        data: {
-          'domainname': domainname        // add the country id to the GET parameters
-        },
+        // Load Domain Group rank1
+        $.ajax({
+			url: urldomaingroupsrank1,
+			data: {
+				'domainname': domainname
+			},
+			success: function (data) {
+				 $("#domaingroup_rank").html(data);	 // Update rank1
+                 $("#id_domaingroup").html("");		 // Clear rank2
+			}
+		});
 
-        success: function (data) {                    // `data` is the return of the `load_cities` view function
-          $("#shortname").html(data);     // replace the contents of the city input with the data that came from the server
-        }
-      });
+		// Load shortnames
+		$.ajax({
+			url: urlshortnames,
+			data: {
+                'domainname': domainname
+			},
+			success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
     });
 
-    // Load Domain Group rank1
-    $("#domainname").change(function () {
-      var url = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");  // get the url of the `load_cities` view
-      var domainname = $(this).val();                                       // get the selected country ID from the HTML input
-
-      $.ajax({                                        // initialize an AJAX request
-        url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
-        data: {
-          'domainname': domainname        // add the country id to the GET parameters
-        },
-
-        success: function (data) {                    // `data` is the return of the `load_cities` view function
-          $("#domaingroup_rank").html(data);     // replace the contents of the city input with the data that came from the server
-          $("#id_domaingroup").html("");
-        }
-      });
-    });
-
-    // Load Domain Group rank2
+    // Change in domain group rank
     $("#domaingroup_rank").change(function () {
       var url = $("#FamilyForm").attr("data-load-domaingroups-rank2-url");  // get the url of the `load_cities` view
       var domaingroup_rank = $(this).val();                                 // get the selected country ID from the HTML input
       var domainname = $("#domainname").val();
 
-      $.ajax({                                        // initialize an AJAX request
-        url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
-        data: {
-          'domaingroup_rank': domaingroup_rank,        // add the country id to the GET parameters
-          'domainname': domainname
-        },
-        success: function (data) {                    // `data` is the return of the `load_cities` view function
-          $("#id_domaingroup").html(data);     // replace the contents of the city input with the data that came from the server
-        }
+      $.ajax({
+		  url: url,
+		  data: {
+              'domaingroup_rank': domaingroup_rank,
+			  'domainname': domainname
+		  },
+		  success: function (data) {
+              $("#id_domaingroup").html(data);
+          }
       });
     });
 
