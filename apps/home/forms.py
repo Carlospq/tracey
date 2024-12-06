@@ -288,6 +288,13 @@ class MotifForm(forms.Form):
     #                 widget = forms.Select()
     #             )
 
+    proteinlayout = forms.CharField(
+        label="Protein Layout",
+        required=False,
+        initial="",
+        widget=forms.Select(choices = [("","")] + sorted([(x.proteinlayoutname, x.proteinlayoutname) for x in Proteinlayouts.objects.all()]))
+    )
+
     domainname = forms.CharField(
                     label= "Domain Name",
                     required = False,
@@ -337,6 +344,9 @@ class MotifForm(forms.Form):
                     widget = forms.Select(choices = [ ("",""), (0,0), (1,1)])
                 )
     private.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+
+    def clean_proteinlayout(self):
+        return self.cleaned_data['proteinlayout']
 
     def clean_domainname(self):
         data = self.cleaned_data

@@ -129,6 +129,7 @@
                         <form method='post' action='#' name="MotifForm" id="MotifForm"
                               data-load-taxonomy-rank-url="{% url 'ajax_load_taxonomy_rank' %}"
                               data-load-species-url="{% url 'ajax_load_species' %}"
+							  data-load-domains-url="{% url 'ajax_load_domains' %}"
                               data-load-sequenceshortnames-url="{% url 'ajax_load_sequenceshortnames' %}"
                               data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
                               data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
@@ -136,85 +137,103 @@
                             {% csrf_token %}
                             <div class="row mb-4">
 
-                                <div class="col-3">
-                                    <!-- Domain -->
-                                    <div class="row">
-                                        <div class="col-4">
-                                            <label style="vertical-align: top;" for="{{ form.domainname.id_for_label }}">Domain name</label>
-                                            <select name="domainname" id="domainname" style="width: 100%" >{% for val in MotifForm.domainname %}{{ val }}{% endfor %}</select>
-                                            {% if MotifForm.domainname.errors %}<p style="color: red">{{ MotifForm.domainname.errors.as_text }}</p>{% endif %}
-                                            {% if error %}<p style="color: red">{{ error }}</p>{% endif %}
-                                        </div>
-                                        <div class="col-4">
-                                            <label style="vertical-align: top;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
-                                            <select name="domaingroup_rank" id="domaingroup_rank" style="width: 100%" >{% for val in MotifForm.domaingroup_rank %}{{ val }}{% endfor %}</select>
-                                        </div>
-                                        <div class="col-4">
-                                            <label style="vertical-align: top;" for="{{ form.domaingroup.id_for_label }}">Subgroup</label>
-                                            <select name="domaingroup" id="domaingroup" style="width: 100%" >{% for val in MotifForm.domaingroup %}{{ val }}{% endfor %}</select>
-                                        </div>
-                                    </div>
+								<!-- Layout/Domain/Domaingroups -->
+                                <div class="col-4">
+
+									<!-- Layout -->
+									<div class="row mb-4">
+										<label style="vertical-align: top; width: 30%">Protein Layout</label>
+										<select name="proteinlayout" id="proteinlayout" style="width: 70%" >{% for val in MotifForm.proteinlayout %}{{ val }}{% endfor %}</select>
+										{% if MotifForm.domainname.errors %}<p style="color: red">{{ MotifForm.proteinlayout.errors.as_text }}</p>{% endif %}
+										{% if error %}<p style="color: red">{{ error }}</p>{% endif %}
+									</div>
+
+									<!-- Domain -->
+									<div class="row mb-4">
+										<label style="vertical-align: top; width: 30%" for="{{ form.domainname.id_for_label }}">Domain name</label>
+										<select name="domainname" id="domainname" style="width: 70%" >{% for val in MotifForm.domainname %}{{ val }}{% endfor %}</select>
+										{% if MotifForm.domainname.errors %}<p style="color: red">{{ MotifForm.domainname.errors.as_text }}</p>{% endif %}
+										{% if error %}<p style="color: red">{{ error }}</p>{% endif %}
+									</div>
+
+									<!-- Domaingroup -->
+									<div class="row mb-4">
+										<label style="vertical-align: top; width: 30%;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
+										<select name="domaingroup_rank" id="domaingroup_rank" style="width: 70%" >{% for val in MotifForm.domaingroup_rank %}{{ val }}{% endfor %}</select>
+									</div>
+
+									<!-- Domaingroup subgroup -->
+									<div class="row mb-4">
+										<label style="vertical-align: top; width: 30%;" for="{{ form.domaingroup.id_for_label }}">Subgroup</label>
+										<select name="domaingroup" id="domaingroup" style="width: 70%" >{% for val in MotifForm.domaingroup %}{{ val }}{% endfor %}</select>
+									</div>
+
                                 </div>
 
-                                <div class="col-1">
-                                </div>
+								<!-- Shortname/Taxonomy -->
+                                <div class="col-4">
 
-                                <div class="col-2">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <label style="vertical-align: top;" for="{{ form.status.id_for_label }}">Status</label>
-                                            <select name="status" id="status" style="width: 100%" >{% for val in MotifForm.status %}{{ val }}{% endfor %}</select>
-                                        </div>
-                                        <div class="col-6">
-                                            <label style="vertical-align: top;" for="{{ form.private.id_for_label }}">Private</label>
-                                            <select name="private" id="private" style="width: 100%" >{% for val in MotifForm.private %}{{ val }}{% endfor %}</select>
-                                        </div>
-                                    </div>
-                                </div>
+									<!-- Shortname -->
+									<div class="row mb-4">
+										<label style="vertical-align: top; width: 30%; padding-left: 60px" for="{{ form.shortname.id_for_label }}">Shortname</label>
+										<select style="width: 70%" name="shortname" id="shortname" >
+											<option selected="selected" disabled="true">-- Choose a domain to display Shortnames --</option>">
+										</select>
+									</div>
 
-                            </div>
+									<!-- Taxonomy -->
+									<div class="row mb-1">
+										<div style="width: 30%">
+											<label style="vertical-align: top; width: 100%; padding-left: 48px" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
+										</div>
+										<div style="width: 70%; padding: 0">
+											<div class="taxonomyDiv" id="taxonomyDiv" style="display: block; width: 100%; padding: 0">
+												<select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
+													<option value=""></option>
+													{% for val in taxonomy_ranks %}
+														<option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
+													{% endfor %}
+												</select>
+											</div>
+											<p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
+										</div>
+									</div>
 
-                            <div class="row mb-4">
-                                <!-- Shortname -->
-                                <div class="col-3">
-                                    <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}">Shortname</label>
-                                    <select style="width: 100%" name="shortname" id="shortname" >
-                                        <option selected="selected" disabled="true">-- Choose a domain to display Shortnames --</option>">
-                                    </select>
-                                </div>
-                                <!-- End Shortname -->
-                            </div>
+								</div>
 
-                            <div class="row mb-4" style="min-height: 200px;">
-                                <!-- taxonomy_rank -->
-                                <div class="col-6">
-                                    <div class="row">
-                                        <label style="vertical-align: top;" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
-                                    </div>
-                                    <div class="row mb-4" style="height: calc(100% - 55px);">
-                                        <div class="col-6">
-                                            <div class="fieldWrapper col-lg-12 col-sm-12">
-                                                <div class="taxonomyDiv" id="taxonomyDiv" style="display: block">
-                                                    <select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
-                                                        <option value=""></option>
-                                                        {% for val in taxonomy_ranks %}
-                                                        <option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                                <p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div style="vertical-align: top; height: 100%;">
-                                                <select name="species_list" id="species_list" multiple style="width: 100%; height: 100%">
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+								<!-- Sequencestatus/Species list-->
+								<div class="col-4">
 
-                            </div>
+									<!-- Sequencestatus/Private -->
+									<div class="row mb-4">
+
+										<!-- Status -->
+										<div class="col-6">
+											<label style="vertical-align: top; width: 50%; padding: 0px 0px 0px 60px" for="{{ form.status.id_for_label }}">Status</label>
+											<select name="status" id="status" style="width: 45%" >{% for val in MotifForm.status %}{{ val }}{% endfor %}</select>
+										</div>
+
+										<!-- Private -->
+										<div class="col-6">
+											<label style="vertical-align: top; width: 50%; padding: 0px 0px 0px 60px" for="{{ form.private.id_for_label }}">Private</label>
+											<select name="private" id="private" style="width: 45%;" >{% for val in MotifForm.private %}{{ val }}{% endfor %}</select>
+										</div>
+
+									</div>
+
+									<!-- Species -->
+									<div class="row mb-4" style="padding-right: 20px;">
+										<div style="vertical-align: top; height: 100%; padding: 0px 0px 0px 60px">
+											<select name="species_list" id="species_list" multiple style="width: 100%; height: 15em"></select>
+										</div>
+									</div>
+
+								 </div>
+
+							</div>
+							<!-- End of Form -->
+							<hr>
+
 
                             <!-- Table with filtered sequences -->
                             <div class="col-1 mb-4" style="width: 100%;">
@@ -324,13 +343,6 @@
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
 
-    // Table rows clickable
-    {#jQuery(document).ready(function($) {#}
-    {#    $(".clickable-row").click(function() {#}
-    {#        window.location = $(this).data("href");#}
-    {#    });#}
-    {# });#}
-
     // Pues a verlas venir...
     $(document).ready(function() {
         $('.has-popover').popover({'trigger':'hover'});
@@ -338,65 +350,64 @@
 
     // Load secuential taxonomy ranks
     function taxonomyDiv(object) {
-      var url = $("#MotifForm").attr("data-load-taxonomy-rank-url");
-      var url_species = $("#MotifForm").attr("data-load-species-url");
-      var taxonomy_rank = object.value;
-      var parent = object.parentElement;
-      var rankNum = parseInt(object.id.split('taxonomy_rank_')[1])+1;
+        var url = $("#MotifForm").attr("data-load-taxonomy-rank-url");
+        var url_species = $("#MotifForm").attr("data-load-species-url");
+        var taxonomy_rank = object.value;
+        var parent = object.parentElement;
+        var rankNum = parseInt(object.id.split('taxonomy_rank_')[1])+1;
 
-      var taxonomy_ranks = document.getElementsByName("taxonomy");
-      var taxonomy_list = [];
-      taxonomy_ranks.forEach((tax) => taxonomy_list.push(tax.value));
+		var taxonomy_ranks = document.getElementsByName("taxonomy");
+        var taxonomy_list = [];
+        taxonomy_ranks.forEach((tax) => taxonomy_list.push(tax.value));
 
-      // remove higher ranks
-      var children = document.getElementById("taxonomyDiv").children;
-      for (var i = children.length - 1; i >= 0; i--) {
-        var child = children[i];
-        var current_id = parseInt(child.id.split('taxonomy_rank_')[1]);
-        if (parseInt(current_id) >= parseInt(rankNum)) {
-          child.remove()
+        // remove higher ranks
+		var children = document.getElementById("taxonomyDiv").children;
+        for (var i = children.length - 1; i >= 0; i--) {
+            var child = children[i];
+            var current_id = parseInt(child.id.split('taxonomy_rank_')[1]);
+            if (parseInt(current_id) >= parseInt(rankNum)) {
+                child.remove()
+            };
         };
-      };
 
-      // create new high rank
-      var selectList = document.createElement("select");
-      selectList.id = "taxonomy_rank_"+rankNum;
-      selectList.name = "taxonomy";
-      selectList.style = 'width: 100%; margin-top: 5px;';
-      selectList.addEventListener(
-                                  'change',
-                                  (event) => {taxonomyDiv(selectList)}
-                                );
-      parent.appendChild(selectList);
-      // var selectedList = document.getElementById(selectList.id);
-      var selectedList = $("#"+selectList.id)
+        // create new high rank
+		var selectList = document.createElement("select");
+        selectList.id = "taxonomy_rank_"+rankNum;
+        selectList.name = "taxonomy";
+        selectList.style = 'width: 100%; margin-top: 5px;';
+        selectList.addEventListener(
+            'change',
+			(event) => {taxonomyDiv(selectList)}
+		);
+        parent.appendChild(selectList);
 
-      $.ajax({
-        url: url,
-        data: {
-          'taxonomy_rank': taxonomy_rank,
-          'reduced': 'true'
-        },
-        success: function (data) {
-          selectedList.html(data);
-          var x = selectedList[0]
-          if (x.options.length == 1){
-            selectedList.hide();
-          };
-        }
-      });
+		var selectedList = $("#"+selectList.id)
+		$.ajax({
+			url: url,
+			data: {
+                'taxonomy_rank': taxonomy_rank,
+				'reduced': 'true'
+			},
+			success: function (data) {
+                selectedList.html(data);
+                var x = selectedList[0]
+				if (x.options.length == 1){
+                    selectedList.hide();
+                };
+            }
+        });
 
-      $.ajax({
-        url: url_species,
-        data: {
-          'taxonomy_rank': taxonomy_rank,
-          'taxonomy_list': taxonomy_list,
-          'verify': 'true',
-        },
-        success: function (data) {
-          $("#species_list").html(data);
-        }
-      });
+        $.ajax({
+			url: url_species,
+			data: {
+                'taxonomy_rank': taxonomy_rank,
+				'taxonomy_list': taxonomy_list,
+				'verify': 'true',
+			},
+			success: function (data) {
+                $("#species_list").html(data);
+            }
+        });
     };
 
     // Send form data for sequence search
@@ -404,6 +415,7 @@
         // Don't reload site on submit
         e.preventDefault();
         // Get variables
+		var proteinlayout = $("#proteinlayout").val();
         var domainname = $("#domainname").val();
         var domaingroup_rank = $("#domaingroup_rank").val();
         var domaingroup = $("#domaingroup").val();
@@ -421,16 +433,17 @@
 
         // Data for domaingroup_rank field
         $.ajax({
-          url: "{% url 'ajax_load_domaingroups_rank1' %}",
-          data: {
-            'domainname': domainname,
-            'domaingroup_rank': domaingroup_rank
-          },
+			url: "{% url 'ajax_load_domaingroups_rank1' %}",
+			data: {
+                'proteinlayout': proteinlayout,
+				'domainname': domainname,
+				'domaingroup_rank': domaingroup_rank
+			},
 
-          success: function (data) {
-            $("#domaingroup_rank").html(data);
-            $("#id_domaingroup_rank").html("");
-          }
+			success: function (data) {
+                $("#domaingroup_rank").html(data);
+                $("#id_domaingroup_rank").html("");
+            }
         });
 
         $.ajaxSetup({traditional: true});
@@ -439,6 +452,7 @@
             type:'POST',
             url: "{% url 'ajax_load_queryverifysequences' %}",
             data: {
+                proteinlayout: proteinlayout,
                 domainname: $("#domainname").val(),
                 domaingroup_rank: $("#domaingroup_rank").val(),
                 domaingroup: $("#domaingroup").val(),
@@ -459,6 +473,23 @@
     });
 
     // formField.reload on formField.change
+	$("#proteinlayout").change(function () {
+    	var url = $("#MotifForm").attr("data-load-domains-url");
+        var proteinlayout = $(this).val();
+
+        // Load domain names
+        $.ajax({
+			url: url,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				$("#domainname").html(data);
+			}
+		});
+
+    });
+
     $("#domainname").change(function () {
       var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
       var domainname = $(this).val();
