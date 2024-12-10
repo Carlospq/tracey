@@ -4,7 +4,7 @@ tar -xvf ncbi-blast-2.13.0+-x64-linux.tar.gz
 
 # Generate TRACEY blast database
 > first generate a fasta with all TRACEY sequences
-python manage.py shell < ./utils/ncbi-blast-2.13.0+/generateTraceyDB.py
+python3 manage.py shell < ./utils/ncbi-blast-2.13.0+/generateTraceyDB.py
 > second generate database from TRACEY fasta
 ./utils/ncbi-blast-2.13.0+/bin/makeblastdb -in ./utils/ncbi-blast-2.13.0+/tracey.fasta -dbtype prot -out ./utils/ncbi-blast-2.13.0+/traceyBLASTdb/traceyp
 > (Optional) Delete tracey.fasta

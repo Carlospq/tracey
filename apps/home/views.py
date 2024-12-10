@@ -354,7 +354,7 @@ def load_domaingroups_rank2(request):
 	if not rank:
 		children_list = []#[ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
 	else:
-		children_list = get_childs(Domaingroups, Domaingroups.objects.filter(domaingroupname=rank), "domaingroup_id", "domaingroupparent_id", childs=children_list)
+		children_list = sorted(get_childs(Domaingroups, Domaingroups.objects.filter(domaingroupname=rank), "domaingroup_id", "domaingroupparent_id", childs=children_list), key=lambda x: x.domaingroupname)
 		children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in children_list if x.analysislevel > 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
 	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
@@ -728,6 +728,7 @@ def getMotifPlot_fromPyhammer(hit, sequence, evalcutoff=1e-10):
 	buf.seek(0)
 	string = base64.b64encode(buf.read())
 	uri = urllib.parse.quote(string)
+	plt.close(fig)
 	return uri
 
 
@@ -782,6 +783,7 @@ def motifScan(sequence, motifname, domaingroup="", evalcutoff=1e-10):
 	hits = pipeline.scan_seq(seq1, optimized_block)
 
 	for h in hits:
+		if not any([d for d in h.domains if d.pvalue < evalcutoff]): continue
 		h_name = h.name.decode('UTF-8')
 		hits_d[h_name] = {}
 		hits_d[h_name]['plot'] = plot = getMotifPlot_fromPyhammer(h, sequence, evalcutoff)
@@ -1229,7 +1231,7 @@ def parseNCBIblastpSTDOUT(stdout):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryVerifyBlastView(request, db, query_id):
-	print(db)
+
 	alignment_colors = {'A': 'CornflowerBlue', 'I': 'CornflowerBlue', 'L': 'CornflowerBlue', 'M': 'CornflowerBlue', 'F': 'CornflowerBlue', 'W': 'CornflowerBlue', 'V': 'CornflowerBlue', 'C': 'CornflowerBlue',
 						'K': 'red', 'R': 'red',
 						'E': 'magenta', 'D': 'magenta',
@@ -1351,7 +1353,8 @@ def QueryVerifyView(request, sequence_id):
 		form.data._mutable = True
 		# сhange the values of FORM you want
 		if form.data['newChangelog']:
-			form.data['newChangelog'] = " %s %s - %s;"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, form.data['newChangelog'])
+			form.data['changelog'] += " %s %s - %s;"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, form.data['newChangelog'])
+			form.data['newChangelog'] = ''
 
 		# Verify motifs if not verified yet
 		for vm_id in request.POST.getlist('verifymotif_id'):
@@ -1362,7 +1365,7 @@ def QueryVerifyView(request, sequence_id):
 			if requestValue == 'delete':
 				# Delete VerifyMotif
 				vm.delete()
-				form.data['newChangelog'] += " %s %s - VerifyMotif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
+				form.data['changelog'] += " %s %s - VerifyMotif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
 			elif requestValue == 'verify':
 				# Create Motif from VerifyMotif and delete VerifyMotif
 				m = Motifs(sequence = seq,
@@ -1378,7 +1381,7 @@ def QueryVerifyView(request, sequence_id):
 						   asciioutput = vm.asciioutput,
 						   binaryoutput = vm.binaryoutput)
 				m.save()
-				form.data['newChangelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
+				form.data['changelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
 				vm.delete()
 
 		for m_id in request.POST.getlist('motif_id'):
@@ -1389,7 +1392,7 @@ def QueryVerifyView(request, sequence_id):
 			if requestValue == 'delete':
 				# Delete yMotif
 				motif.delete()
-				form.data['newChangelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
+				form.data['changelog'] += " %s %s - Motif deleted: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
 			elif requestValue == 'unverify':
 				# Create VerifyMotif from Motif and delete Motif
 				vm = Verifymotifs(sequence=motif.sequence,
@@ -1406,7 +1409,7 @@ def QueryVerifyView(request, sequence_id):
 								  binaryoutput=motif.binaryoutput
 								  )
 				vm.save()
-				form.data['newChangelog'] += " %s %s - Unerified motif: '%s';" % (strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
+				form.data['changelog'] += " %s %s - Unverified motif: '%s';" % (strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
 				motif.delete()
 
 		# set mutable flag back
@@ -1430,20 +1433,17 @@ def QueryVerifyView(request, sequence_id):
 				context['domaingroups'] = request.POST.get('domaingroups')
 				context['evalcutoff'] = request.POST.get('evalcutoff')
 
+		context['form'] = form
 		if form.is_valid():
-			context['form'] = form
+			# The submitted form is valid, just render it `as is` for htmx.
 			if request.htmx or 'scanerror' in context:
-				# The submitted form is valid, just render it `as is` for htmx.
 				return render(request, 'home/query-verify.html', context)
+			# Save modifications in FORM into sequence
 			try:
 				form.save()
-				# context['message'] = 'Sequence updated successfully'
-				# return render(request, 'home/query-verify.html', context)
-				# return HttpResponseRedirect(reverse('query-verify', args=(seq.pk,)), context)
 			except:
 				context['message'] = 'Sequence could not be updated'
-		else:
-			context['form'] = form
+
 	else:
 		context['form'] = InsertSequence(instance=seq, initial={'gene': ncbigene_id, 'taxonomy': seq.taxonomy.scientificname})
 
@@ -1483,6 +1483,7 @@ def QueryVerifyView(request, sequence_id):
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
 			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroup"])
 
+	# Sort VerifyMotifs by evalue
 	context["verifymotifs"] = {k: v for k, v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
 
 	return render(request, 'home/query-verify.html', context)
