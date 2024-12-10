@@ -133,15 +133,18 @@
 
                             </form>
                         </div>
-                        <hr>
                     </div>
 
+					<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem; border-width: 0"></div>
+					<div style="z-index: -1; background-color: #F2F4F6; height: 40px; margin-left: -1.5rem; margin-right: -1.5rem; margin-top: -10px; margin-bottom: -10px;"></div>
+					<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem"></div>
+
 					{% if predictedSNARE %}
-						<div class="row mb-4">
+						<div class="row">
 							<div class="col-sm-12">
-								<div class="row mb-4" style="border: lightgrey solid 1px; border-radius: 15px; border-radius: 15px; padding: 10px 15px 0px 15px;">
+								<div class="row" style="border: lightgrey solid 1px; border-radius: 15px; border-radius: 15px; padding: 10px 15px 0px 15px;">
                                 	<div class="mb-3">
-										<b>SNARE Group Prediction:</b>
+										<p><b>SNARE Group Prediction:</b></p>
 										<table style="width: 100%;">
 											<tr>
 												<td style="width: 33%; vertical-align: center; horiz-align: center"><b>Domain:</b> {{ predictedSNARE|get_item:'domain' }} (<p style="color:
@@ -175,8 +178,10 @@
 									</div>
 								</div>
 							</div>
-							<hr>
 						</div>
+						<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem; border-width: 0"></div>
+						<div style="z-index: -1; background-color: #F2F4F6; height: 40px; margin-left: -1.5rem; margin-right: -1.5rem; margin-top: -10px; margin-bottom: -10px;"></div>
+						<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem"></div>
 					{% endif %}
 
                     <div class="row mb-4">

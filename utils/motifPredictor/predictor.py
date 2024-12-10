@@ -47,6 +47,7 @@
 
 ### IMPORTS
 import os, subprocess
+import pyhmmer
 import tempfile
 import pickle
 import numpy as np
@@ -76,18 +77,55 @@ def retriveEvalues(domtbloutFile, all_motifs):
 	return results
 
 # Search sequences againts HMM database
-def motifSearch(input_file, bothDomains=False, hmmDB="utils/motifPredictor/HmmDb/hmmDb.hmm", tmp_file="utils/motifPredictor/temp_domtblout.txt"):
-	# Search sequences against hmm DB and store results in domtblout files
-	cmd = "hmmsearch --domtblout %s --cpu 4 %s %s" % (tmp_file, hmmDB, input_file)
-	out, error = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-	if error:
-		return error
+def motifSearch(input_file="", sequence="", bothDomains=False, hmmDB="utils/motifPredictor/HmmDb/hmmDb.hmm", tmp_file="utils/motifPredictor/temp_domtblout.txt"):
+
 	# Retrieve valid motifnames according to lmModel that is going to be used
 	if bothDomains:
 		all_motifs = HabcSNAREMotifsNames
 	else:
 		all_motifs = motifsNames
-	results = retriveEvalues(tmp_file, all_motifs)
+
+	# Scan the sequence for hits
+	if sequence:
+		# If sequence is provided
+		# Prepare HMM models
+		hmms = pyhmmer.plan7.HMMFile(hmmDB)
+
+		# Convert hmms to optimized profiles -> optimizad block
+		alphabet = pyhmmer.easel.Alphabet.amino()
+		optimized_block = pyhmmer.plan7.OptimizedProfileBlock(alphabet=alphabet)
+
+		for h in hmms:
+			optimized_block.append(h.to_profile().to_optimized())
+
+		pipeline = pyhmmer.plan7.Pipeline(pyhmmer.easel.Alphabet.amino())
+		digitalsequence = pyhmmer.easel.TextSequence(name=bytes("Query_sequence", 'utf-8'), sequence=sequence).digitize(alphabet)
+		hits = pipeline.scan_seq(digitalsequence, optimized_block)
+
+		# Store results in dictionary
+		results = {'inputSequence': {}}
+
+		# Initialize results dictionary
+		for m in all_motifs:
+			results['inputSequence'][m] = np.log(10e10)
+
+		for hit in hits:
+			for d in hit.domains:
+				hit_name = hit.name.decode('utf-8')
+				if hit_name in all_motifs:
+					if d.pvalue < results['inputSequence'][hit_name]:
+						results['inputSequence'][hit_name] = d.pvalue
+	else:
+		# If file is provided
+		tmp_file_domtblout = "./utils/motifPredictor/domtblout_tmpfile.txt"
+		cmd = "hmmsearch --domtblout %s --cpu 4 %s %s" % (tmp_file_domtblout, hmmDB, input_file)
+		out, error = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+		if error:
+			return error
+		else:
+			results = retriveEvalues(tmp_file_domtblout, all_motifs)
+			os.remove(tmp_file_domtblout)
+
 	# if no results
 	if not results:
 		return {}
@@ -95,7 +133,6 @@ def motifSearch(input_file, bothDomains=False, hmmDB="utils/motifPredictor/HmmDb
 		evals = {}
 		for idx in results:
 			evals[idx] = [results[idx][m] for m in all_motifs]
-		os.remove(tmp_file)
 		return evals
 
 # Predicts the domain of a sequence
@@ -308,9 +345,7 @@ def snareMotifPrediction(evals, probCutOff = 60, SNARE=False, bypass=''):
 # Prediction from sequence string or path to fasta file
 def predictMotifs(sequence, bothDomains=False, probCutOff = 60, bypass='', onlyPrint=False):
 
-	# Store sequence into temp file
-	# sequenceTemporaryFile = "utils/motifPredictor/tempSequence.fasta"
-	# with open(sequenceTemporaryFile, 'w') as tempseqfile:
+	# Write sequence to temporary file
 	with tempfile.NamedTemporaryFile(mode='w', dir='utils/motifPredictor', delete=False) as tempseqfile:
 		sequenceTemporaryFile = tempseqfile.name
 		line = '>' + 'inputSequence' + '\n' + sequence + '\n'
@@ -318,7 +353,7 @@ def predictMotifs(sequence, bothDomains=False, probCutOff = 60, bypass='', onlyP
 	tempseqfile.close()
 
 	# Search hmmDb against sequence
-	evals = motifSearch(sequenceTemporaryFile, bothDomains=bothDomains)
+	evals = motifSearch(input_file=sequenceTemporaryFile, sequence=sequence, bothDomains=bothDomains)
 	if not evals:
 		return {}
 	else:

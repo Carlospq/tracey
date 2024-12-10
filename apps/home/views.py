@@ -899,6 +899,10 @@ def QueryMotifsResultsView(request):
 		bothDomains = False
 	if context['domain'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
 		bypass=context['domain'][0] if context['domain'][0] in ["Habc", "SNARE"] else ''
+	if context['motifname'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
+		bypass=context['motifname'][0] if context['motifname'][0] in ["Habc", "SNARE"] else ''
+		# TODO: Change hmmmsearch using cmd to pyhmmer
+		context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
 
 	if request.method == "POST":
 		context['error_seq'] = ''
