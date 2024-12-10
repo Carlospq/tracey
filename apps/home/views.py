@@ -9,6 +9,7 @@ import mimetypes
 import pyhmmer
 import json as simplejson
 import xml.etree.ElementTree as ET
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import django_tables2 as tables
@@ -45,7 +46,7 @@ from utils.motifPredictor.predictor import *
 from django import template
 
 register = template.Library()
-
+matplotlib.use('agg')
 
 ### FUNCTIONS ###
 def get_childs(model, parent, parent_id, child_parent_id, childs=[], search_type='iexact'):
@@ -124,7 +125,6 @@ def get_sequences(query, verify=False):
 
 	elif ('proteinlayout' in query and notEmpty(query, 'proteinlayout')) or ('domainname' in query and notEmpty(query, 'domainname')):
 
-		print(query)
 		if 'proteinlayout' in query and notEmpty(query, 'proteinlayout'):
 			proteinlayout = Proteinlayouts.objects.get(proteinlayoutname=query['proteinlayout'][0])
 			proteinlayoutgroups = Proteinlayoutgroups.objects.filter(proteinlayout=proteinlayout)
@@ -693,6 +693,8 @@ def QueryMotifsView(request):
 	if request.method == "POST":
 		context['protseq'] = dict(request.POST)['protseq']
 		context['motifname'] = dict(request.POST)['motifname']
+		context['domaingroups'] = dict(request.POST)['domaingroups']
+		context['evalcutoff'] = [request.POST.get('evalcutoff')] if request.POST.get('evalcutoff') else ['10']
 
 		if not context['protseq'][0]:
 			context['error'] = 'Please provide a protein sequence to analyze.'
@@ -707,7 +709,7 @@ def QueryMotifsView(request):
 	return render(request, 'home/query-motifs.html', context)
 
 
-def getMotifPlot_fromPyhammer(hit, sequence):
+def getMotifPlot_fromPyhammer(hit, sequence, evalcutoff=1e-10):
 	import io
 	import urllib, base64
 
@@ -717,7 +719,7 @@ def getMotifPlot_fromPyhammer(hit, sequence):
 				GraphicFeature(start=d.alignment.target_from-1, end=d.alignment.target_to,
 							   label=[str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else
 							          str(d.alignment).split("\n")[1].split()[0]][0] + " (%s)"%(format(d.pvalue, '.1E')), color="#ffcccc")
-				for d in hit.domains
+				for d in hit.domains if d.pvalue < evalcutoff
 			]
 	record = GraphicRecord(sequence_length=len(sequence), features=features)
 	record.plot(ax=ax)
@@ -729,7 +731,7 @@ def getMotifPlot_fromPyhammer(hit, sequence):
 	return uri
 
 
-def motifScan(sequence, motifname):
+def motifScan(sequence, motifname, domaingroup="", evalcutoff=1e-10):
 
 	hits_d = {}
 
@@ -752,6 +754,17 @@ def motifScan(sequence, motifname):
 	M = motifname[0].upper()
 	if M == "ALL":
 		hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
+	elif domaingroup:
+		hmms = []
+		domaingroup = "SNAP" if domaingroup == "SNAPbc" else domaingroup
+		hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(M)) if domaingroup in x]
+		if not hmmList:
+			hits_d['error'] = 'No HMM model found for this motif.'
+			return hits_d
+		for hmmModel in hmmList:
+			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(M, hmmModel)) as hmm_file:
+				hmm = hmm_file.read()
+				hmms.append(hmm)
 	else:
 		hmms = []
 		for f in os.listdir('utils/hmmModels/%s'%(M)):
@@ -771,11 +784,13 @@ def motifScan(sequence, motifname):
 	for h in hits:
 		h_name = h.name.decode('UTF-8')
 		hits_d[h_name] = {}
-		hits_d[h_name]['plot'] = plot = getMotifPlot_fromPyhammer(h, sequence)
+		hits_d[h_name]['plot'] = plot = getMotifPlot_fromPyhammer(h, sequence, evalcutoff)
 		hits_d[h_name]['split_sequence'] = [letter for letter in sequence]
 		hits_d[h_name]['domainname'] = Domaingroups.objects.get(domaingroupname = h_name).domain.domainname
 		hits_d[h_name]['domains'] = []
 		for d in h.domains:
+			# Filter by e-value
+			if d.pvalue > evalcutoff: continue
 			split_alignment = str(d.alignment).split("\n")
 			motifname = split_alignment[0].split()[0] if split_alignment[0].split()[-1] not in ["RF", "SC"] else split_alignment[1].split()[0]
 			# motifname = str(d.alignment).split("\n")[1].split()[0]
@@ -820,14 +835,15 @@ def QueryMotifsResultsView(request):
 	context["segment"] = segment
 	context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ] + ["HabcSNARE"] )))
 	context["hits_d"] = {}
-
 	if notEmpty(context, 'protseq'):
 		if len(context['protseq'][0]) > 2000:
 			context['error_seq'] = 'Sequence is too long [max length = 2000 aa].'
 		elif len(context['protseq'][0]) == 0:
 			context['error_seq'] = 'Please provide a protein sequence to analyze.'
 		else:
-			context["hits_d"] = motifScan(context["protseq"][0], context['motifname'])
+			context["hits_d"] = motifScan(context["protseq"][0], context['motifname'],
+										  domaingroup=context['domaingroups'][0] if 'domaingroups' in context else '',
+										  evalcutoff=float('1e-' + context['evalcutoff'][0] if 'evalcutoff' in context else '1e-10'))
 	else:
 		context['error_seq'] = ''
 
@@ -908,17 +924,22 @@ def saveVerifyMotifs(sequence_id, hits):
 				method.save()
 			vm = Verifymotifs(sequence_id = sequence_id,
 							  motifname = motif,
-							  startposition = d['env_from']+1,
-							  stopposition = d['env_to']-1,
+							  startposition = d['env_from'],
+							  stopposition = d['env_to'],
 							  verifymotifcomments = '',
 							  domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id,
 							  gaps = countGaps(d['alignment'].target_sequence),
 							  active = 0,
 							  method = method, #Review this field
-							 verifymotifrank = 1000000,
-							 asciioutput = '<asciiOutput>\r\t<consensus>%s</consensus>\r\t<similarity>%s\t</similarity>\r\t<motif>%s</motif>\r\t<eValue>%s</eValue>\r\t<bitscore>321</bitscore>\r</asciiOutput>'%(d['alignment'].hmm_sequence, d['alignment'].identity_sequence, d['alignment'].target_sequence, d['evalue']),
-							 binaryoutput = '')
-			vm.save()
+							  verifymotifrank = 1000000,
+							  asciioutput = '<asciiOutput>\r\t<consensus>%s</consensus>\r\t<similarity>%s\t</similarity>\r\t<motif>%s</motif>\r\t<eValue>%s</eValue>\r\t<bitscore>321</bitscore>\r</asciiOutput>'%(d['alignment'].hmm_sequence, d['alignment'].identity_sequence, d['alignment'].target_sequence, d['evalue']),
+							  binaryoutput = '')
+
+			# Skip if motif already exists ( ascii outputs are identical)
+			if Verifymotifs.objects.filter(sequence_id = sequence_id, asciioutput = vm.asciioutput).exists() or Motifs.objects.filter(sequence_id = sequence_id, asciioutput = vm.asciioutput).exists():
+				continue
+			else:
+				vm.save()
 
 
 def common_name(list, sn):
@@ -1208,7 +1229,7 @@ def parseNCBIblastpSTDOUT(stdout):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryVerifyBlastView(request, db, query_id):
-
+	print(db)
 	alignment_colors = {'A': 'CornflowerBlue', 'I': 'CornflowerBlue', 'L': 'CornflowerBlue', 'M': 'CornflowerBlue', 'F': 'CornflowerBlue', 'W': 'CornflowerBlue', 'V': 'CornflowerBlue', 'C': 'CornflowerBlue',
 						'K': 'red', 'R': 'red',
 						'E': 'magenta', 'D': 'magenta',
@@ -1320,48 +1341,9 @@ def QueryVerifyView(request, sequence_id):
 	# Domains list
 	context['domainsList'] = [d.domainname for d in Domains.objects.all()]
 
-	# Retrive verifyMotifs
-	motifs = seq.motifs_set.all().order_by('startposition')
-	verifymotifs = seq.verifymotifs_set.all().order_by('startposition')
-	context["motifs"] = {}
-	context["verifymotifs"] = {}
-
-	# Gather information of Motifs/VerifyMotifs and pass it to context
-	for type, motifs in zip(['motifs', 'verifymotifs'], [motifs, verifymotifs]):
-		for m in motifs:
-			context[type][m] = {}
-			if type == "motifs":
-				context[type][m]['motif_id'] = m.motif_id
-			else:
-				context[type][m]['verifymotif_id'] = m.verifymotif_id
-			d = Domaingroups.objects.get(domaingroup_id = m.domaingroup_id)
-
-			if d.domaingroupparent_id == None:
-				context[type][m]["domaingroupparent"] = m.motifname
-			elif ";" in d.domaingroupparent_id:
-				p_id = d.domaingroupparent_id.split(";")
-				context[type][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = p_id[0]).domaingroupname +"/"+ Domaingroups.objects.get(domaingroup_id = p_id[1]).domaingroupname
-			else:
-				context[type][m]["domaingroupparent"] = Domaingroups.objects.get(domaingroup_id = d.domaingroupparent_id).domaingroupname
-			context[type][m]["domaingroup"] = d.domaingroupname
-			context[type][m]["ascii"] = m.asciioutput
-			context[type][m]["length"] = m.stopposition - m.startposition + 1
-
-			data = ET.fromstring(context[type][m]["ascii"])
-			for x in data:
-				context[type][m][x.tag] = x.text
-			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
-			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroup"])
-
-	context["verifymotifs"] = {k:v for k,v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
-
+	# Updating sequence
 	if request.method == 'POST':
 		form = InsertSequence(request.POST, instance=seq, initial={'gene': ncbigene_id, })
-
-		# scan sequence for new motifs if Scan button is pressed
-		if request.POST.get("scan"):
-			hits_d = motifScan(form.data['sequence'], [form.data['domain']])
-			saveVerifyMotifs(sequence_id, hits_d)
 
 		# remember old state of FORM
 		_mutable = form.data._mutable
@@ -1430,21 +1412,78 @@ def QueryVerifyView(request, sequence_id):
 		# set mutable flag back
 		form.data._mutable = _mutable
 
+		# scan sequence for new motifs if Scan button is pressed
+		if request.POST.get("scan"):
+			# Check if domain and domaingroup or selected
+			if not form.data['domain']:
+				context['scanerror'] = 'Protein domain is required to scan sequence for HMM matches'
+			elif form.data['sequence'] and form.data['domain']:
+				evalcutoff = float('1e-' + request.POST.get('evalcutoff') if request.POST.get('evalcutoff') else '10')
+				hits_d = motifScan(form.data['sequence'], [form.data['domain']], domaingroup=form.data['domaingroups'],
+								   evalcutoff=evalcutoff)
+				if 'error' in hits_d:
+					context['scanerror'] = hits_d['error']
+				else:
+					saveVerifyMotifs(sequence_id, hits_d)
+
+				context['domain'] = request.POST.get('domain')
+				context['domaingroups'] = request.POST.get('domaingroups')
+				context['evalcutoff'] = request.POST.get('evalcutoff')
+
 		if form.is_valid():
 			context['form'] = form
-			if request.htmx:
+			if request.htmx or 'scanerror' in context:
 				# The submitted form is valid, just render it `as is` for htmx.
 				return render(request, 'home/query-verify.html', context)
 			try:
 				form.save()
-				context['message'] = 'Sequence updated successfully'
-				return HttpResponseRedirect(reverse('query-verify', args=(seq.pk,)))
+				# context['message'] = 'Sequence updated successfully'
+				# return render(request, 'home/query-verify.html', context)
+				# return HttpResponseRedirect(reverse('query-verify', args=(seq.pk,)), context)
 			except:
 				context['message'] = 'Sequence could not be updated'
 		else:
 			context['form'] = form
 	else:
 		context['form'] = InsertSequence(instance=seq, initial={'gene': ncbigene_id, 'taxonomy': seq.taxonomy.scientificname})
+
+	# Retrive verifyMotifs
+	motifs = seq.motifs_set.all().order_by('startposition')
+	verifymotifs = seq.verifymotifs_set.all().order_by('startposition')
+	context["motifs"] = {}
+	context["verifymotifs"] = {}
+
+	# Gather information of Motifs/VerifyMotifs and pass it to context
+	for type, motifs in zip(['motifs', 'verifymotifs'], [motifs, verifymotifs]):
+		for m in motifs:
+			context[type][m] = {}
+			if type == "motifs":
+				context[type][m]['motif_id'] = m.motif_id
+			else:
+				context[type][m]['verifymotif_id'] = m.verifymotif_id
+			d = Domaingroups.objects.get(domaingroup_id=m.domaingroup_id)
+
+			if d.domaingroupparent_id == None:
+				context[type][m]["domaingroupparent"] = m.motifname
+			elif ";" in d.domaingroupparent_id:
+				p_id = d.domaingroupparent_id.split(";")
+				context[type][m]["domaingroupparent"] = Domaingroups.objects.get(
+					domaingroup_id=p_id[0]).domaingroupname + "/" + Domaingroups.objects.get(
+					domaingroup_id=p_id[1]).domaingroupname
+			else:
+				context[type][m]["domaingroupparent"] = Domaingroups.objects.get(
+					domaingroup_id=d.domaingroupparent_id).domaingroupname
+			context[type][m]["domaingroup"] = d.domaingroupname
+			context[type][m]["ascii"] = m.asciioutput
+			context[type][m]["length"] = m.stopposition - m.startposition + 1
+
+			data = ET.fromstring(context[type][m]["ascii"])
+			for x in data:
+				context[type][m][x.tag] = x.text
+			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
+			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroup"])
+
+	context["verifymotifs"] = {k: v for k, v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
 
 	return render(request, 'home/query-verify.html', context)
 

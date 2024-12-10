@@ -121,7 +121,7 @@
 					<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
 						<table class="detailTable">
 							<tr>
-								<td class="td-data" style="width: auto"><b>Motif: </b> {{ m.motifname }} </td>
+								<td class="td-data" style="width: auto"><b>Domain: </b> {{ m.domaingroup.domain.domainname }} </td>
 								<td class="td-data" style="width: auto"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
 								<!-- <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td> -->
 								<!-- <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td> -->

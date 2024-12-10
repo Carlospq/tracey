@@ -22,18 +22,43 @@
                         <hr>
                     </div>
 
-                    <form method='post' action='' name="motifForm" id="motifForm">
+                    <form method='post' action='' name="motifForm" id="motifForm"
+					data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
                     {% csrf_token %}
 
                     <div class="row mb-4">
                             <div class="col-lg-3 col-sm-3 mb-4">
-                                <label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}"> Motifs to scan: </label>
-                                <select style="width: 100%" name="motifname" id="motifname">
-                                    <option value= "all" selected>All</option>
-                                    {% for val in motifs %}
-                                        <option value= "{{ val }}"> {{ val }} </option>
-                                    {% endfor %}
-                                </select>
+
+								<label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}"> Motifs to scan: </label>
+
+								<!-- domain name -->
+								<div class="row" style="width: 75%">
+									<div style="width: 50%">Domain: </div>
+									<select style="width: 50%" name="motifname" id="motifname">
+										<option value= "all" selected>All</option>
+										{% for val in motifs %}
+											<option value= "{{ val }}"> {{ val }} </option>
+										{% endfor %}
+									</select>
+								</div>
+								<!-- domain groups -->
+								<div class="row" style="width: 75%; margin-top: 10px;">
+									<div style="width: 50%">Domain Group: </div>
+									<select style="width: 50%;" name="domaingroups" id="domaingroups" style="width: 100px;">
+										<option value="" selected></option>
+										<option value="all">All</option>
+										{% for val in domaingroupList %}
+											<option value= "{{ val }}"> {{ val }} </option>
+										{% endfor %}
+									</select>
+								</div>
+								<!-- E-value cutoff -->
+								<div class="row" style="width: 75%; margin-top: 10px;">
+									<div style="width: 50%;"> E-value cutoff:</div>
+									<div style="width: 50%; padding: 0">
+										<p>1E-<input name="evalcutoff" id="evalcutoff" style="width: 40%" type="number" step="1" value="10"></p>
+									</div>
+								</div>
                             </div>
                         <div class="col-sm-12">
                             <label style="vertical-align: top;"> Protein sequence (max length: 2000 aa): </label>
@@ -56,4 +81,26 @@
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script>
+
+	// Change in Protein Layout
+	$("#motifname").change(function () {
+		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
+        var domainname = $(this).val();
+
+        // Load Domain Group rank1
+        $.ajax({
+			url: urldomaingroupsrank1,
+			data: {
+				'domainname': domainname
+			},
+			success: function (data) {
+				 $("#domaingroups").html(data);	 // Update rank1
+			}
+		});
+    })
+
+</script>
+{% endblock javascripts %}

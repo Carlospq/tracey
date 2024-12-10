@@ -1,4 +1,4 @@
 <option value=""> </option>
 {% for domaingroup in domaingroups_rank_list %}
-<option value="{{ domaingroup }}" {% if domaingroup == domaingroup_rank %} selected {% endif %}>{{ domaingroup }}</option>
+	<option value="{{ domaingroup }}" {% if domaingroup == domaingroup_rank %} selected {% endif %}>{{ domaingroup }}</option>
 {% endfor %}

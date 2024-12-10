@@ -100,193 +100,198 @@
 </script>
 
 
-<form method='post' action='' name="motifForm" id="motifForm">
+<form method='post' action='' name="motifForm" id="motifForm"
+data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
 
     {% csrf_token %}
     <!-- Sequence fields from InsertSequence form model -->
     <!-- Row 1 -->
     <div class="row mb-4">
-            <div class="col-lg-6 col-sm-6">
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
-                                    <td class="tdquestion">
-                                            <!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
-                                            <a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue">
-                                                <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr>
-                                            </a>
-                                    </td>
-                                    <td class="tdfield">
-                                            {{ form.sequenceshortname }}
-                                            {% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
-                                    </td>
-                                   </tr>
-                                   {% if suggestedNames %}
-                                   <tr>
-                                     <td class="tdlabel">Suggested Names:</td>
-                                     <td class="tdquestion"><abbr data-toggle="tooltip" title="Suggested names based on BLAST against TRACEY sequences" style='color: blue; text-align: right'> ? </abbr></td>
-                                     <td class="tdfield">{{ suggestedNames }}</td>
-                                   </tr>
-                                   {% endif %}
-                             </table>
-                    </div>
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.aliases.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.aliases.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            {{ form.aliases }}
-                                            {% for error in form.errors.aliases %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.foreignannotation.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.foreignannotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            {{ form.foreignannotation }}
-                                            {% for error in form.errors.foreignannotation %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-            </div>
-            <div class="col-lg-6 col-sm-6 mb-1" style="display: inline">
-                    <div class="row mb-1" style="height: 100%;">
-                            <table><tr>
-                                    <td class="tdlabel" style="padding-left: 25px;">{{ form.sequence.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <div class="fieldWrapper" id="sequence">{{ form.sequence }}</div>
-                                            {% for error in form.errors.sequence %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                            <table><tr>
-                                    <td class="tdlabel" style="padding-left: 25px; padding-right: 15px;"><input type="button" onclick="suggestNames()" value="Suggested names" style="font-size: 14px; white-space: normal;"></td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="Return suggested names based on sequence alignment against tracey sequences. It can take several minutes for very long sequences." style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <textarea id="suggestedNames" style="line-height: 31px; width: 100%; height: 62px; resize: none; overflow-y: auto;" disabled></textarea>
-                                            {% for error in form.errors.sequence %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-            </div>
-    </div>
+		<div class="col-lg-6 col-sm-6">
+			<div class="row mb-1">
+				<table>
+					<tr>
+						<td class="tdlabel">{{ form.sequenceshortname.label_tag }}</td>
+						<td class="tdquestion">
+							<!-- <abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr> -->
+							<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue">
+								<abbr data-toggle="tooltip" title="{{ form.sequenceshortname.help_text }}" style='color: blue; text-align: right'> ? </abbr>
+							</a>
+						</td>
+						<td class="tdfield">
+							{{ form.sequenceshortname }}
+							{% for error in form.errors.sequenceshortname %}<p class="perror"><br>{{ error }}</p>{% endfor %}
+						</td>
+					</tr>
+					{% if suggestedNames %}
+					<tr>
+						<td class="tdlabel">Suggested Names:</td>
+						<td class="tdquestion"><abbr data-toggle="tooltip" title="Suggested names based on BLAST against TRACEY sequences" style='color: blue; text-align: right'> ? </abbr></td>
+						<td class="tdfield">{{ suggestedNames }}</td>
+					</tr>
+					{% endif %}
+				</table>
+			</div>
+
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.aliases.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.aliases.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						{{ form.aliases }}
+						{% for error in form.errors.aliases %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.foreignannotation.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.foreignannotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						{{ form.foreignannotation }}
+						{% for error in form.errors.foreignannotation %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+		</div>
+
+	    <div class="col-lg-6 col-sm-6 mb-1" style="display: inline">
+			<div class="row mb-1" style="height: 100%;">
+				<table><tr>
+					<td class="tdlabel" style="padding-left: 25px;">{{ form.sequence.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequence.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div class="fieldWrapper" id="sequence">{{ form.sequence }}</div>
+						{% for error in form.errors.sequence %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+				<table><tr>
+					<td class="tdlabel" style="padding-left: 25px; padding-right: 15px;"><input type="button" onclick="suggestNames()" value="Suggested names" style="font-size: 14px; white-space: normal;"></td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="Return suggested names based on sequence alignment against tracey sequences. It can take several minutes for very long sequences." style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<textarea id="suggestedNames" style="line-height: 31px; width: 100%; height: 62px; resize: none; overflow-y: auto;" disabled></textarea>
+						{% for error in form.errors.sequence %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+		</div>
+	</div>
 
     <!-- Row 2 -->
     <div class="row mb-4">
-            <div class="col-lg-6 col-sm-6">
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.taxonomy.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.taxonomy.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                        <div id="taxonomy_field" hx-select="#taxonomy_field" hx-trigger="blur from:find input" hx-target="#taxonomy_field"
-                                             hx-post={% if 'query-verify' in segment %}
-                                                         "{% url 'query-verify' sequence_id=sequence_id %}"
-                                                     {% else %}
-                                                         "{% url 'query-insert' %}"
-                                                     {% endif %}>
-                                            {{ form.taxonomy }}
-                                            {% for error in form.errors.taxonomy %}<p class="perror">{{ error }}</p>{% endfor %}
-                                        </div>
-                                    </td>
-                            </tr></table>
-                    </div>
-                    <div class="row mb-1">
-                                    <table><tr>
-                                            <td class="tdlabel">{{ form.sourcedatabase.label_tag }}</td>
-                                            <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sourcedatabase.help_text }}"> ? </abbr></td>
-                                            <td class="tdfield">
-                                                    {{ form.sourcedatabase }}
-                                                    {% for error in form.errors.sourcedatabase %}<p class="perror">{{ error }}</p>{% endfor %}
-                                            </td>
-                                    </tr></table>
-                                </div>
-                    <div class="row mb-1">
-                        <table>
-                            <tr>
-                                <td class="tdlabel">{{ form.dbxref.label_tag }}</td>
-                                <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.dbxref.help_text }}"> ? </abbr></td>
-                                <td class="tdfield">
-                                        {{ form.dbxref }}
-                                        {% for error in form.errors.dbxref %}<p class="perror">{{ error }}</p>{% endfor %}
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.gene.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.gene.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            {{ form.gene }}
-                                            {% for error in form.errors.gene %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-            </div>
-            <div class="col-lg-6 col-sm-6">
-                    <div class="row mb-1" style="height: 100%">
-                            <table><tr>
-                                    <td class="tdlabel" style="padding-left: 25px;">{{ form.annotation.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.annotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <div class="fieldWrapper">{{ form.annotation }}</div>
-                                            {% for error in form.errors.annotation %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-            </div>
-    </div>
+		<div class="col-lg-6 col-sm-6">
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.taxonomy.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.taxonomy.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div id="taxonomy_field" hx-select="#taxonomy_field" hx-trigger="blur from:find input" hx-target="#taxonomy_field"
+							 hx-post={% if 'query-verify' in segment %}
+										 "{% url 'query-verify' sequence_id=sequence_id %}"
+									 {% else %}
+										 "{% url 'query-insert' %}"
+									 {% endif %}>
+							{{ form.taxonomy }}
+							{% for error in form.errors.taxonomy %}<p class="perror">{{ error }}</p>{% endfor %}
+						</div>
+					</td>
+				</tr></table>
+			</div>
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.sourcedatabase.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sourcedatabase.help_text }}"> ? </abbr></td>
+					<td class="tdfield">
+						{{ form.sourcedatabase }}
+						{% for error in form.errors.sourcedatabase %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+			<div class="row mb-1">
+				<table>
+					<tr>
+						<td class="tdlabel">{{ form.dbxref.label_tag }}</td>
+						<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.dbxref.help_text }}"> ? </abbr></td>
+						<td class="tdfield">
+							{{ form.dbxref }}
+							{% for error in form.errors.dbxref %}<p class="perror">{{ error }}</p>{% endfor %}
+						</td>
+					</tr>
+				</table>
+			</div>
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.gene.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.gene.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						{{ form.gene }}
+						{% for error in form.errors.gene %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+		</div>
+		<div class="col-lg-6 col-sm-6">
+			<div class="row mb-1" style="height: 100%">
+				<table><tr>
+					<td class="tdlabel" style="padding-left: 25px;">{{ form.annotation.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.annotation.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div class="fieldWrapper">{{ form.annotation }}</div>
+						{% for error in form.errors.annotation %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+		</div>
+	</div>
 
     <!-- Row 3 -->
     <div class="row mb-4">
-            <div class="col-lg-6 col-sm-6">
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.sequencetype.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencetype.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <div class="fieldWrapper">{{ form.sequencetype }}</div>
-                                            {% for error in form.errors.sequencetype %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.sequencestatus.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencestatus.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <div class="fieldWrapper">{{ form.sequencestatus }}</div>
-                                            {% for error in form.errors.sequencestatus %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-                    <div class="row mb-1">
-                            <table><tr>
-                                    <td class="tdlabel">{{ form.private.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.private.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <div class="fieldWrapper">{{ form.private }}</div>
-                                            {% for error in form.errors.private %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-            </div>
-            <div class="col-lg-6 col-sm-6">
-                    <div class="row mb-1" style="height: 100%">
-                            <table><tr>
-                                    <td class="tdlabel" style="padding-left: 25px;">{{ form.sequencecomments.label_tag }}</td>
-                                    <td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencecomments.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
-                                    <td class="tdfield">
-                                            <div class="fieldWrapper">{{ form.sequencecomments }}</div>
-                                            {% for error in form.errors.sequencecomments %}<p class="perror">{{ error }}</p>{% endfor %}
-                                    </td>
-                            </tr></table>
-                    </div>
-            </div>
-    </div>
+		<div class="col-lg-6 col-sm-6">
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.sequencetype.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencetype.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div class="fieldWrapper">{{ form.sequencetype }}</div>
+						{% for error in form.errors.sequencetype %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.sequencestatus.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencestatus.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div class="fieldWrapper">{{ form.sequencestatus }}</div>
+						{% for error in form.errors.sequencestatus %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+			<div class="row mb-1">
+				<table><tr>
+					<td class="tdlabel">{{ form.private.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.private.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div class="fieldWrapper">{{ form.private }}</div>
+						{% for error in form.errors.private %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+		</div>
+		<div class="col-lg-6 col-sm-6">
+			<div class="row mb-1" style="height: 100%">
+				<table><tr>
+					<td class="tdlabel" style="padding-left: 25px;">{{ form.sequencecomments.label_tag }}</td>
+					<td class="tdquestion"><abbr data-toggle="tooltip" title="{{ form.sequencecomments.help_text }}" style='color: blue; text-align: right'> ? </abbr></td>
+					<td class="tdfield">
+						<div class="fieldWrapper">{{ form.sequencecomments }}</div>
+						{% for error in form.errors.sequencecomments %}<p class="perror">{{ error }}</p>{% endfor %}
+					</td>
+				</tr></table>
+			</div>
+		</div>
+	</div>
+
     <!-- Row 4 -->
     <div class="row mb-4">
 		<div class="col-lg-12 col-sm-12">
@@ -322,28 +327,28 @@
 				</div>
 				{% endif %}
 			</div>
-        {% if 'query-verify' in segment %}
-        <hr>
-        <div class="row" style="display: flex; align-items: center; margin-top: 15px;">
-            <table>
-                <tr>
-                    <td class="tdlabel" style="width: 5.5%; color: black;">BLAST sequence:</td>
-                    <td class="tdfield" style="width: 10%;">TRACEY
-                        <a href="{% url 'query-verify-blast' db='TRACEYvs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
-                        <a href="{% url 'query-verify-blast' db='TRACEYus' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
-                        <a href="{% url 'query-verify-blast' db='TRACEYas' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
-                    </td>
-                    <td class="tdfield" style="width: 10%;"><a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a></td>
-                </tr>
-            </table>
+			{% if 'query-verify' in segment %}
+			<hr>
+			<div class="row" style="display: flex; align-items: center; margin-top: 15px;">
+				<table>
+					<tr>
+						<td class="tdlabel" style="width: 5.5%; color: black;">BLAST sequence:</td>
+						<td class="tdfield" style="width: 10%;">TRACEY
+							<a href="{% url 'query-verify-blast' db='TRACEYvs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
+							<a href="{% url 'query-verify-blast' db='TRACEYus' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
+							<a href="{% url 'query-verify-blast' db='TRACEYas' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
+						</td>
+						<td class="tdfield" style="width: 10%;"><a href="{% url 'query-verify-blast' db='NCBIs' query_id=sequence.sequence_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a></td>
+					</tr>
+				</table>
+			</div>
+			{% endif %}
         </div>
-        {% endif %}
-        </div>
-</div>
+	</div>
 
     <hr>
     <!-- Submit buttons for SequenceForm -->
-    <div class="mb-1" style="width: 100%; text-align: center;">
+    <div class="mb-4" style="width: 100%; text-align: center;">
         <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="margin-left: 50px;">
         <a href="" style="padding: 15px;"> <img src="" width="5%"> </a>
         <input type="submit" value="Submit" style="margin-right: 50px;">
@@ -355,30 +360,49 @@
 
     {% if 'query-verify' in segment %}
 
+	<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem; border-width: 0"></div>
+	<div style="z-index: -1; background-color: #F2F4F6; height: 40px; margin-left: -1.5rem; margin-right: -1.5rem; margin-top: -10px; margin-bottom: -10px;"></div>
+	<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem"></div>
+
 	<!-- Scan sequence against HHM models -->
-	<div class="row mb-4 mt-6">
-		<table>
-			<tr>
-				<td class="tdlabel" style="width: 15%; color: black; padding-left: 15px;">Scan sequence against HMM models:
-					<abbr data-toggle="tooltip" title="Scan sequence against selected motifs. Hits will be added to Not verify motif list" style='color: blue; text-align: right'> ? </abbr>
-				</td>
-				<td class="tdfield" style="padding-left: 15px;">
-					<select name="domain" id="domain">
+	<div class="row mb-4" style="object-fit: contain; margin-top: 5px;">
+		<p>Scan sequence against HMM models:<abbr data-toggle="tooltip" title="Scan sequence against selected motifs. Hits will be added to Not verify motif list" style='color: blue; text-align: right'> ? </abbr></p>
+		<table style="width: 450px;">
+			<tr style="margin-bottom: 5px;">
+				<td style="width: 50%; padding-left: 50px;"> Protein Domain:</td>
+				<td style="width: 50%; padding-left: 25px;">
+					<select name="domain" id="domain" style="width: 100px;">
+						<option value="" selected></option>
 						<option value="all">All</option>
 						{% for val in domainsList %}
-							<option value= "{{ val }}"> {{ val }} </option>
+							<option value= "{{ val }}" {% if val == domain %} selected {% endif %}> {{ val }} </option>
 						{% endfor %}
 					</select>
 				</td>
 			</tr>
 			<tr>
-				<td class="tdlabel" style="width: 15%; color: black; padding-left: 15px;"></td>
-				<td style="padding-left: 15px;">
-					<input type="submit" name="scan" value="Scan">
+				<td style="width: 50%; padding-left: 50px;"> Domain group:</td>
+				<td style="width: 50%; padding-left: 25px;">
+					<select name="domaingroups" id="domaingroups" style="width: 100px;">
+						<option value="" selected></option>
+						<option value="all">All</option>
+						{% for val in domaingroupList %}
+							<option value= "{{ val }}" {% if domaingroups %} selected {% endif %}> {{ val }} </option>
+						{% endfor %}
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<td style="width: 50%; padding-left: 50px;"> E-value cutoff:</td>
+				<td style="width: 50%; padding-left: 25px;">
+					1E-<input name="evalcutoff" id="evalcutoff" style="width: 75px" type="number" step="1" value={% if evalcutoff %} {{ evalcutoff }} {% else %} '10' {% endif %}>
 				</td>
 			</tr>
 		</table>
+		{% if scanerror %} <p style="padding-top: 5px; margin-bottom: 5px; color: red">{{ scanerror }}</p> {% endif %}
 	</div>
+	<input type="submit" name="scan" value="Scan" style="width: 50px; margin-bottom: 15px">
+	<hr>
 
     <!-- Verifymotifs / Motifs -->
     <div class="row mb-4 mt-4">
@@ -412,10 +436,10 @@
                                     <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
                                         <table class="detailTable">
                                             <tr>
-                                                <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+                                                <td class="td-data"><b>Domain: </b> {{ m.domaingroup.domain.domainname }} </td>
                                                 <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
-                                                <td class="td-data"><b>Hmm-Model: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>
-                                                <td class="td-data"><b>Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
+                                                <!--<td class="td-data"><b>Domain Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>-->
+                                                <td class="td-data"><b>Hmm-Model/Domaingroup: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
                                                 <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ verifymotifs|get_item:m|get_item:'length' }})</td>
                                                 <td class="td-data"><b>Functional Name: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
                                             </tr>
@@ -535,10 +559,10 @@
                                     <div class="row mb-1" style="padding: 10px 15px 0px 15px;">
                                         <table class="detailTable">
                                             <tr>
-                                                <td class="td-data"><b>Motif: </b> {{ m.motifname}} </td>
+                                                <td class="td-data"><b>Domain: </b> {{ m.domaingroup.domain.domainname }} </td>
                                                 <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
-                                                <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>
-                                                <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
+                                                <!--<td class="td-data"><b>Domain Group: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>-->
+                                                <td class="td-data"><b>Hmm-Model/Domaingroup: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
                                                 <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length' }})</td>
                                                 <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
                                             </tr>
@@ -639,3 +663,25 @@
     {% endif %}
 
 </form>
+
+<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script>
+
+	// Change in Protein Layout
+	$("#domain").change(function () {
+		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
+        var domainname = $(this).val();
+
+        // Load Domain Group rank1
+        $.ajax({
+			url: urldomaingroupsrank1,
+			data: {
+				'domainname': domainname
+			},
+			success: function (data) {
+				 $("#domaingroups").html(data);	 // Update rank1
+			}
+		});
+    })
+
+</script>

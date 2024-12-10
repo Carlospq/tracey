@@ -10,3 +10,7 @@ def get_item(dictionary, key):
 def splitAlignment(value, key):
     value = [ [y for y in x] for x in str(value).split("\n")]
     return value
+
+@register.filter
+def index(indexable, i):
+    return indexable[i]
