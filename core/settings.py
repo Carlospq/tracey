@@ -61,6 +61,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 20000
 INSTALLED_APPS = [
     'apps.config.AppsConfig',
     'captcha',
+    'django_extensions',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
