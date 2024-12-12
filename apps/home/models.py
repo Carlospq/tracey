@@ -188,6 +188,9 @@ class Domaingroups(models.Model):
         managed = False
         db_table = 'domaingroups'
 
+    def __str__(self):
+        return self.domaingroupname
+
 
 class Domains(models.Model):
     domain_id = models.AutoField(primary_key=True)
@@ -310,6 +313,9 @@ class Motifs(models.Model):
         managed = False
         db_table = 'motifs'
 
+    def __str__(self):
+        return self.motifname
+
 
 class NcbiTaxonomy(models.Model):
     rank = models.TextField(db_collation='latin1_swedish_ci')
@@ -397,6 +403,9 @@ class Proteinlayoutgroups(models.Model):
         managed = False
         db_table = 'proteinlayoutgroups'
 
+    def __str__(self):
+        return self.proteinlayoutgroupname
+
 
 class Proteinlayouts(models.Model):
     proteinlayout_id = models.AutoField(db_column='proteinLayout_id', primary_key=True)  # Field name made lowercase.
@@ -408,6 +417,9 @@ class Proteinlayouts(models.Model):
     class Meta:
         managed = False
         db_table = 'proteinlayouts'
+
+    def __str__(self):
+        return self.proteinlayoutname
 
 
 class Secondarydomainstructures(models.Model):
@@ -625,3 +637,6 @@ class Verifymotifs(models.Model):
     class Meta:
         managed = False
         db_table = 'verifymotifs'
+
+    def __str__(self):
+        return self.motifname
