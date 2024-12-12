@@ -111,10 +111,10 @@
 						</tr>
 					</table>
 				</div>
-              <div class="row mb-3">
-                  <h4> Motif Data </h4>
-                  <hr>
-              </div>
+				<div class="row mb-3">
+					<h4> Motif Data </h4>
+					<hr>
+				</div>
 
 				{% for m in motifs %}
 				<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
@@ -126,79 +126,72 @@
 								<!-- <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td> -->
 								<!-- <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td> -->
 								<td class="td-data" style="width: auto"><b>Hmm-Model/Domaingroup: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
-								<td class="td-data" style="width: auto"><b>Position: </b>{{ m.startposition|add:"1" }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length'|add:"-1" }})</td>
+								<!--<td class="td-data" style="width: auto"><b>Position: </b>{{ m.startposition|add:"1" }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length'|add:"-1" }})</td>-->
+								<td class="td-data" style="width: auto"><b>Position: </b>{{ m.startposition|add:"1" }}-{{  motifs|get_item:m|get_item:'stopposition' }} (length: {{ motifs|get_item:m|get_item:'length' }})
 								<td class="td-data" style="width: auto"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
 							</tr>
 						</table>
 						<hr>
 					</div>
-				<div class="row mb-1" style="padding: 0px 15px 0px 15px;">
-                  <table class="detailTable" style="table-layout: fixed;">
-                      <tr>
-                          <td class="td-header"><b></b></td>
-                          <td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
-                      </tr>
-                      <tr>
-                          <td class="td-header"><b>Sequence with motif: </b></td>
-                          <td class="td-data">
-                              <div class="mt-2 mb-3" style="overflow-x:auto;">
-                                  <table style="font-family: monospace; width: 100%; text-align: justify;">
-                                      <tr><td>
-                                      {% for leter in sequence.sequence %}
-                                          <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition|add:"1" and forloop.counter <= m.stopposition %} red {% endif %}; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</a>
-                                      {% endfor %}
-                                      </td></tr>
-                                  </table>
-                              </div>
-                          </td>
-                      </tr>
-                  </table>
-              </div>
-              <div class="row mb-3" style="padding: 0px 15px 0px 15px;">
-                  <table class="detailTable" style="table-layout: fixed;">
-                      <tr>
-                          <td class="td-header" style="table-layout: fixed;">
-                              <table style="table-layout: fixed; width:100%;">
-                                  <tr><td><b>Hmm-Consensus: </b></td></tr>
-                                  <tr><td><b>Similarity: </b></td></tr>
-                                  <tr><td><b>Found Motif: </b></td></tr>
-                              </table>
-                          </td>
-
-                          <td class="td-data" style="table-layout: fixed;">
-                              <div style="overflow-x:auto;">
-                                  <table style="width:100%;">
-                                    <tr>
-                                        {% for leter in motifs|get_item:m|get_item:'consensus' %}
-                                            <td style="text-align: left; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                    <tr>
-                                        {% for leter in motifs|get_item:m|get_item:'similarity' %}
-                                            <td style="text-align: justify; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                    <tr>
-                                        {% for leter in motifs|get_item:m|get_item:'motif' %}
-                                            <td style="text-align: justify; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                  </table>
-                              </div>
-                          </td>
-                      </tr>
-                  </table>
-              </div>
-              </div>
-              {% endfor %}
+					<div class="row mb-1" style="padding: 0px 15px 0px 15px;">
+						<table class="detailTable" style="table-layout: fixed;">
+							<tr>
+								<td class="td-header"><b></b></td>
+								<td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+							</tr>
+							<tr>
+								<td class="td-header"><b>Sequence with motif: </b></td>
+								<td class="td-data">
+									<div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
+										{% with motifs|get_item:m|get_item:'stopposition' as stopposition %}
+											{% for letter in sequence.sequence %}{% if forloop.counter >= m.startposition|add:1 and forloop.counter <= stopposition %}<span style=" color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
+										{% endwith %}
+									</div>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+						<table class="detailTable" style="table-layout: fixed;">
+							<tr>
+								<td class="td-header" style="table-layout: fixed;">
+									<table style="table-layout: fixed; width:100%;">
+										<tr><td><b>Hmm-Consensus: </b></td></tr>
+										<tr><td><b>Similarity: </b></td></tr>
+										<tr><td><b>Found Motif: </b></td></tr>
+									</table>
+								</td>
+								<td class="td-data" style="table-layout: fixed;">
+									<div style="overflow-x:auto;">
+										<table style="width:100%;">
+											<tr>
+												{% for leter in motifs|get_item:m|get_item:'consensus' %}
+													<td style="text-align: left; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
+												{% endfor %}
+											</tr>
+											<tr>
+												{% for leter in motifs|get_item:m|get_item:'similarity' %}
+													<td style="text-align: justify; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
+												{% endfor %}
+											</tr>
+											<tr>
+												{% for leter in motifs|get_item:m|get_item:'motif' %}
+													<td style="text-align: justify; font-size: 18px; font-family: Arial, sans-serif;">{{ leter }}</td>
+												{% endfor %}
+											</tr>
+										</table>
+									</div>
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+				{% endfor %}
 
             </div>
         </div>
     </div>
 </div>
-
-
-
 
 {% endblock content %}
 

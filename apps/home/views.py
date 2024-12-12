@@ -527,9 +527,16 @@ def QuerySequencesFastaFormat(request):
 			motifs_seqs = {}
 			for seq in sequences:
 				for m in seq.motifs_set.all():
-					s = seq.sequence[[0 if m.startposition == 0 else m.startposition-1][0]:m.stopposition]
+
+					mdata = {}
+					for x in ET.fromstring(m.asciioutput):
+						mdata[x.tag] = x.text
+
+					# s = seq.sequence[[0 if m.startposition == 0 else m.startposition-1][0]:m.stopposition]
+					s = mdata['motif'].upper().replace("-", "").strip()
 					name = seq.sequenceshortname+"|"+"_".join([m.domaingroup.domain.domainname, m.domaingroup.domaingroupname])
 					motifs_seqs[name] = s
+
 			return render(request, 'home/query-sequences-fasta.html', {'motifs_seqs': motifs_seqs})
 
 	elif 'multialignment' in request.POST or 'download_multialignment' in request.POST:
@@ -667,7 +674,9 @@ def QuerySequencesDetails(request, sequence_id):
 		for x in data:
 			context["motifs"][m][x.tag] = x.text
 		context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-		context["motifs"][m]["length"] = m.stopposition - m.startposition + 1
+		# context["motifs"][m]["length"] = m.stopposition - m.startposition + 1
+		context["motifs"][m]["stopposition"] = m.startposition + len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
+		context["motifs"][m]["length"] = len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
 		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
 
 	# context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
@@ -808,9 +817,12 @@ def motifScan(sequence, motifname, domaingroup="", evalcutoff=1e-10):
 					dg_parent = Domaingroups.objects.get(domaingroup_id = dg.domaingroupparent_id).domaingroupname
 				x = {'evalue': format(d.pvalue, '.1E'),
 					 'pvalue': d.pvalue,
-					 'env_from': d.env_from,
-					 'env_to': d.env_to,
-					 'length': d.env_to - d.env_from + 1,
+					 # 'env_from': d.env_from,
+					 # 'env_to': d.env_to,
+					 # 'length': d.env_to - d.env_from,
+					 'env_from': d.alignment.target_from,
+					 'env_to': d.alignment.target_to,
+					 'length': d.alignment.target_to - d.alignment.target_from,
 					 'alignment': d.alignment,
 					 'dg': dg.domaingroupname,
 					 'dg_parent': dg_parent,

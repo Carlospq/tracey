@@ -14,3 +14,10 @@ def splitAlignment(value, key):
 @register.filter
 def index(indexable, i):
     return indexable[i]
+
+
+@register.filter
+def split_str(splitable, positions):
+    print(positions)
+    start, stop = [int(x) for x in positions.split(",")]
+    return splitable[start:stop]
