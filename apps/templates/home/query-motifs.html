@@ -23,7 +23,8 @@
                     </div>
 
                     <form method='post' action='' name="motifForm" id="motifForm"
-					data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
+					data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+					data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                     {% csrf_token %}
 
                     <div class="row mb-4">
@@ -34,9 +35,9 @@
 								<!-- domain name -->
 								<div class="row" style="width: 75%">
 									<div style="width: 50%">Domain: </div>
-									<select style="width: 50%" name="motifname" id="motifname">
+									<select style="width: 50%" name="domain" id="domain">
 										<option value= "all" selected>All</option>
-										{% for val in motifs %}
+										{% for val in domainList %}
 											<option value= "{{ val }}"> {{ val }} </option>
 										{% endfor %}
 									</select>
@@ -44,12 +45,15 @@
 								<!-- domain groups -->
 								<div class="row" style="width: 75%; margin-top: 10px;">
 									<div style="width: 50%">Domain Group: </div>
-									<select style="width: 50%;" name="domaingroups" id="domaingroups" style="width: 100px;">
+									<select style="width: 50%;" name="domaingroup" id="domaingroup" style="width: 100px;">
 										<option value="" selected></option>
-										<option value="all">All</option>
-										{% for val in domaingroupList %}
-											<option value= "{{ val }}"> {{ val }} </option>
-										{% endfor %}
+									</select>
+								</div>
+								<!-- domain subgroups -->
+								<div class="row" style="width: 75%; margin-top: 10px;">
+									<div style="width: 50%">Domain Subgroup: </div>
+									<select style="width: 50%;" name="domainsubgroup" id="domainsubgroup" style="width: 100px;">
+										<option value="" selected></option>
 									</select>
 								</div>
 								<!-- E-value cutoff -->
@@ -85,19 +89,47 @@
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
 
-	// Change in Protein Layout
-	$("#motifname").change(function () {
+	// Change in Domain
+	$("#domain").change(function () {
 		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
-        var domainname = $(this).val();
+        var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var domain = $(this).val();
 
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank1,
 			data: {
-				'domainname': domainname
+				'domainname': domain
 			},
 			success: function (data) {
-				 $("#domaingroups").html(data);	 // Update rank1
+                $("#domaingroup").html(data);	// Update rank1
+			}
+		});
+        // Load Domain Group rank1
+        $.ajax({
+			url: urldomaingroupsrank2,
+			data: {
+				'domaingroup_rank': ''
+			},
+			success: function (data) {
+				$("#domainsubgroup").html(data);	// Update rank2 blank
+			}
+		});
+    })
+
+	// Change in Domain
+	$("#domaingroup").change(function () {
+		var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var domaingroup = $(this).val();
+
+        // Load Domain Group rank1
+        $.ajax({
+			url: urldomaingroupsrank2,
+			data: {
+				'domaingroup_rank': domaingroup
+			},
+			success: function (data) {
+				 $("#domainsubgroup").html(data);	 // Update rank2
 			}
 		});
     })

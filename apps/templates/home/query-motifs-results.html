@@ -46,8 +46,9 @@
 
                     <div class="row mb-0">
                         <div class="col-sm-12 mb-3" style="padding-top: 10px; display: inline-block">
-                            <form method='post' action='' name="motifForm" id="motifForm"
-							data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
+							<form method='post' action='' name="motifForm" id="motifForm"
+								  data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+								  data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                             {% csrf_token %}
 
 							<div class="row mb-3" style="width: 100%">
@@ -60,21 +61,30 @@
 										<!-- domain name -->
 										<div class="row" style="width: 75%">
 											<div style="width: 50%">Domain: </div>
-											<select style="width: 50%" name="motifname" id="motifname">
+											<select style="width: 50%" name="domain" id="domain">
 												<option value= "all" selected>All</option>
-												{% for val in motifs %}
-													<option value= "{{ val }}" {% if val == motifname|index:0 %} selected {% endif %}> {{ val }} </option>
+												{% for val in domainList %}
+													<option value= "{{ val }}" {% if val == domain.0 %} selected {% endif %}> {{ val }} </option>
 												{% endfor %}
 											</select>
 										</div>
 										<!-- domain groups -->
 										<div class="row" style="width: 75%; margin-top: 10px;">
 											<div style="width: 50%">Domain Group: </div>
-											<select style="width: 50%;" name="domaingroups" id="domaingroups" style="width: 100px;">
+											<select style="width: 50%;" name="domaingroup" id="domaingroup" style="width: 100px;">
 												<option value="" selected></option>
-												<option value="all">All</option>
 												{% for val in domaingroupList %}
-													<option value= "{{ val }}" {% if val == domaingroups|index:0 %} selected {% endif %}> {{ val }} </option>
+													<option value={{ val }} {%  if val == domaingroup.0 %} selected {% endif %}>{{ val }}</option>
+												{% endfor %}
+											</select>
+										</div>
+										<!-- domain subgroups -->
+										<div class="row" style="width: 75%; margin-top: 10px;">
+											<div style="width: 50%">Domain Subgroup: </div>
+											<select style="width: 50%;" name="domainsubgroup" id="domainsubgroup" style="width: 100px;">
+												<option value="" selected></option>
+												{% for val in domainsubgroupList %}
+													<option value={{ val }} {%  if val == domainsubgroup.0 %} selected {% endif %}>{{ val }}</option>
 												{% endfor %}
 											</select>
 										</div>
@@ -186,8 +196,6 @@
 									<hr>
 									<table style="width: 100%; height: 200px">
 										<tr>
-											<!-- <td style="width:10%; vertical-align: center;"><b>Motif: {{ h }}</b></td> -->
-											<!-- <td style="width:10%; vertical-align: center;"><b> Domain:</b> {{ hits_d|get_item:h|get_item:'domainname' }}<br /><b>Domain group:</b> {{ h }}</td> -->
 											<td style="width:100%;"><img src="data:image/png;base64,{{ hits_d|get_item:h|get_item:'plot' }}" alt="" style="width: 90%; display: block; margin-left: auto; margin-right: auto;"></td>
 										</tr>
 									</table>
@@ -197,13 +205,9 @@
                                     <div class="mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 15px 0px 15px;">
                                         <table class="detailTable" style="table-layout: fixed;">
                                             <tr>
-                                                <!-- <td class="td-data"><b>Motif: </b>{{ d.dg }}</td> -->
 												<td class="td-header"><b></b></td>
                                                 <td class="td-data" style="width: auto;"><b>E-value: </b> <a style="pointer-events: none; color: {% if d.pvalue < 0.05 %}red{% endif %}">{{ d.evalue }}</a></td>
                                                 <td class="td-data" style="width: auto;"><b>Motif position: </b>{{ aln.target_from }} - {{ aln.target_to }} (length: {{ d.length }})</td>
-                                                <!-- <td class="td-data"><b>Domain: </b>{{ d.domain }}</td> -->
-                                                <!-- <td class="td-data"><b>Domain group: </b>{{ d.dg_parent }}</td> -->
-												<!-- <td class="td-data"><b>Domain group: </b>{{ d.dg }}</td> -->
                                             </tr>
                                         </table>
                                         <hr>
@@ -304,27 +308,31 @@
 <script>
 
 	document.addEventListener('DOMContentLoaded', () => {
-        loadDomainGroups();
+		loadDomainGroups();
 	});
 
 	function loadDomainGroups() {
         var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
-        var domainname = $("#motifname").val();
+        var domainname = $("#domain").val();
+        var domaingroup_rank = $("#domaingroup").val();
+
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank1,
 			data: {
-				'domainname': domainname
+				'domainname': domainname,
+				'domaingroup_rank': domaingroup_rank
 			},
 			success: function (data) {
-				 $("#domaingroups").html(data);	 // Update rank1
+				 $("#domaingroup").html(data);	 // Update rank1
 			}
 		});
     }
 
-	// Change in Protein Layout
-	$("#motifname").change(function () {
+	// Change in Domain
+	$("#domain").change(function () {
 		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
+        var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
         var domainname = $(this).val();
 
         // Load Domain Group rank1
@@ -334,7 +342,35 @@
 				'domainname': domainname
 			},
 			success: function (data) {
-				 $("#domaingroups").html(data);	 // Update rank1
+				 $("#domaingroup").html(data);	 // Update rank1
+			}
+		});
+
+        // Load Domaingroup
+        $.ajax({
+			url: urldomaingroupsrank2,
+			data: {
+				'domaingroup_rank': ''
+			},
+			success: function (data) {
+				 $("#domainsubgroup").html(data);	 // Update rank2
+			}
+		});
+    })
+
+	// Change in Domaingroup
+	$("#domaingroup").change(function () {
+        var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var domaingroup = $(this).val();
+
+        // Load Domain Group rank2
+        $.ajax({
+			url: urldomaingroupsrank2,
+			data: {
+				'domaingroup_rank': domaingroup
+			},
+			success: function (data) {
+				 $("#domainsubgroup").html(data);	 // Update rank2
 			}
 		});
     })

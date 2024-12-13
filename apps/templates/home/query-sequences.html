@@ -51,7 +51,6 @@
 								<div class="row mb-3">
 									<label style="display: inline; vertical-align: top; width: 30%" for="{{ form.proteinlayout.id_for_label }}"> Protein Layout </label>
 									<select style="width: 70%" name="proteinlayout" id="proteinlayout">
-										<option value= ""> </option>
 										{% for val in proteinLayoutsList %}
 											<option value= "{{ val }}" "{% if 'SNARE' in val %} selected {% endif %}"> {{ val }} </option>
 										{% endfor %}

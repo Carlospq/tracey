@@ -49,23 +49,24 @@ register = template.Library()
 matplotlib.use('agg')
 
 ### FUNCTIONS ###
-def get_childs(model, parent, parent_id, child_parent_id, childs=[], search_type='iexact'):
+def get_children(model, parent, parent_id, child_parent_id, children=[], search_type='iexact'):
 	variable_column = child_parent_id
 	filter = variable_column + '__' + search_type
 	cs = model.objects.none()
 	for p in parent:
+		# children.append(p) if p not in children and p.analysislevel >= 2 else None
 		if getattr(p, parent_id) == 4 and isinstance(p, Domaingroups):
 			cs = cs.union(model.objects.filter( **{ variable_column+"__icontains" : ";4" }))
 		else:
 			cs = cs.union(model.objects.filter( **{ filter: getattr(p, parent_id) }))
 	for c in cs:
-		childs.append(c)
+		children.append(c)
 		if model.objects.filter( **{ filter: getattr(c, parent_id) }):
-			get_childs(model, model.objects.filter(pk=c.pk), parent_id, child_parent_id, childs=childs)
-	return(childs)
+			get_children(model, model.objects.filter(pk=c.pk), parent_id, child_parent_id, children=children)
+	return(children)
 
 
-def get_childs_raw(model, modelname, parent, query_id, parent_id, child_parent_id):
+def get_children_raw(model, modelname, parent, query_id, parent_id, child_parent_id):
 	variable_column = child_parent_id
 	filter = variable_column + '__iexact'
 
@@ -110,7 +111,7 @@ def get_sequences(query, verify=False):
 
 		domaingroup_list = [x.replace("-","") for x in query['domaingroup']]
 		domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in = domaingroup_list)
-		domaingroups_children  = get_childs(Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", childs=[])
+		domaingroups_children = get_children(Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", children=[])
 		children_ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
 		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
 
@@ -119,7 +120,7 @@ def get_sequences(query, verify=False):
 		domainname = query['domainname'][0]
 		domaingrouprank = Domaingroups.objects.filter(domain = Domains.objects.get(domainname=domainname))
 		domaingrouprank = domaingrouprank.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
-		domaingrouprank_children = get_childs(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", childs=[])
+		domaingrouprank_children = get_children(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", children=[])
 		children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
 		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
 
@@ -144,14 +145,7 @@ def get_sequences(query, verify=False):
 
 	else:
 		domaingroups = Domaingroups.objects.all()
-	# else:
-	# 	if verify:
-	# 		domaingroups = Domaingroups.objects.all()
-	# 	else:
-	# 		context = {'error': "At least one of 'Domain name', 'Domain group' or 'Subgroup' fields is required"}
-	# 		return context
 
-	# Filter sequences using domaingroups obtained in previous step
 	motifs = Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))
 	seqs = Sequences.objects.filter(sequence_id__in = motifs.values('sequence_id'))
 
@@ -321,13 +315,7 @@ def load_domaingroups_rank1(request):
 	domainname = request.GET.get('domainname')
 	domain = Domains.objects.filter(domainname=domainname)
 	domaingroup_rank = request.GET.get('domaingroup_rank')
-
-	if domainname:
-		domainGroupNames = sorted([x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in=domain.values('domain_id')) if x.analysislevel == 2])
-	elif proteinlayout:
-		domainGroupNames = sorted( [x.domaingroupname for x in proteinlayoutToDomaingroups(proteinlayout) if x.analysislevel == 2] )
-	else:
-		domainGroupNames = sorted([ x.domaingroupname for x in Domaingroups.objects.filter(analysislevel = 2) ])
+	domainGroupNames = sorted([x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in=domain.values('domain_id')) if x.analysislevel == 2]) if domainname else []
 
 	return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames, 'domaingroup_rank': domaingroup_rank})
 
@@ -352,10 +340,10 @@ def load_domaingroups_rank2(request):
 	children_list = []
 	rank = request.GET.get('domaingroup_rank')
 	if not rank:
-		children_list = []#[ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in Domaingroups.objects.filter(analysislevel__gt = 2) ]
+		children_list = []
 	else:
-		children_list = sorted(get_childs(Domaingroups, Domaingroups.objects.filter(domaingroupname=rank), "domaingroup_id", "domaingroupparent_id", childs=children_list), key=lambda x: x.domaingroupname)
-		children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in children_list if x.analysislevel > 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
+		children_list = get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=rank), "domaingroup_id", "domaingroupparent_id", children=children_list)
+		children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in children_list if x.analysislevel >= 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
 	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
 
@@ -396,12 +384,12 @@ def QuerySequences(request):
 	form = FamilyForm
 
 	## GET QUERIES ##
-	domainsList = sorted([ x.domainname for x in Domains.objects.filter(domainname__in = ["SNARE", "Habc", "LGL"]) ])
 	proteinLayoutsList = sorted([x.proteinlayoutname for x in Proteinlayouts.objects.all()])
+	domainsList = sorted([x.domainname for x in Domains.objects.filter(domainname__in=["SNARE", "Habc", "LGL"])])
 
 	SNAREdomainID = Domains.objects.get(domainname = "SNARE").domain_id
 	SNAREdomaingroups = Domaingroups.objects.filter(domain_id = SNAREdomainID)
-	SNAREdomaingroupnames = [x.domaingroupname for x in SNAREdomaingroups if x.analysislevel == 2 ]
+	SNAREdomaingroupnames = []#[x.domaingroupname for x in SNAREdomaingroups if x.analysislevel == 2 ]
 
 	SNAREmotifs = Motifs.objects.filter(domaingroup_id__in = SNAREdomaingroups.values('domaingroup_id'))
 	shortnames = sorted(list( set([ x.sequenceshortname.split("_")[0] for x in Sequences.objects.filter(sequence_id__in = SNAREmotifs.values('sequence_id')) if x.sequenceshortname.split("_")[0] != "" ]) ))
@@ -696,13 +684,14 @@ def DetailsSequencesFastaFormat(request, sequence_id):
 def QueryMotifsView(request):
 	segment = request.path.split('/')[-1]
 	context = {"segment": segment,
-			   "motifs": sorted(list( set([ x.domainname for x in Domains.objects.all() ]+["HabcSNARE"]) ))
+			   "domainList": sorted(list( set([ x.domainname for x in Domains.objects.all() ]+["HabcSNARE"]) ))
 			  }
 
 	if request.method == "POST":
 		context['protseq'] = dict(request.POST)['protseq']
-		context['motifname'] = dict(request.POST)['motifname']
-		context['domaingroups'] = dict(request.POST)['domaingroups']
+		context['domain'] = dict(request.POST)['domain']
+		context['domaingroup'] = dict(request.POST)['domaingroup']
+		context['domainsubgroup'] = dict(request.POST)['domainsubgroup']
 		context['evalcutoff'] = [request.POST.get('evalcutoff')] if request.POST.get('evalcutoff') else ['10']
 
 		if not context['protseq'][0]:
@@ -741,7 +730,7 @@ def getMotifPlot_fromPyhammer(hit, sequence, evalcutoff=1e-10):
 	return uri
 
 
-def motifScan(sequence, motifname, domaingroup="", evalcutoff=1e-10):
+def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutoff=1e-10):
 
 	hits_d = {}
 
@@ -761,26 +750,38 @@ def motifScan(sequence, motifname, domaingroup="", evalcutoff=1e-10):
 	seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
 	# Fetch HMMs
-	M = motifname[0].upper()
-	if M == "ALL":
+	domainname = domainname[0].upper() if type(domainname)==list else domainname.upper()
+	if domainname == "ALL":
 		hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
-	elif domaingroup:
+	else:
 		hmms = []
-		domaingroup = "SNAP" if domaingroup == "SNAPbc" else domaingroup
-		hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(M)) if domaingroup in x]
+		if domainsubgroup:
+			hmmToScan = domainsubgroup
+		elif domaingroup:
+			hmmToScan = "SNAP" if domaingroup == "SNAPbc" else domaingroup
+		else:
+			hmmToScan = domainname
+		hmmNamesList = [x.domaingroupname+".hmm" for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
+		hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if x in hmmNamesList]
+
+		# domaingroup = "SNAP" if domaingroup == "SNAPbc" else domaingroup
+		# hmmToScan = domainsubgroup if domainsubgroup else domaingroup
+		# hmmNamesList = [x.domaingroupname for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
+		# hmmList = ['utils/hmmModels/%s/%s'%(domainname, domainsubgroup)] if domainsubgroup else [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if domaingroup in x]
+
 		if not hmmList:
 			hits_d['error'] = 'No HMM model found for this motif.'
 			return hits_d
 		for hmmModel in hmmList:
-			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(M, hmmModel)) as hmm_file:
+			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(domainname, hmmModel)) as hmm_file:
 				hmm = hmm_file.read()
 				hmms.append(hmm)
-	else:
-		hmms = []
-		for f in os.listdir('utils/hmmModels/%s'%(M)):
-			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(M, f)) as hmm_file:
-				hmm = hmm_file.read()
-				hmms.append(hmm)
+	# else:
+	# 	hmms = []
+	# 	for f in os.listdir('utils/hmmModels/%s'%(M)):
+	# 		with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(M, f)) as hmm_file:
+	# 			hmm = hmm_file.read()
+	# 			hmms.append(hmm)
 
 	# Convert hmms to optimized profiles -> optimizad block
 	optimized_block = pyhmmer.plan7.OptimizedProfileBlock(alphabet=alphabet)
@@ -844,10 +845,23 @@ def QueryMotifsResultsView(request):
 		context = dict(request.POST)
 	else:
 		context = dict(request.GET)
-
+	print(context)
 	segment = request.path.split('/')[-1]
 	context["segment"] = segment
-	context["motifs"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ] + ["HabcSNARE"] )))
+
+	context["domainList"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ] + ["HabcSNARE"] )))
+	context["domaingroupList"] = []
+	context["domainsubgroupList"] = []
+
+	if context['domain'][0] != "all":
+		domain = Domains.objects.filter(domainname = context['domain'][0])
+		context["domaingroupList"] = sorted([x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in=domain.values('domain_id')) if x.analysislevel == 2]) if domain else []
+
+	if 'domaingroup' in context and notEmpty(context, 'domaingroup'):
+		domaingroup = Domaingroups.objects.filter(domaingroupname = context['domaingroup'][0])[0]
+		context["domainsubgroupList"] = get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=domaingroup.domaingroupname), "domaingroup_id","domaingroupparent_id", children=[])
+		context["domainsubgroupList"] = ["-" * (int(x.analysislevel) - 2) + x.domaingroupname for x in context["domainsubgroupList"]  if x.analysislevel > 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
+
 	context["hits_d"] = {}
 	if notEmpty(context, 'protseq'):
 		if len(context['protseq'][0]) > 2000:
@@ -855,15 +869,17 @@ def QueryMotifsResultsView(request):
 		elif len(context['protseq'][0]) == 0:
 			context['error_seq'] = 'Please provide a protein sequence to analyze.'
 		else:
-			context["hits_d"] = motifScan(context["protseq"][0], context['motifname'],
-										  domaingroup=context['domaingroups'][0] if 'domaingroups' in context else '',
+			domainsubgroup = [context['domainsubgroup'][0].replace("-", "")] if 'domainsubgroup' in context else ['']
+			context["hits_d"] = motifScan(context["protseq"][0], context['domain'],
+										  domaingroup=context['domaingroup'][0],
+										  domainsubgroup=context['domainsubgroup'][0].replace("-", ""),
 										  evalcutoff=float('1e-' + context['evalcutoff'][0] if 'evalcutoff' in context else '1e-10'))
 	else:
 		context['error_seq'] = ''
 
 	if not context['hits_d']:
-		if not 'motifname' in context:
-			context['motifname'] = ['%EmptyMotifname%']
+		if not 'domain' in context:
+			context['domain'] = ['%EmptyMotifname%']
 		context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
 	elif 'error' in context['hits_d']:
 		context['error_hits'] = context['hits_d']['error']
@@ -871,13 +887,12 @@ def QueryMotifsResultsView(request):
 		# return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
 	# Predict domain if any SNARE motif is selected
-	if context['motifname'][0] in ["HabcSNARE"]:
+	if context['domain'][0] in ["HabcSNARE"]:
 		bothDomains = True
-	elif context['motifname'][0] in ["all", "Habc", "SNARE"]:
+	elif context['domain'][0] in ["all", "Habc", "SNARE"]:
 		bothDomains = False
-	if context['motifname'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
-		bypass=context['motifname'][0] if context['motifname'][0] in ["Habc", "SNARE"] else ''
-		# TODO: Change hmmmsearch using cmd to pyhmmer
+	if context['domain'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
+		bypass=context['domain'][0] if context['domain'][0] in ["Habc", "SNARE"] else ''
 		#context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
 
 	if request.method == "POST":
@@ -908,7 +923,6 @@ def staff_login_required(view_func):
 
 def saveVerifyMotifs(sequence_id, hits):
 
-	# TODO: Check if match found is already identical to a motif in the database for the same sequence
 	def countGaps(alignment):
 		gaps = []
 		count = 0
