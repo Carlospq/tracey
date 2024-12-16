@@ -3,7 +3,25 @@
 {% block title %} Query motifs {% endblock %}
 
 <!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+    .taxonomyDiv {
+        width: 100%;
+        display: block;
+    }
+	.formrow {
+		display: table;
+		width: 100%;
+		margin-bottom: 5px;
+	}
+	.formcell {
+		display: table-cell;
+		width: 50%;
+		vertical-align: top;
+		text-wrap: nowrap;
+	}
+</style>
+{% endblock stylesheets %}
 {% block content %}
 
 <div class="row mt-4">
@@ -33,33 +51,39 @@
 								<label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}"> Motifs to scan: </label>
 
 								<!-- domain name -->
-								<div class="row" style="width: 75%">
-									<div style="width: 50%">Domain: </div>
-									<select style="width: 50%" name="domain" id="domain">
-										<option value= "all" selected>All</option>
-										{% for val in domainList %}
-											<option value= "{{ val }}"> {{ val }} </option>
-										{% endfor %}
-									</select>
+								<div class="formrow">
+									<div class="formcell">Domain: </div>
+									<div class="formcell">
+										<select style="width: 100%" name="domain" id="domain">
+											<option value= "all" selected>All</option>
+											{% for val in domainList %}
+												<option value= "{{ val }}"> {{ val }} </option>
+											{% endfor %}
+										</select>
+									</div>
 								</div>
 								<!-- domain groups -->
-								<div class="row" style="width: 75%; margin-top: 10px;">
-									<div style="width: 50%">Domain Group: </div>
-									<select style="width: 50%;" name="domaingroup" id="domaingroup" style="width: 100px;">
-										<option value="" selected></option>
-									</select>
+								<div class="formrow">
+									<div class="formcell">Domain Group: </div>
+									<div class="formcell">
+										<select style="width: 100%;" name="domaingroup" id="domaingroup" style="width: 100px;">
+											<option value="" selected></option>
+										</select>
+									</div>
 								</div>
 								<!-- domain subgroups -->
-								<div class="row" style="width: 75%; margin-top: 10px;">
-									<div style="width: 50%">Domain Subgroup: </div>
-									<select style="width: 50%;" name="domainsubgroup" id="domainsubgroup" style="width: 100px;">
-										<option value="" selected></option>
-									</select>
+								<div class="formrow">
+									<div class="formcell">Domain Subgroup: </div>
+									<div class="formcell">
+										<select style="width: 100%;" name="domainsubgroup" id="domainsubgroup" style="width: 100px;">
+											<option value="" selected></option>
+										</select>
+									</div>
 								</div>
 								<!-- E-value cutoff -->
-								<div class="row" style="width: 75%; margin-top: 10px;">
-									<div style="width: 50%;"> E-value cutoff:</div>
-									<div style="width: 50%; padding: 0">
+								<div class="formrow">
+									<div class="formcell"> E-value cutoff:</div>
+									<div class="formcell">
 										<p>1E-<input name="evalcutoff" id="evalcutoff" style="width: 40%" type="number" step="1" value="10"></p>
 									</div>
 								</div>

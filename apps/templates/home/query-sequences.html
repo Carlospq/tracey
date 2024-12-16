@@ -9,6 +9,28 @@
         width: 100%;
         display: block;
     }
+	.formrow {
+		display: table;
+		width: 100%;
+	}
+	.formcell1 {
+		display: table-cell;
+		width: 25%;
+		vertical-align: top;
+		text-wrap: nowrap;
+	}
+	.formcell2 {
+		display: table-cell;
+		vertical-align: top;
+		text-align: center;
+		width: 5%;
+		color: blue;
+	}
+	.formcell3 {
+		display: table-cell;
+		vertical-align: top;
+		width: 70%;
+	}
 </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -48,43 +70,52 @@
 							<div class="col-lg-4 col-sm-4">
 
 								<!-- ProteinLayout Name -->
-								<div class="row mb-3">
-									<label style="display: inline; vertical-align: top; width: 30%" for="{{ form.proteinlayout.id_for_label }}"> Protein Layout </label>
-									<select style="width: 70%" name="proteinlayout" id="proteinlayout">
-										{% for val in proteinLayoutsList %}
-											<option value= "{{ val }}" "{% if 'SNARE' in val %} selected {% endif %}"> {{ val }} </option>
-										{% endfor %}
-									</select>
+								<div class="mb-3 formrow">
+									<div class="formcell1"><label for="{{ form.proteinlayout.id_for_label }}"> Protein Layout </label></div>
+									<div class="formcell2"></div>
+									<div class="formcell3">
+										<select style="width: 100%" name="proteinlayout" id="proteinlayout">
+											{% for val in proteinLayoutsList %}
+												<option value= "{{ val }}" "{% if 'SNARE' in val %} selected {% endif %}"> {{ val }} </option>
+											{% endfor %}
+										</select>
+									</div>
 								</div>
 
 								<!-- Domain Name -->
-								<div class="row mb-3">
-									<label style="vertical-align: middle; width: 30%" for="{{ form.domainname.id_for_label }}"> Domain Name </label>
-									<select style="width: 70%" name="domainname" id="domainname">
-										<option value= ""> </option>
-										{% for val in domainsList %}
-											<option value= "{{ val }}"> {{ val }} </option>
-										{% endfor %}
-									</select>
+								<div class="mb-3 formrow">
+									<div class="formcell1"><label for="{{ form.domainname.id_for_label }}"> Domain Name </label></div>
+									<div class="formcell2"></div>
+									<div class="formcell3">
+										<select style="width: 100%" name="domainname" id="domainname">
+											<option value= ""> </option>
+											{% for val in domainsList %}
+												<option value= "{{ val }}"> {{ val }} </option>
+											{% endfor %}
+										</select>
+									</div>
 								</div>
 
 								<!-- Domain Groups -->
-								<div class="row mb-3">
+								<div class="mb-3 formrow">
 									<!-- domainGroup_rank -->
-									<label style="vertical-align: middle; width: 25%" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
-									<a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue; width: 5%">
+									<div class="formcell1"><label for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label></div>
+									<div class="formcell2"><a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup">
 										<abbr data-toggle="tooltip" title='Click for full description' style='color: blue;'> ? </abbr>
-									</a>
-									<select style="width: 70%" name="domaingroup_rank" id="domaingroup_rank">
-										<option value= ""> </option>
-										{% for val in domaingroup_rank %}
-											<option value= "{{ val }}"> {{ val }} </option>
-										{% endfor %}
-									</select>
-									<!-- domainGroups -->
-									<div class="fieldWrapper" style="height: 14.5em; width: 100%; padding: 10px 0px 0px 12px">
-										{{ form.domaingroup }}
+									</a></div>
+									<div class="formcell3">
+										<select style="width: 100%" name="domaingroup_rank" id="domaingroup_rank">
+											<option value= ""> </option>
+											{% for val in domaingroup_rank %}
+												<option value= "{{ val }}"> {{ val }} </option>
+											{% endfor %}
+										</select>
 									</div>
+								</div>
+
+								<!-- domainGroups -->
+								<div class="fieldWrapper" style="height: 14.5em; width: 100%; padding: 0">
+									{{ form.domaingroup }}
 								</div>
 
                             </div>
@@ -93,26 +124,26 @@
 							<div class="col-lg-4 col-sm-4">
 
 								<!-- Shortname -->
-								<div class="row mb-3">
-									<label style="vertical-align: middle; width: 25%; padding-left: 30px" for="{{ form.shortname.id_for_label }}">Shortname</label>
-									<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" style="color: blue; width: 5%"> ?</a>
-									<select style="width: 70%" name="shortname" id="shortname" >
-										<option value=""> </option>
-										{% for val in shortnames %}
-											<option value= "{{ val }}"> {{ val }} </option>
-										{% endfor %}
-									</select>
+								<div class="mb-3 formrow">
+									<div class="formcell1"><label for="{{ form.shortname.id_for_label }}">Shortname</label></div>
+									<div class="formcell2"><a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup"> ?</a></div>
+									<div class="formcell3">
+										<select style="width: 100%" name="shortname" id="shortname" >
+											<option value=""> </option>
+											{% for val in shortnames %}
+												<option value= "{{ val }}"> {{ val }} </option>
+											{% endfor %}
+										</select>
+									</div>
 								</div>
 
 								<!-- Taxonomy -->
-								<div class="row mb-3">
-
-									<label style="vertical-align: middle; width: 25%; padding-left: 30px" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
-                                    <a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" style="color: blue; width: 5%">
-										<abbr data-toggle="tooltip" title='Click for full description' style='color: blue;'> ? </abbr>
-									</a>
-
-									<div class="taxonomyDiv" id="taxonomyDiv" style="display: block; width: 70%; padding: 0">
+								<div class="mb-3 formrow">
+									<div class="formcell1"><label for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label></div>
+									<div class="formcell2"><a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup">
+										<abbr data-toggle="tooltip" title='Click for full description'> ? </abbr>
+									</a></div>
+									<div class="taxonomyDiv" id="taxonomyDiv" style="display: block; width: 100%; padding: 0">
 										<select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
 											<option value=""></option>
 											{% for val in taxonomy_ranks %}
@@ -120,7 +151,6 @@
 											{% endfor %}
 										</select>
 									</div>
-
 								</div>
 
 							</div>
@@ -129,18 +159,18 @@
 							<div class="col-lg-4 col-sm-4">
 
 								<!-- Foreign annotation -->
-								<div class="row mb-3">
-									<label style="vertical-align: middle; width: 25%; padding-left: 30px" for="{{ form.foreignannotation.id_for_label }}">Foreign annotation</label>
-									<abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue; width: 5%'> ? </abbr>
-									<div class="fieldWrapper" style="width: 70%">
+								<div class="mb-3 formrow">
+									<div class="formcell1"><label for="{{ form.foreignannotation.id_for_label }}">Foreign annotation</label></div>
+									<div class="formcell2"><a><abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue; width: 5%'> ? </abbr></a></div>
+									<div class="formcell3 fieldWrapper">
 										{{ form.foreignannotation }}
 									</div>
 									{% if error %}<p style="color: red; width: 100%">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
 								</div>
 
 								<!-- Species List -->
-								<div class="row mb-3">
-									<div class="fieldWrapper" style="height: 17.8em; width: 100%; padding: 0px 12px 0px 30px">
+								<div class="mb-3 formrow">
+									<div class="fieldWrapper" style="height: 17.8em; width: 100%; padding: 0">
 										<select name="species_list" id="species_list" multiple style="width: 100%; height: 17.8em"></select>
 									</div>
 									<p style="color: red; width: 100%">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
@@ -151,9 +181,9 @@
 						</div>
 
 						<!-- Sequence Status -->
-						<div class="row mb-3" style="display: block">
-							<label style="padding: 0px 0px 0px 12px; width: 9%" for="sequencestatus"> Only active sequences</label>
-							<input style="width: 1%;" type="checkbox" id="sequencestatus" name="sequencestatus" value="1" checked>
+						<div class="mb-3" style="display: table;">
+							<div style="display: table-cell"><label style="padding: 0px 15px 0px 0px;" for="sequencestatus"> Only active sequences</label></div>
+							<div style="display: table-cell"><input type="checkbox" id="sequencestatus" name="sequencestatus" value="1" checked></div>
 						</div>
 
                         <hr>

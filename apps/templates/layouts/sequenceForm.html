@@ -101,7 +101,8 @@
 
 
 <form method='post' action='' name="motifForm" id="motifForm"
-data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
+data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
 
     {% csrf_token %}
     <!-- Sequence fields from InsertSequence form model -->
@@ -385,9 +386,19 @@ data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
 				<td style="width: 50%; padding-left: 25px;">
 					<select name="domaingroups" id="domaingroups" style="width: 100px;">
 						<option value="" selected></option>
-						<option value="all">All</option>
 						{% for val in domaingroupList %}
 							<option value= "{{ val }}" {% if domaingroups %} selected {% endif %}> {{ val }} </option>
+						{% endfor %}
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<td style="width: 50%; padding-left: 50px;"> Domain subgroup:</td>
+				<td style="width: 50%; padding-left: 25px;">
+					<select name="domainsubgroups" id="domainsubgroups" style="width: 100px;">
+						<option value="" selected></option>
+						{% for val in domainsubgroupList %}
+							<option value= "{{ val }}" {% if domainsubgroups %} selected {% endif %}> {{ val }} </option>
 						{% endfor %}
 					</select>
 				</td>
@@ -667,9 +678,10 @@ data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
 
-	// Change in Protein Layout
+	// Change in Domain
 	$("#domain").change(function () {
 		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
+        var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
         var domainname = $(this).val();
 
         // Load Domain Group rank1
@@ -682,6 +694,36 @@ data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}">
 				 $("#domaingroups").html(data);	 // Update rank1
 			}
 		});
+
+        // Load Domainsubgroup
+        $.ajax({
+			url: urldomaingroupsrank2,
+			data: {
+				'domaingroup_rank': ''
+			},
+			success: function (data) {
+				 $("#domainsubgroups").html(data);	 // Update rank2
+			}
+		});
+
+    })
+
+	// Change in Domain group
+	$("#domaingroups").change(function () {
+        var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var domaingroup_rank = $(this).val();
+
+        // Load Domainsubgroup
+        $.ajax({
+			url: urldomaingroupsrank2,
+			data: {
+				'domaingroup_rank': domaingroup_rank
+			},
+			success: function (data) {
+				 $("#domainsubgroups").html(data);	 // Update rank2
+			}
+		});
+
     })
 
 </script>

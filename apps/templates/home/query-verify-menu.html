@@ -78,6 +78,26 @@
           -webkit-animation: spin 2s linear infinite; /* Safari */
           animation: spin 2s linear infinite;
         }
+		.formrow {
+			display: table;
+			width: 100%;
+			margin-bottom: 5px;
+		}
+		.formrow select {
+			width: 100%;
+		}
+		.formcell1 {
+			display: table-cell;
+			width: 30%;
+			vertical-align: top;
+			text-wrap: nowrap;
+		}
+		.formcell2 {
+			display: table-cell;
+			width: 70%;
+			vertical-align: top;
+			text-wrap: nowrap;
+		}
 
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -141,31 +161,31 @@
                                 <div class="col-4">
 
 									<!-- Layout -->
-									<div class="row mb-4">
-										<label style="vertical-align: top; width: 30%">Protein Layout</label>
-										<select name="proteinlayout" id="proteinlayout" style="width: 70%" >{% for val in MotifForm.proteinlayout %}{{ val }}{% endfor %}</select>
-										{% if MotifForm.domainname.errors %}<p style="color: red">{{ MotifForm.proteinlayout.errors.as_text }}</p>{% endif %}
-										{% if error %}<p style="color: red">{{ error }}</p>{% endif %}
+									<div class="formrow">
+										<div class="formcell1"><label>Protein Layout</label></div>
+										<div class="formcell2"><select name="proteinlayout" id="proteinlayout">{% for val in MotifForm.proteinlayout %}{{ val }}{% endfor %}</select></div>
 									</div>
+									{% if MotifForm.domainname.errors %}<div class="formrow mb-4"><p style="color: red">{{ MotifForm.proteinlayout.errors.as_text }}</p></div>{% endif %}
+									{% if error %}<div class="formrow mb-4"><p style="color: red">{{ error }}</p></div>{% endif %}
 
 									<!-- Domain -->
-									<div class="row mb-4">
-										<label style="vertical-align: top; width: 30%" for="{{ form.domainname.id_for_label }}">Domain name</label>
-										<select name="domainname" id="domainname" style="width: 70%" >{% for val in MotifForm.domainname %}{{ val }}{% endfor %}</select>
+									<div class="formrow">
+										<div class="formcell1"><label for="{{ form.domainname.id_for_label }}">Domain name</label></div>
+										<div class="formcell2"><select name="domainname" id="domainname" >{% for val in MotifForm.domainname %}{{ val }}{% endfor %}</select></div>
 										{% if MotifForm.domainname.errors %}<p style="color: red">{{ MotifForm.domainname.errors.as_text }}</p>{% endif %}
 										{% if error %}<p style="color: red">{{ error }}</p>{% endif %}
 									</div>
 
 									<!-- Domaingroup -->
-									<div class="row mb-4">
-										<label style="vertical-align: top; width: 30%;" for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label>
-										<select name="domaingroup_rank" id="domaingroup_rank" style="width: 70%" >{% for val in MotifForm.domaingroup_rank %}{{ val }}{% endfor %}</select>
+									<div class="formrow">
+										<div class="formcell1"><label for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label></div>
+										<div class="formcell2"><select name="domaingroup_rank" id="domaingroup_rank">{% for val in MotifForm.domaingroup_rank %}{{ val }}{% endfor %}</select></div>
 									</div>
 
 									<!-- Domaingroup subgroup -->
-									<div class="row mb-4">
-										<label style="vertical-align: top; width: 30%;" for="{{ form.domaingroup.id_for_label }}">Subgroup</label>
-										<select name="domaingroup" id="domaingroup" style="width: 70%" >{% for val in MotifForm.domaingroup %}{{ val }}{% endfor %}</select>
+									<div class="formrow">
+										<div class="formcell1"><label for="{{ form.domaingroup.id_for_label }}">Subgroup</label></div>
+										<div class="formcell2"><select name="domaingroup" id="domaingroup">{% for val in MotifForm.domaingroup %}{{ val }}{% endfor %}</select></div>
 									</div>
 
                                 </div>
@@ -174,29 +194,25 @@
                                 <div class="col-4">
 
 									<!-- Shortname -->
-									<div class="row mb-4">
-										<label style="vertical-align: top; width: 30%; padding-left: 60px" for="{{ form.shortname.id_for_label }}">Shortname</label>
-										<select style="width: 70%" name="shortname" id="shortname" >
-											<option selected="selected" disabled="true">-- Choose a domain to display Shortnames --</option>">
-										</select>
+									<div class="formrow">
+										<div class="formcell1"><label for="{{ form.shortname.id_for_label }}">Shortname</label></div>
+										<div class="formcell2"><select name="shortname" id="shortname"><option value=""> </option></select></div>
 									</div>
 
 									<!-- Taxonomy -->
-									<div class="row mb-1">
-										<div style="width: 30%">
-											<label style="vertical-align: top; width: 100%; padding-left: 48px" for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
+									<div class="formrow">
+										<div class="formcell1">
+											<label for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
 										</div>
-										<div style="width: 70%; padding: 0">
-											<div class="taxonomyDiv" id="taxonomyDiv" style="display: block; width: 100%; padding: 0">
-												<select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
-													<option value=""></option>
-													{% for val in taxonomy_ranks %}
-														<option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
-													{% endfor %}
-												</select>
-											</div>
-											<p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
+										<div class="formcell2" id="taxonomyDiv">
+											<select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
+												<option value=""></option>
+												{% for val in taxonomy_ranks %}
+													<option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
+												{% endfor %}
+											</select>
 										</div>
+										<p style="color: red">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
 									</div>
 
 								</div>
@@ -205,25 +221,21 @@
 								<div class="col-4">
 
 									<!-- Sequencestatus/Private -->
-									<div class="row mb-4">
+									<div class="formrow">
 
 										<!-- Status -->
-										<div class="col-6">
-											<label style="vertical-align: top; width: 50%; padding: 0px 0px 0px 60px" for="{{ form.status.id_for_label }}">Status</label>
-											<select name="status" id="status" style="width: 45%" >{% for val in MotifForm.status %}{{ val }}{% endfor %}</select>
-										</div>
+										<div style="display: table-cell; width: 20%; text-wrap: nowrap;"><label for="{{ form.status.id_for_label }}">Status</label></div>
+										<div style="display: table-cell; width: 30%; text-wrap: nowrap; padding-right: 5px;"><select name="status" id="status">{% for val in MotifForm.status %}{{ val }}{% endfor %}</select></div>
 
 										<!-- Private -->
-										<div class="col-6">
-											<label style="vertical-align: top; width: 50%; padding: 0px 0px 0px 60px" for="{{ form.private.id_for_label }}">Private</label>
-											<select name="private" id="private" style="width: 45%;" >{% for val in MotifForm.private %}{{ val }}{% endfor %}</select>
-										</div>
+										<div style="display: table-cell; width: 20%; text-wrap: nowrap; padding-left: 5px;"><label for="{{ form.private.id_for_label }}">Private</label></div>
+										<div style="display: table-cell; width: 30%; text-wrap: nowrap;"><select name="private" id="private">{% for val in MotifForm.private %}{{ val }}{% endfor %}</select></div>
 
 									</div>
 
 									<!-- Species -->
-									<div class="row mb-4" style="padding-right: 20px;">
-										<div style="vertical-align: top; height: 100%; padding: 0px 0px 0px 60px">
+									<div class="formrow">
+										<div style="vertical-align: top; height: 100%; padding: 0">
 											<select name="species_list" id="species_list" multiple style="width: 100%; height: 15em"></select>
 										</div>
 									</div>

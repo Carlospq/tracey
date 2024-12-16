@@ -38,6 +38,16 @@ class FamilyForm(forms.Form):
             'taxonomy': ''
         }
 
+    # ProteinLayout
+    proteinlayout = forms.CharField(
+        label="Protein Layout",
+        required=False,
+        initial="SNARE",
+        widget=forms.Select(
+            choices=[(x.proteinlayoutname, x.proteinlayoutname) for x in Proteinlayouts.objects.all()])
+    )
+    proteinlayout.widget.attrs.update({'style': 'width: 100%; margin-top: 6px; display: table-cell'})
+
     # Motif
     domainname = forms.CharField(
                     label= "Motif Name",
@@ -45,16 +55,7 @@ class FamilyForm(forms.Form):
                     initial = "SNARE",
                     widget = forms.Select(choices = [ (x.domainname, x.domainname) for x in Domains.objects.all() ])
                 )
-    domainname.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
-
-    # ProteinLayout
-    proteinlayout = forms.CharField(
-        label="Protein Layout",
-        required=False,
-        initial="SNARE",
-        widget=forms.Select(choices=[(x.proteinlayoutname, x.proteinlayoutname) for x in Proteinlayouts.objects.all()])
-    )
-    proteinlayout.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
+    domainname.widget.attrs.update({'style': 'width: 100%; margin-top: 6px; display: table-cell'})
 
     # Shortname
     shortname = forms.CharField(
@@ -62,6 +63,7 @@ class FamilyForm(forms.Form):
                     required = False,
                     widget = forms.Select()
                 )
+    domainname.widget.attrs.update({'style': 'width: 100%; margin-top: 6px; display: table-cell'})
 
     # Taxonomy
     taxonomy_rank = forms.CharField(
@@ -75,7 +77,7 @@ class FamilyForm(forms.Form):
                     required = False,
                 )
     taxonomy.widget.attrs.update({'size': 7,
-                                  'style': 'width: 100%; margin-top: 6px'})
+                                  'style': 'width: 100%; margin-top: 6px; display: table-cell'})
 
     # Foreign annotation
     foreignannotation = forms.CharField(
@@ -86,7 +88,7 @@ class FamilyForm(forms.Form):
                         )
                         # [NCBIpattern]
     foreignannotation.widget.attrs.update({'type': 'text',
-                                           'style': 'width: 100%;',
+                                           'style': 'width: 100%; display: table-cell',
                                            'placeholder': "ex: 'gi|21426793'"})
 
     # Domain group
@@ -100,7 +102,7 @@ class FamilyForm(forms.Form):
                         required = False,
                     )
     domaingroup.widget.attrs.update({'size': 7,
-                                     'style': 'width: 100%; margin-top: 6px; height: 14.5em'})
+                                     'style': 'width: 100%; margin-top: 6px; height: 14.5em;'})
 
 
 def get_taxonomy_choices():
