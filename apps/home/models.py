@@ -2,6 +2,7 @@
 """
 Copyright (c) 2019 - present AppSeed.us
 """
+import xml.etree.ElementTree as ET
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -315,6 +316,12 @@ class Motifs(models.Model):
 
     def __str__(self):
         return self.motifname
+
+    def get_real_stopposition(self):
+        asciidata = {}
+        for x in ET.fromstring(self.asciioutput):
+            asciidata[x.tag] = x.text
+        return self.startposition + len(asciidata["motif"].strip()) - asciidata["motif"].strip().count("-")
 
 
 class NcbiTaxonomy(models.Model):

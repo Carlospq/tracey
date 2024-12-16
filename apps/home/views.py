@@ -600,7 +600,7 @@ def getLayoutPlot(sequence):
 	fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(20, 2), sharex=True, gridspec_kw={"height_ratios": [5, 1]})
 	# fig, ax = plt.subplots(nrows=1, figsize=(20, 2), sharex=True)
 	features = [
-				GraphicFeature(start=m.startposition+1, end=m.stopposition-1,
+				GraphicFeature(start=m.startposition+1, end=m.get_real_stopposition(),
 							   label=m.motifname + " | " + m.domaingroup.domaingroupname, color=motifColors[m.motifname] if m.motifname in motifColors else "#ffcccc",
 							   linewidth=0.75,
 							   fontdict={'fontsize': 8})
@@ -662,10 +662,9 @@ def QuerySequencesDetails(request, sequence_id):
 		for x in data:
 			context["motifs"][m][x.tag] = x.text
 		context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-		# context["motifs"][m]["length"] = m.stopposition - m.startposition + 1
 		context["motifs"][m]["stopposition"] = m.startposition + len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
 		context["motifs"][m]["length"] = len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
-		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
+		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
 
 	# context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
 	return render(request, 'home/query-sequences-details.html', context)
@@ -1501,13 +1500,16 @@ def QueryVerifyView(request, sequence_id):
 					domaingroup_id=d.domaingroupparent_id).domaingroupname
 			context[type][m]["domaingroup"] = d.domaingroupname
 			context[type][m]["ascii"] = m.asciioutput
-			context[type][m]["length"] = m.stopposition - m.startposition + 1
+			#context[type][m]["length"] = m.stopposition - m.startposition + 1
+			context[type][m]["length"] = len(context[type][m]["motif"].strip()) - context[type][m]["motif"].strip().count("-")
+			context[type][m]["stopposition"] = m.startposition + len(context[type][m]["motif"].strip()) - context[type][m]["motif"].strip().count("-")
+
 
 			data = ET.fromstring(context[type][m]["ascii"])
 			for x in data:
 				context[type][m][x.tag] = x.text
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
-			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.stopposition, len(seq.sequence), context[type][m]["domaingroup"])
+			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.get_real_stopposition(), len(seq.sequence), context[type][m]["domaingroup"])
 
 	# Sort VerifyMotifs by evalue
 	context["verifymotifs"] = {k: v for k, v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
