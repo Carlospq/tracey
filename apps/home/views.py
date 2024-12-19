@@ -1158,13 +1158,14 @@ def QueryInsertView(request):
 @staff_login_required
 def QueryVerifyMenuView(request):
 	user = AuthUser.objects.get(pk=request.session['_auth_user_id'])
+	shortnames = sorted(list( set([ t.taxonomyshortname for t in Taxonomies.objects.filter(analysislevel__gte=4) if t.taxonomyrank == "species" and any(t.sequences_set.all()) ]) ))
 	taxonomy_ranks = [x for x in reducedTRACEYtaxonomies]
 	context = {'segment': request.path.split('/')[-1],
 			   'sequences': Sequences.objects.none(),
 			   'speciesname': {},
 			   'MotifForm': MotifForm(initial={'status': 'live'}),
 			   'taxonomy_ranks': taxonomy_ranks,
-			   'shortnames': [''],
+			   'shortnames': shortnames,
 			   }
 
 	context['log'] = len(context['sequences'])
@@ -1498,8 +1499,14 @@ def QueryVerifyView(request, sequence_id):
 			else:
 				context[type][m]["domaingroupparent"] = Domaingroups.objects.get(
 					domaingroup_id=d.domaingroupparent_id).domaingroupname
+
 			context[type][m]["domaingroup"] = d.domaingroupname
 			context[type][m]["ascii"] = m.asciioutput
+
+			data = ET.fromstring(context[type][m]["ascii"])
+			for x in data:
+				context[type][m][x.tag] = x.text
+
 			#context[type][m]["length"] = m.stopposition - m.startposition + 1
 			context[type][m]["length"] = len(context[type][m]["motif"].strip()) - context[type][m]["motif"].strip().count("-")
 			context[type][m]["stopposition"] = m.startposition + len(context[type][m]["motif"].strip()) - context[type][m]["motif"].strip().count("-")

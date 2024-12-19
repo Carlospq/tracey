@@ -647,3 +647,9 @@ class Verifymotifs(models.Model):
 
     def __str__(self):
         return self.motifname
+
+    def get_real_stopposition(self):
+        asciidata = {}
+        for x in ET.fromstring(self.asciioutput):
+            asciidata[x.tag] = x.text
+        return self.startposition + len(asciidata["motif"].strip()) - asciidata["motif"].strip().count("-")

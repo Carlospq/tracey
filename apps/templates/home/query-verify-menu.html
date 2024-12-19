@@ -196,15 +196,20 @@
 									<!-- Shortname -->
 									<div class="formrow">
 										<div class="formcell1"><label for="{{ form.shortname.id_for_label }}">Shortname</label></div>
-										<div class="formcell2"><select name="shortname" id="shortname"><option value=""> </option></select></div>
+										<div class="formcell2">
+											<select name="shortname" id="shortname">
+												<option value=""> </option>
+												{% for val in shortnames %}
+													<option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val }} </option>
+												{% endfor %}
+											</select>
+										</div>
 									</div>
 
 									<!-- Taxonomy -->
 									<div class="formrow">
-										<div class="formcell1">
-											<label for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label>
-										</div>
-										<div class="formcell2" id="taxonomyDiv">
+										<div class="formcell1"><label for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label></div>
+										<div id="taxonomyDiv" id="taxonomyDiv" style="display: block; width: 100%; padding: 0">
 											<select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
 												<option value=""></option>
 												{% for val in taxonomy_ranks %}
@@ -379,8 +384,8 @@
             var current_id = parseInt(child.id.split('taxonomy_rank_')[1]);
             if (parseInt(current_id) >= parseInt(rankNum)) {
                 child.remove()
-            };
-        };
+            }
+        }
 
         // create new high rank
 		var selectList = document.createElement("select");
@@ -405,7 +410,7 @@
                 var x = selectedList[0]
 				if (x.options.length == 1){
                     selectedList.hide();
-                };
+                }
             }
         });
 
@@ -420,12 +425,14 @@
                 $("#species_list").html(data);
             }
         });
-    };
+    }
 
     // Send form data for sequence search
     $(document).on('submit','#MotifForm',function(e){
+
         // Don't reload site on submit
         e.preventDefault();
+
         // Get variables
 		var proteinlayout = $("#proteinlayout").val();
         var domainname = $("#domainname").val();
@@ -435,6 +442,7 @@
         var species_list = $("#species_list").val();
         var verified = document.getElementById("verified").checked;
         var unverified = document.getElementById("unverified").checked;
+
         // Loading animation
         document.getElementById("loader").style.display = "flex";
 
@@ -458,36 +466,49 @@
             }
         });
 
-        $.ajaxSetup({traditional: true});
-        // Update sequences
-        $.ajax({
-            type:'POST',
-            url: "{% url 'ajax_load_queryverifysequences' %}",
-            data: {
-                proteinlayout: proteinlayout,
-                domainname: $("#domainname").val(),
-                domaingroup_rank: $("#domaingroup_rank").val(),
-                domaingroup: $("#domaingroup").val(),
-                taxonomy: taxonomy,
-                shortname: shortname,
-                species_list: species_list,
-                sequencestatus: $("#status").val(),
-                verified: verified,
-                unverified: unverified,
-                private: $("#private").val(),
-                csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
-                action: 'post'
-            },
-            success: function(data){
-              $("#resultsTable").html(data);
-            }
-        });
+		// Update sequences
+		$.ajaxSetup({traditional: true});
+		$.ajax({
+			type:'POST',
+			url: "{% url 'ajax_load_queryverifysequences' %}",
+			data: {
+				proteinlayout: proteinlayout,
+				domainname: $("#domainname").val(),
+				domaingroup_rank: $("#domaingroup_rank").val(),
+				domaingroup: $("#domaingroup").val(),
+				taxonomy: taxonomy,
+				shortname: shortname,
+				species_list: species_list,
+				sequencestatus: $("#status").val(),
+				verified: verified,
+				unverified: unverified,
+				private: $("#private").val(),
+				csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+				action: 'post'
+			},
+			success: function(data){
+			  $("#resultsTable").html(data);
+			}
+		});
+
     });
 
     // formField.reload on formField.change
 	$("#proteinlayout").change(function () {
     	var url = $("#MotifForm").attr("data-load-domains-url");
+        var urlshortnames = $("#MotifForm").attr("data-load-sequenceshortnames-url");
         var proteinlayout = $(this).val();
+
+        // Load shortnames
+		$.ajax({
+			url: urlshortnames,
+			data: {
+                'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
 
         // Load domain names
         $.ajax({
@@ -497,38 +518,51 @@
 			},
 			success: function (data) {
 				$("#domainname").html(data);
+                $("#domaingroup_rank").html("");
+                $("#domaingroup").html("");
 			}
 		});
 
     });
 
     $("#domainname").change(function () {
-      var url = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
-      var domainname = $(this).val();
+        var urlrank1 = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
+        var urlshortnames = $("#MotifForm").attr("data-load-sequenceshortnames-url");
+        var domainname = $(this).val();
 
-      $.ajax({
-        url: url,
-        data: {
-          'domainname': domainname
-        },
+        $.ajax({
+			url: urlshortnames,
+			data: {
+                'domainname': domainname
+			},
+			success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
 
-        success: function (data) {
-          $("#domaingroup_rank").html(data);
-          $("#id_domaingroup_rank").html("");
-        }
-      });
-      $.ajax({
-        url: "{% url 'ajax_load_domaingroups_rank2' %}",
-        data: {
-          'domainname': domainname,
-          'domaingroup_rank': ''
-        },
+        $.ajax({
+			url: urlrank1,
+			data: {
+                'domainname': domainname
+			},
+			success: function (data) {
+                $("#domaingroup_rank").html(data);
+                $("#id_domaingroup_rank").html("");
+            }
+        });
 
-        success: function (data) {
-          $("#domaingroup").html(data);
-          $("#id_domaingroup").html("");
-        }
-      });
+        $.ajax({
+			url: "{% url 'ajax_load_domaingroups_rank2' %}",
+			data: {
+                'domainname': domainname,
+				'domaingroup_rank': ''
+			},
+			success: function (data) {
+                $("#domaingroup").html(data);
+                $("#id_domaingroup").html("");
+            }
+        });
+
     });
 
     // Load domaingroups
@@ -552,22 +586,7 @@
       });
     });
 
-    // Load shortnames
-    $("#domainname").change(function () {
-      var url = $("#MotifForm").attr("data-load-sequenceshortnames-url");   // get the url of the `load_cities` view
-      var domainname = $(this).val();                                       // get the selected country ID from the HTML input
 
-      $.ajax({                                        // initialize an AJAX request
-        url: url,                                     // set the url of the request (= localhost:8000/hr/ajax/load-cities/)
-        data: {
-          'domainname': domainname        // add the country id to the GET parameters
-        },
-
-        success: function (data) {                    // `data` is the return of the `load_cities` view function
-          $("#shortname").html(data);     // replace the contents of the city input with the data that came from the server
-        }
-      });
-    });
 
 
 </script>
