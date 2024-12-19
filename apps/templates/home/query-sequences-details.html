@@ -123,11 +123,8 @@
 							<tr>
 								<td class="td-data" style="width: auto"><b>Domain: </b> {{ m.domaingroup.domain.domainname }} </td>
 								<td class="td-data" style="width: auto"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
-								<!-- <td class="td-data"><b>Hmm-Model: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td> -->
-								<!-- <td class="td-data"><b>Group: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td> -->
 								<td class="td-data" style="width: auto"><b>Hmm-Model/Domaingroup: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
-								<!--<td class="td-data" style="width: auto"><b>Position: </b>{{ m.startposition|add:"1" }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length'|add:"-1" }})</td>-->
-								<td class="td-data" style="width: auto"><b>Position: </b>{{ m.startposition|add:"1" }}-{{  motifs|get_item:m|get_item:'stopposition' }} (length: {{ motifs|get_item:m|get_item:'length' }})
+								<td class="td-data" style="width: auto"><b>Position: </b>{{ m.get_real_startposition }}-{{  m.get_real_stopposition }} (length: {{ m.get_motif_length }})
 								<td class="td-data" style="width: auto"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
 							</tr>
 						</table>
@@ -144,7 +141,7 @@
 								<td class="td-data">
 									<div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
 										{% with motifs|get_item:m|get_item:'stopposition' as stopposition %}
-											{% for letter in sequence.sequence %}{% if forloop.counter >= m.startposition|add:1 and forloop.counter <= stopposition %}<span style=" color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
+											{% for letter in sequence.sequence %}{% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %}<span style=" color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
 										{% endwith %}
 									</div>
 								</td>

@@ -451,7 +451,7 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                                                 <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if verifymotifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ verifymotifs|get_item:m|get_item:'eValue' }}</a></td>
                                                 <!--<td class="td-data"><b>Domain Group: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupparent' }}</td>-->
                                                 <td class="td-data"><b>Hmm-Model/Domaingroup: </b>{{ verifymotifs|get_item:m|get_item:'domaingroup' }}</td>
-                                                <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ verifymotifs|get_item:m|get_item:'length' }})</td>
+                                                <td class="td-data"><b>Position: </b>{{ m.get_real_startposition }}-{{ m.get_real_stopposition }} (length: {{ m.get_motif_length }})</td>
                                                 <td class="td-data"><b>Functional Name: </b>{{ verifymotifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
                                             </tr>
                                         </table>
@@ -473,7 +473,7 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                                                         <table style="font-family: monospace; width: 100%; text-align: justify;">
                                                             <tr><td style="border: red;">
                                                                 {% for leter in sequence.sequence %}
-                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %} red {% endif %};">{{ leter }}</a>
                                                                 {% endfor %}
                                                             </td></tr>
                                                         </table>
@@ -572,9 +572,8 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                                             <tr>
                                                 <td class="td-data"><b>Domain: </b> {{ m.domaingroup.domain.domainname }} </td>
                                                 <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
-                                                <!--<td class="td-data"><b>Domain Group: </b>{{ motifs|get_item:m|get_item:'domaingroupparent' }}</td>-->
                                                 <td class="td-data"><b>Hmm-Model/Domaingroup: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
-                                                <td class="td-data"><b>Position: </b>{{ m.startposition }}-{{ m.stopposition }} (length: {{ motifs|get_item:m|get_item:'length' }})</td>
+                                                <td class="td-data"><b>Position: </b>{{ m.get_real_startposition }}-{{ m.get_real_stopposition }} (length: {{ m.get_motif_length }})</td>
                                                 <td class="td-data"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
                                             </tr>
                                         </table>
@@ -596,7 +595,7 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                                                         <table style="font-family: monospace; width: 100%; text-align: justify;">
                                                             <tr><td style="border: red;">
                                                                 {% for leter in sequence.sequence %}
-                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.startposition and forloop.counter <= m.stopposition %} red {% endif %};">{{ leter }}</a>
+                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %} red {% endif %};">{{ leter }}</a>
                                                                 {% endfor %}
                                                             </td></tr>
                                                         </table>

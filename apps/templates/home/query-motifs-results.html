@@ -207,7 +207,7 @@
                                             <tr>
 												<td class="td-header"><b></b></td>
                                                 <td class="td-data" style="width: auto;"><b>E-value: </b> <a style="pointer-events: none; color: {% if d.pvalue < 0.05 %}red{% endif %}">{{ d.evalue }}</a></td>
-                                                <td class="td-data" style="width: auto;"><b>Motif position: </b>{{ aln.target_from }} - {{ aln.target_to }} (length: {{ d.length }})</td>
+                                                <td class="td-data" style="width: auto;"><b>Motif position: </b>{{ d.aln_from }} - {{ d.aln_to }} (length: {{ d.length }})</td>
                                             </tr>
                                         </table>
                                         <hr>
@@ -221,14 +221,8 @@
 															<tr>
 																<td class="td-header"><b>Sequence with motif: </b></td>
 																<td class="td-data">
-																	<div class="mt-2 mb-3" style="overflow-x:auto;">
-																		<table style="font-family: monospace; width: 100%; text-align: justify;">
-																			<tr><td>
-																				{% for letter in hits_d|get_item:h|get_item:'split_sequence' %}
-																					<a style="pointer-events: none; color: {% if forloop.counter >= aln.target_from and forloop.counter <= aln.target_to %} red {% endif %}; font-size: 18px; font-family: Arial, sans-serif;">{{ letter }}</a>
-																				{% endfor %}
-																			</td></tr>
-																		</table>
+																	<div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
+																		{% for letter in hits_d|get_item:h|get_item:'split_sequence' %}{% if forloop.counter >= d.aln_from and forloop.counter <= d.aln_to %}<span style=" color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
 																	</div>
 																</td>
 															</tr>

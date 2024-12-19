@@ -520,7 +520,6 @@ def QuerySequencesFastaFormat(request):
 					for x in ET.fromstring(m.asciioutput):
 						mdata[x.tag] = x.text
 
-					# s = seq.sequence[[0 if m.startposition == 0 else m.startposition-1][0]:m.stopposition]
 					s = mdata['motif'].upper().replace("-", "").strip()
 					name = seq.sequenceshortname+"|"+"_".join([m.domaingroup.domain.domainname, m.domaingroup.domaingroupname])
 					motifs_seqs[name] = s
@@ -574,11 +573,13 @@ def getMotifPlot_fromMotif(start, end, length, label):
 	import io
 	import urllib, base64
 
-	motifColors = {"SNARE": "#5cb206", "Habc": "#0666b2", "C2": "#fcc12d"}
+	# motifColors = {"SNARE": "#5cb206", "Habc": "#0666b2", "C2": "#fcc12d"}
+	motifColors = get_motifsColors()
+	domainname = Domaingroups.objects.get(domaingroupname=label).domain.domainname
 	buf = io.BytesIO()
 	fig, ax = plt.subplots(nrows=1, figsize=(20, 1.5), sharex=True)
 	features = [ GraphicFeature(start=start, end=end, label=label,
-								color=motifColors[label] if label in motifColors else "#ffcccc"),
+								color=motifColors[domainname] if domainname in motifColors else "#ffcccc"),
 				 ]
 
 	record = GraphicRecord(sequence_length=length, features=features)
@@ -591,17 +592,33 @@ def getMotifPlot_fromMotif(start, end, length, label):
 	return uri
 
 
+def get_motifsColors():
+
+	import colorsys
+
+	N = len(Domains.objects.all())
+	HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
+	RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+
+	motifColors = {}
+	for domain, color in zip(Domains.objects.all(), RGB_tuples):
+		motifColors[domain.domainname] = color
+
+	return motifColors
+
+
 def getLayoutPlot(sequence):
 	import io
 	import urllib, base64
 
-	motifColors = {"SNARE": "#5cb206", "Habc": "#0666b2", "C2": "#fcc12d"}
+	# motifColors = {"SNARE": "#5cb206", "Habc": "#0666b2", "C2": "#fcc12d"}
+	motifColors = get_motifsColors()
 	buf = io.BytesIO()
 	fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(20, 2), sharex=True, gridspec_kw={"height_ratios": [5, 1]})
 	# fig, ax = plt.subplots(nrows=1, figsize=(20, 2), sharex=True)
 	features = [
-				GraphicFeature(start=m.startposition+1, end=m.get_real_stopposition(),
-							   label=m.motifname + " | " + m.domaingroup.domaingroupname, color=motifColors[m.motifname] if m.motifname in motifColors else "#ffcccc",
+				GraphicFeature(start=m.get_real_startposition(), end=m.get_real_stopposition(),
+							   label=m.motifname + " | " + m.domaingroup.domaingroupname, color=motifColors[m.domaingroup.domain.domainname] if m.domaingroup.domain.domainname in motifColors else "#ffcccc",
 							   linewidth=0.75,
 							   fontdict={'fontsize': 8})
 				for m in sequence.motifs_set.all()
@@ -662,9 +679,10 @@ def QuerySequencesDetails(request, sequence_id):
 		for x in data:
 			context["motifs"][m][x.tag] = x.text
 		context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-		context["motifs"][m]["stopposition"] = m.startposition + len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
-		context["motifs"][m]["length"] = len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
-		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
+		# context["motifs"][m]["stopposition"] = m.startposition + len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-") - 1
+		# context["motifs"][m]["length"] = len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
+		# context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
+		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
 
 	# context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
 	return render(request, 'home/query-sequences-details.html', context)
@@ -712,6 +730,7 @@ def getMotifPlot_fromPyhammer(hit, sequence, evalcutoff=1e-10):
 
 	buf = io.BytesIO()
 	fig, ax = plt.subplots(nrows=1, figsize=(15, 1.5), sharex=True)
+	motifColors = get_motifsColors()
 	features = [
 				GraphicFeature(start=d.alignment.target_from-1, end=d.alignment.target_to,
 							   label=[str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else
@@ -763,11 +782,6 @@ def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutof
 		hmmNamesList = [x.domaingroupname+".hmm" for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
 		hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if x in hmmNamesList]
 
-		# domaingroup = "SNAP" if domaingroup == "SNAPbc" else domaingroup
-		# hmmToScan = domainsubgroup if domainsubgroup else domaingroup
-		# hmmNamesList = [x.domaingroupname for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
-		# hmmList = ['utils/hmmModels/%s/%s'%(domainname, domainsubgroup)] if domainsubgroup else [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if domaingroup in x]
-
 		if not hmmList:
 			hits_d['error'] = 'No HMM model found for this motif.'
 			return hits_d
@@ -775,12 +789,6 @@ def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutof
 			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(domainname, hmmModel)) as hmm_file:
 				hmm = hmm_file.read()
 				hmms.append(hmm)
-	# else:
-	# 	hmms = []
-	# 	for f in os.listdir('utils/hmmModels/%s'%(M)):
-	# 		with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(M, f)) as hmm_file:
-	# 			hmm = hmm_file.read()
-	# 			hmms.append(hmm)
 
 	# Convert hmms to optimized profiles -> optimizad block
 	optimized_block = pyhmmer.plan7.OptimizedProfileBlock(alphabet=alphabet)
@@ -815,14 +823,13 @@ def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutof
 					dg_parent = "/".join([ x.domaingroupname for x in Domaingroups.objects.filter(domaingroup_id__in = dg.domaingroupparent_id.split(";")) ])
 				else:
 					dg_parent = Domaingroups.objects.get(domaingroup_id = dg.domaingroupparent_id).domaingroupname
+
+				match = re.search(d.alignment.target_sequence.strip().replace("-", "").upper(), sequence)
 				x = {'evalue': format(d.pvalue, '.1E'),
 					 'pvalue': d.pvalue,
-					 # 'env_from': d.env_from,
-					 # 'env_to': d.env_to,
-					 # 'length': d.env_to - d.env_from,
-					 'env_from': d.alignment.target_from,
-					 'env_to': d.alignment.target_to,
-					 'length': d.alignment.target_to - d.alignment.target_from,
+					 'aln_from': match.start() + 1,
+					 'aln_to': match.end(),
+					 'length': match.end() - (match.start() + 1) + 1,
 					 'alignment': d.alignment,
 					 'dg': dg.domaingroupname,
 					 'dg_parent': dg_parent,
@@ -844,7 +851,7 @@ def QueryMotifsResultsView(request):
 		context = dict(request.POST)
 	else:
 		context = dict(request.GET)
-	print(context)
+
 	segment = request.path.split('/')[-1]
 	context["segment"] = segment
 
@@ -883,7 +890,6 @@ def QueryMotifsResultsView(request):
 	elif 'error' in context['hits_d']:
 		context['error_hits'] = context['hits_d']['error']
 		context['hits_d'] = {}
-		# return HttpResponseRedirect(reverse('query-motifs-results'), context)
 
 	# Predict domain if any SNARE motif is selected
 	if context['domain'][0] in ["HabcSNARE"]:
@@ -892,7 +898,6 @@ def QueryMotifsResultsView(request):
 		bothDomains = False
 	if context['domain'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
 		bypass=context['domain'][0] if context['domain'][0] in ["Habc", "SNARE"] else ''
-		#context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
 
 	if request.method == "POST":
 		context['error_seq'] = ''
@@ -1382,7 +1387,7 @@ def QueryVerifyView(request, sequence_id):
 			form.data['changelog'] += " %s %s - %s;"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, form.data['newChangelog'])
 			form.data['newChangelog'] = ''
 
-		# Verify motifs if not verified yet
+		# Generate a Motif from each validated VerifyMotif and/or delete it
 		for vm_id in request.POST.getlist('verifymotif_id'):
 
 			requestValue, vm_id = vm_id.split(":")
@@ -1410,6 +1415,7 @@ def QueryVerifyView(request, sequence_id):
 				form.data['changelog'] += " %s %s - Verified motif: '%s';"%(strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, m.motifname)
 				vm.delete()
 
+		# Generate a Verifymotif from each unvalidated Motif and/or delete it
 		for m_id in request.POST.getlist('motif_id'):
 
 			requestValue, m_id = m_id.split(":")
@@ -1448,8 +1454,7 @@ def QueryVerifyView(request, sequence_id):
 				context['scanerror'] = 'Protein domain is required to scan sequence for HMM matches'
 			elif form.data['sequence'] and form.data['domain']:
 				evalcutoff = float('1e-' + request.POST.get('evalcutoff') if request.POST.get('evalcutoff') else '10')
-				hits_d = motifScan(form.data['sequence'], [form.data['domain']], domaingroup=form.data['domaingroups'],
-								   evalcutoff=evalcutoff)
+				hits_d = motifScan(form.data['sequence'], [form.data['domain']], domaingroup=form.data['domaingroups'], evalcutoff=evalcutoff)
 				if 'error' in hits_d:
 					context['scanerror'] = hits_d['error']
 				else:
@@ -1507,16 +1512,11 @@ def QueryVerifyView(request, sequence_id):
 			for x in data:
 				context[type][m][x.tag] = x.text
 
-			#context[type][m]["length"] = m.stopposition - m.startposition + 1
-			context[type][m]["length"] = len(context[type][m]["motif"].strip()) - context[type][m]["motif"].strip().count("-")
-			context[type][m]["stopposition"] = m.startposition + len(context[type][m]["motif"].strip()) - context[type][m]["motif"].strip().count("-")
-
-
 			data = ET.fromstring(context[type][m]["ascii"])
 			for x in data:
 				context[type][m][x.tag] = x.text
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
-			context[type][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.get_real_stopposition(), len(seq.sequence), context[type][m]["domaingroup"])
+			context[type][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(seq.sequence), context[type][m]["domaingroup"])
 
 	# Sort VerifyMotifs by evalue
 	context["verifymotifs"] = {k: v for k, v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
