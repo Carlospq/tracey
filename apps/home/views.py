@@ -54,7 +54,7 @@ def get_children(model, parent, parent_id, child_parent_id, children=[], search_
 	filter = variable_column + '__' + search_type
 	cs = model.objects.none()
 	for p in parent:
-		# children.append(p) if p not in children and p.analysislevel >= 2 else None
+		children.append(p) if p not in children and p.analysislevel >= 2 else None
 		if getattr(p, parent_id) == 4 and isinstance(p, Domaingroups):
 			cs = cs.union(model.objects.filter( **{ variable_column+"__icontains" : ";4" }))
 		else:
@@ -886,7 +886,8 @@ def QueryMotifsResultsView(request):
 	if not context['hits_d']:
 		if not 'domain' in context:
 			context['domain'] = ['%EmptyMotifname%']
-		context['error_hits'] = "HMMER couldn't find any match for motif %s in the query sequence."%(context['motifname'][0])
+		hmmToScan = context['domainsubgroup'][0] if context['domainsubgroup'][0] else context['domaingroup'][0] if context['domaingroup'][0] else context['domain'][0]
+		context['error_hits'] = "HMMER could not find any match for motif %s in the query sequence."%(hmmToScan)
 	elif 'error' in context['hits_d']:
 		context['error_hits'] = context['hits_d']['error']
 		context['hits_d'] = {}
