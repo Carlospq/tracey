@@ -500,23 +500,18 @@ class Sequences(models.Model):
         description='Taxa'
     )
 
-    def get_fullTaxa(self, taxonomy_id=-1000):
-        if taxonomy_id == -1000:
-            taxonomy_id = self.taxonomy.taxonomy_id
+    def get_fullTaxa(self, taxonomy_id=-1000, rank=True):
+        if taxonomy_id == 1:
+            name = "root"
         else:
-            taxonomy_id = taxonomy_id
-        selfTaxa = Taxonomies.objects.filter(pk=taxonomy_id)[0]
-        name = selfTaxa.scientificname
-        rank = selfTaxa.taxonomyrank
-        if selfTaxa.taxonomyparent_id != -1:
-            # parent_name, parent_rank = self.get_fullTaxa(selfTaxa.taxonomyparent_id)
-            parent_name = self.get_fullTaxa(selfTaxa.taxonomyparent_id)
-            if parent_name=="root":
-                pass
+            taxonomy_id = taxonomy_id if taxonomy_id != -1000 else self.taxonomy.taxonomy_id
+            selfTaxa = Taxonomies.objects.get(taxonomy_id=taxonomy_id)
+            parent_name = self.get_fullTaxa(selfTaxa.taxonomyparent_id, rank)
+            if rank:
+                name = " | ".join([ parent_name, ":".join([selfTaxa.taxonomyrank, selfTaxa.scientificname]) ])
             else:
-                name = " | ".join([ parent_name, name ])
-                # rank = "|".join([ parent_rank, rank ])
-        # return([name,rank])
+                name = " | ".join([ parent_name, selfTaxa.scientificname ])
+
         return name
 
 
@@ -561,6 +556,14 @@ class Taxonomies(models.Model):
 
     def __str__(self):
         return self.scientificname
+
+    def get_fullTaxa(self, rank=True):
+        if self.taxonomy_id == 1:
+            return "root"
+        else:
+            parent_taxonomy = Taxonomies.objects.get(taxonomy_id=self.taxonomyparent_id)
+            parent_name = parent_taxonomy.get_fullTaxa(rank)
+            return " | ".join([parent_name, ":".join([self.taxonomyrank, self.scientificname])]) if rank else " | ".join([parent_name, self.scientificname])
 
 
 class Tertiarydomainstructures(models.Model):
