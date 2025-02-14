@@ -15,6 +15,7 @@ class Command(BaseCommand):
         parser.add_argument("--onlyActive", action="store_true", default=False, help="Update only active sequences")
         parser.add_argument("--species", type=str, required=False, help="Update sequences for a specific species")
         parser.add_argument("--traceyIds", type=int, nargs='+', required=False, help="Update specific TRACEY ID sequence")
+        parser.add_argument("--domain", type=str, required=False, help="Update sequences for a specific domain")
 
 
     def handle(self, *args, **options):
@@ -61,4 +62,5 @@ class Command(BaseCommand):
             sys.exit("Please specify if you want to continue from the last log file or force a new complete update of TRACEY sequences.")
         logFile.close()
 
-        updateSequences(sequencesAnalysed, options['species'], options['traceyIds'], options['onlyActive'])
+        # updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE", onlyActive=False)
+        updateSequences(sequencesAnalysed, options['species'], options['traceyIds'], options['domain'], options['onlyActive'])

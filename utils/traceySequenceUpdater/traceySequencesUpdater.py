@@ -435,7 +435,8 @@ def analyzeSequence(newSeq):
 				if h_name in hits_d and d.pvalue > hits_d[h_name]['pvalue']:
 					continue
 				dg_name = str(d.alignment).split("\n")[1].split()[0]
-				dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name) if d.domain.domainname in ["SNARE", "Habc"]][0]
+				# dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name) if d.domain.domainname in ["SNARE", "Habc"]][0]
+				dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name)][0]
 				motif = Domains.objects.get(domain_id=dg.domain_id).domainname
 				hits_d[h_name] = {'evalue': format(d.pvalue, '.1E'),
 								  'pvalue': d.pvalue,
@@ -447,44 +448,62 @@ def analyzeSequence(newSeq):
 								  'motif': motif}
 	# Save motifs to database
 	# Only one motif per maingroup
-	motifs_lists = {'mainMotifs': {'list': ['Ha', 'Hb','Hc', 'Qa', 'Qb', 'Qc', 'R', 'Habc', 'SNARE'], 'value': 1},
-					'secondaryMotifs': {'list': ['Ha.I', 'Ha.II', 'Ha.III', 'Ha.IV', 'Hb.I', 'Hb.II', 'Hb.III', 'Hc.I', 'Hc.III',
-												 'Qa.I', 'Qa.II', 'Qa.III', 'Qa.IV', 'Qb.I', 'Qb.II', 'Qb.III', 'Qc.I', 'Qc.II', 'Qc.III',
-												 'R.I', 'R.II', 'R.III', 'R.IV', 'R.Reg', 'Lgl', 'SNAP'], 'value': 2},
-					'terniaryMotifs': {'list': ['Ha.III.a', 'Ha.III.b', 'Ha.IV.Sso', 'Ha.IV.Syx', 'Hb.II.a', 'Hb.II.b', 'Hc.III.b', 'Hc.III.c',
-												'Qa.III.a', 'Qa.III.b', 'Qb.III.b', 'Qb.III.d', 'Qc.III.b', 'Qc.III.c', 'SNAP.b', 'SNAP.c'], 'value': 3}}
-	besthits = {'Habc': {}, 'SNARE': []}
+	# motifs_lists = {'mainMotifs': {'list': ['Ha', 'Hb','Hc', 'Qa', 'Qb', 'Qc', 'R', 'Habc', 'SNARE'], 'value': 1},
+	# 				'secondaryMotifs': {'list': ['Ha.I', 'Ha.II', 'Ha.III', 'Ha.IV', 'Hb.I', 'Hb.II', 'Hb.III', 'Hc.I', 'Hc.III',
+	# 											 'Qa.I', 'Qa.II', 'Qa.III', 'Qa.IV', 'Qb.I', 'Qb.II', 'Qb.III', 'Qc.I', 'Qc.II', 'Qc.III',
+	# 											 'R.I', 'R.II', 'R.III', 'R.IV', 'R.Reg', 'Lgl', 'SNAP'], 'value': 2},
+	# 				'terniaryMotifs': {'list': ['Ha.III.a', 'Ha.III.b', 'Ha.IV.Sso', 'Ha.IV.Syx', 'Hb.II.a', 'Hb.II.b', 'Hc.III.b', 'Hc.III.c',
+	# 											'Qa.III.a', 'Qa.III.b', 'Qb.III.b', 'Qb.III.d', 'Qc.III.b', 'Qc.III.c', 'SNAP.b', 'SNAP.c'], 'value': 3}}
+	# besthits = {'Habc': {}, 'SNARE': []}
 
+	# for hit in hits_d:
+	# 	hit = hits_d[hit]
+	# 	# skip hits with p-value > 1e-5 || only for SNAREs
+	# 	# if hit['pvalue'] > 1e-5 or hit['length'] < 45: continue
+	# 	dg_name = hit['dg'].domaingroupname
+	# 	motif_name = hit['motif']
+	# 	list_value = [motifs_lists[l]['value'] for l in motifs_lists if dg_name in motifs_lists[l]['list']][0]
+	# 	hit['list_value'] = list_value
+	# 	if motif_name == 'Habc':
+	# 		if not besthits['Habc']:
+	# 			besthits[hit['motif']] = hit
+	# 		elif list_value >= besthits['Habc']['list_value'] and hit['pvalue'] < besthits['Habc']['pvalue']:
+	# 			besthits[hit['motif']] = hit
+	# 	elif motif_name == 'SNARE':
+	# 		snap_list = [snap_hit for snap_hit in besthits['SNARE'] if 'SNAP' in snap_hit['dg'].domaingroupname]
+	# 		if not besthits['SNARE']:
+	# 			besthits['SNARE'].append(hit)
+	# 		elif 'SNAP.' in dg_name:
+	# 			if not dg_name in [snap_hit['dg'].domaingroupname for snap_hit in snap_list]:
+	# 				besthits['SNARE'].append(hit)
+	# 			else:
+	# 				for i in range(1, len(besthits['SNARE'])):
+	# 					if dg_name == besthits['SNARE'][i]['dg'].domaingroupname and hit['pvalue'] < besthits['SNARE'][i]['pvalue']:
+	# 						besthits['SNARE'][i] = hit
+	# 		elif hit['pvalue'] < besthits['SNARE'][0]['pvalue']:
+	# 			besthits['SNARE'][0] = hit
+
+	def overlap(start1, end1, start2, end2):
+		"""Does the range (start1, end1) overlap with (start2, end2)?"""
+		return (
+				start1 <= start2 <= end1 or
+				start1 <= end2 <= end1 or
+				start2 <= start1 <= end2 or
+				start2 <= end1 <= end2
+		)
+	# Find best hit from all overlapping hits
+	best_hits =[]
 	for hit in hits_d:
 		hit = hits_d[hit]
-		# skip hits with p-value > 1e-5
-		if hit['pvalue'] > 1e-5 or hit['length'] < 45: continue
-		dg_name = hit['dg'].domaingroupname
-		motif_name = hit['motif']
-		list_value = [motifs_lists[l]['value'] for l in motifs_lists if dg_name in motifs_lists[l]['list']][0]
-		hit['list_value'] = list_value
-		if motif_name == 'Habc':
-			if not besthits['Habc']:
-				besthits[hit['motif']] = hit
-			elif list_value >= besthits['Habc']['list_value'] and hit['pvalue'] < besthits['Habc']['pvalue']:
-				besthits[hit['motif']] = hit
-		elif motif_name == 'SNARE':
-			snap_list = [snap_hit for snap_hit in besthits['SNARE'] if 'SNAP' in snap_hit['dg'].domaingroupname]
-			if not besthits['SNARE']:
-				besthits['SNARE'].append(hit)
-			elif 'SNAP.' in dg_name:
-				if not dg_name in [snap_hit['dg'].domaingroupname for snap_hit in snap_list]:
-					besthits['SNARE'].append(hit)
-				else:
-					for i in range(1, len(besthits['SNARE'])):
-						if dg_name == besthits['SNARE'][i]['dg'].domaingroupname and hit['pvalue'] < besthits['SNARE'][i]['pvalue']:
-							besthits['SNARE'][i] = hit
-			elif hit['pvalue'] < besthits['SNARE'][0]['pvalue']:
-				besthits['SNARE'][0] = hit
+		overlapping_hits = [hits_d[h] for h in hits_d if overlap(hit['env_from'], hit['env_to'], hits_d[h]['env_from'], hits_d[h]['env_to'])]
+		best_overlapping_hit = [h for h in overlapping_hits if h['pvalue'] == min([h['pvalue'] for h in overlapping_hits])][0]
+		if not best_overlapping_hit in best_hits:
+			best_hits.append(best_overlapping_hit)
 
-	all_best_hits = [hit for hit in besthits['SNARE']] + [besthits['Habc']]
+
+	# all_best_hits = [hit for hit in besthits['SNARE']] + [besthits['Habc']]
 	for hit in hits_d:
-		if hits_d[hit] in all_best_hits:
+		if hits_d[hit] in best_hits:
 			motif = Motifs()
 		else:
 			motif = Verifymotifs()
@@ -606,8 +625,14 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 			# 	comment += 'Sequencestatus changed from %s to replaced NCBI; ' % (seq.sequencestatus)
 				# seq.sequencestatus = 'replaced NCBI'
 
-			comment += 'Sequence replaced by NCBI ID %s; ' % (replaced_by)
-			newShortname = predictShortname(identicalSeq)
+			if "Comment" in identicalSeqSummaryOutput and "has been updated." in identicalSeqSummaryOutput["Comment"]:
+				comment += 'Sequence updated into NCBI ID %s; ' % (replaced_by)
+			else:
+				comment += 'Sequence replaced by NCBI ID %s; ' % (replaced_by)
+
+			# This naming function only works for SNARE proteins
+			# newShortname = predictShortname(identicalSeq)
+			newShortname = identicalSeq['sequence'].sequenceshortname
 			updateLog[identicalSeqId] = {'accessionVersion': accessionVersion,
 										 'comment': comment,
 										 'newshortname': newShortname}
@@ -637,7 +662,10 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 			comment = updateLog[identicalSeqId]['comment']
 		else:
 			comment = ''
-		newShortname = predictShortname(identicalSeq)
+
+		# Name predictor only works for SNARE proteins
+		# newShortname = predictShortname(identicalSeq)
+		newShortname = identicalSeq['sequence'].sequenceshortname
 
 		logdate = ' ' + datetime.now().strftime('%d.%m.%Y|%H:%M:%S') + '|SequenceUpdater - '
 
@@ -769,48 +797,60 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 	return updateLog
 
 #### MAIN FUNCTION ####
-def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=False):
-	#### NOTE: So far this script is adapted only for SNARE sequences
+def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE", onlyActive=False):
+	#### NOTE: Script adapted for any proteins domain in TRACEY (needs final testing) ####
 
 	######### UPDATE SEQUENCES WITH NCBI SOURCE #########
 	# This first section collects all the sequences from the database that are sourced from NCBI
 	# Then fetch data from the required database from NCBI and compares it with the sequence data in tracey
 	# If needed, sequence will be updated with the new information
 
-	# Collect all sequences in tracey with SNARE/Habc motifs
-	snareMotifsIds = set([m.sequence_id for m in Motifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
-	snareVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
+	# Collect all sequences in tracey matching the domain
+	if domain == "SNARE":
+		snareMotifsIds = set([m.sequence_id for m in Motifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
+		snareVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
 
-	snareSeqs = Sequences.objects.filter(sequence_id__in=list(snareMotifsIds | snareVerifymotifsIds))
-	snareSeqs = snareSeqs.exclude(sequence_id__in=sequencesAnalysed)
+		sequences = Sequences.objects.filter(sequence_id__in=list(snareMotifsIds | snareVerifymotifsIds))
+		sequences = sequences.exclude(sequence_id__in=sequencesAnalysed)
+	else:
+		sequencesMotifsIds = set([m.sequence_id for m in Motifs.objects.filter(motifname__in=[domain])])
+		sequencesVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=[domain])])
+		sequences = Sequences.objects.filter(sequence_id__in=list(sequencesMotifsIds | sequencesVerifymotifsIds))
+		sequences = sequences.exclude(sequence_id__in=sequencesAnalysed)
 
+	# Filter sequences by species -- if any specified
 	if species:
 		try:
 			taxonomy = Taxonomies.objects.get(Q(taxonomyshortname=species) | Q(scientificname=species))
 			if taxonomy.taxonomyrank in ["strain", "varietas", "no rank"]:
 				taxonomy_parent = Taxonomies.objects.get(taxonomy_id=taxonomy.taxonomyparent_id)
-				snareSeqs = snareSeqs.filter(taxonomy__in=[taxonomy.taxonomy_id, taxonomy_parent.taxonomy_id])
+				sequences = sequences.filter(taxonomy__in=[taxonomy.taxonomy_id, taxonomy_parent.taxonomy_id])
 			else:
-				snareSeqs = snareSeqs.filter(taxonomy=taxonomy)
+				sequences = sequences.filter(taxonomy=taxonomy)
 		except Taxonomies.DoesNotExist:
 			sys.exit("Species not found in database. Please confirm that the given species name is correct.")
 
+	# Filter sequences by traceyIds -- if any specified
 	if traceyIds:
-		snareSeqs = snareSeqs.filter(sequence_id__in=traceyIds)
+		sequences = sequences.filter(sequence_id__in=traceyIds)
 
-	snareSeqsNCBI = snareSeqs.filter(sourcedatabase__in=['NCBI_est', 'NCBI_nr', 'NCBI_refseq'])  # 83304 sequences
+	# Filter sequences by source -- collect only those obtained from NCBI
+	sequencesNCBI = sequences.filter(sourcedatabase__in=['NCBI_est', 'NCBI_nr', 'NCBI_refseq'])
+
+	# Filter sequences by sequence status -- only active sequences
 	if onlyActive:
-		snareSeqsNCBI = [s for s in snareSeqsNCBI if any(m.motifname == "SNARE" for m in s.motifs_set.all())]
-		snareSeqsNCBI = [s for s in snareSeqsNCBI if s.sequencestatus == 'live']
-	print("Sequences to analyze: %d" % len(snareSeqsNCBI))
+		# sequencesNCBI = [s for s in sequencesNCBI if any(m.motifname == "SNARE" for m in s.motifs_set.all())]
+		sequencesNCBI = [s for s in sequencesNCBI if any(m.motifname == "SNARE" for m in s.motifs_set.all())]
+		sequencesNCBI = [s for s in sequencesNCBI if s.sequencestatus == 'live']
+	print("Sequences to analyze: %d" % len(sequencesNCBI))
 
-	if snareSeqsNCBI == 0:
+	if len(sequencesNCBI) == 0:
 		logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
 		logFile.write("All sequences selected are up to date\nUpdate completed\n")
 		return
 
 	counter = 0
-	for sequence in snareSeqsNCBI:
+	for sequence in sequencesNCBI:
 
 		print(sequence.sequence_id)
 		counter += 1
@@ -844,7 +884,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 		# Update sequence if needed and print log into logFile
 		updateLog = sequenceUpdate(sequence, summary_output, sequencesAnalysed)
 		print(updateLog)
-		logFile.write("Similarity block (%d/%d):\n" % (counter, len(snareSeqsNCBI)))
+		logFile.write("Similarity block (%d/%d):\n" % (counter, len(sequencesNCBI)))
 		for updateId in updateLog:
 			if not updateId in sequencesAnalysed:
 				sequencesAnalysed.append(updateId)
@@ -865,4 +905,5 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], onlyActive=Fals
 # Run code when run as script
 if __name__ == "django.core.management.commands.shell":
 	sequencesAnalysed = []
-	updateSequences(sequencesAnalysed)
+	# updateSequences(sequencesAnalysed)
+	updateSequences(sequencesAnalysed, species="HoSa", traceyIds=[], domain="C2", onlyActive=False)

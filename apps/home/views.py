@@ -1604,6 +1604,7 @@ def features(request):
 			   "last_sequences_update": last_sequences_update,
 			   "last_sequences_update_end": last_sequences_update_end,
 			   "last_tree_update": last_tree_update,
+			   "domains": [d.domainname for d in Domains.objects.all()]
 			   }
 
 	return render(request, 'home/features.html', context)

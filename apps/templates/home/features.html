@@ -201,6 +201,11 @@
 													<option value="DaRe">Danio rerio</option>
 													<option value="SaCe">Saccharomyces c.</option>
 												</select>
+												<select id="domain" name="domain">
+													{% for domain in domains %}
+														<option value="{{ domain }}">{{ domain }}</option>
+													{% endfor %}
+												</select>
 												<select id="continue" name="continue">
 													<option value="continue">Continue</option>
 													<option value="force">Force new</option>
@@ -298,6 +303,7 @@
 		e.preventDefault();
         var sequences_last_update = document.getElementById("sequences_last_update").innerHTML;
         var shortName = document.getElementById("shortName").value;
+        var domain = document.getElementById("domain").value;
         var continueVal = document.getElementById("continue").value;
         var loader = document.getElementById("loader_sequences");
         var msg = document.getElementById("loader_msg_sequences");
@@ -312,6 +318,7 @@
               'sequences_last_update': sequences_last_update,
 			  'shortName': shortName,
 			  'continueVal': continueVal,
+			  'domain': domain,
           },
 
           success: function (data) {
