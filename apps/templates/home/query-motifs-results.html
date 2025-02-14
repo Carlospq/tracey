@@ -144,36 +144,40 @@
 							<div class="col-sm-12">
 								<div class="row" style="border: lightgrey solid 1px; border-radius: 15px; border-radius: 15px; padding: 10px 15px 0px 15px;">
                                 	<div class="mb-3">
-										<p><b>SNARE Group Prediction:</b></p>
+										<p><b>>SNARE Group Prediction:</b></p>
 										<table style="width: 100%;">
+
+											<!-- Best prediction -->
 											<tr>
-												<td style="width: 33%; vertical-align: center; horiz-align: center"><b>Domain:</b> {{ predictedSNARE|get_item:'domain' }} (<p style="color:
-														{% if predictedSNARE|get_item:'domain_prob' < 10 %} red {% elif predictedSNARE|get_item:'domain_prob' < 50 %} orange {% else %} green {% endif %} ; display: inline;">{{ predictedSNARE|get_item:'domain_prob' }}</p>)</td>
-												<td style="width: 33%; vertical-align: center; horiz-align: center"><b>Domain group:</b> {{ predictedSNARE|get_item:'group' }} (<p style="color:
-														{% if predictedSNARE|get_item:'domain_prob' < 10 %} red {% elif predictedSNARE|get_item:'domain_prob' < 50 %} orange {% else %} green {% endif %}; display: inline;">{{ predictedSNARE|get_item:'group_prob' }}</p>)</td>
-												<td style="width: 34%; vertical-align: center; horiz-align: center"><b>Domain subgroup:</b> {{ predictedSNARE|get_item:'subgroup' }} (<p style="color:
-														{% if predictedSNARE|get_item:'domain_prob' < 10 %} red {% elif predictedSNARE|get_item:'domain_prob' < 50 %} orange {% else %} green {% endif %}; display: inline;">{{ predictedSNARE|get_item:'subgroup_prob' }}</p>)</td>
+												<td style="width: 10%; vertical-align: center; horiz-align: center"><b>Domain:</b> {{ predictedSNARE|get_item:'domain' }}</td>
+												{% for k in predictedSNARE %}
+													{% if k != 'domain' and not "sug_" in k and not "_prob" in k %}
+														{%  with k|add:"_prob" as prob_k %}
+														<td style="width: 10%; vertical-align: center; horiz-align: center"><b>{{ k }}:</b> {{ predictedSNARE|get_item:k }} (<p style="color:
+															{% if predictedSNARE|get_item:prob_k < 10 %} red {% elif predictedSNARE|get_item:prob_k < 50 %} orange {% else %} green {% endif %} ; display: inline;">{{ predictedSNARE|get_item:prob_k|floatformat:2 }}</p>)</td>
+														{% endwith %}
+													{% endif %}
+												{% endfor %}
 											</tr>
+										</table>
+
+										<br><br>
+										<p><b>>Alternative Prediction:</b></p>
+										<table style="width: 100%;">
+
+											<!-- Alternative prediction -->
 											<tr>
-												<td style="width: 33%; vertical-align: center; horiz-align: center">
-													{% if predictedSNARE|get_item:'sug_domain' %}
-													<b>Alternative prediction:</b> {{ predictedSNARE|get_item:'sug_domain' }}
-													(<p style="color:{% if predictedSNARE|get_item:'sug_domain_prob' < 10 %} red {% elif predictedSNARE|get_item:'sug_domain_prob' < 50 %} orange {% else %} green {% endif %} ; display: inline;"> {{ predictedSNARE|get_item:'sug_domain_prob' }} </p>)
+												<td style="width: 10%; vertical-align: center; horiz-align: center"><b>Domain:</b> {{ predictedSNARE|get_item:'domain' }}</td>
+												{% for k in predictedSNARE %}
+													{% if k != 'domain' and "sug_" in k and not "_prob" in k %}
+														{%  with k|add:"_prob" as prob_k %}
+														<td style="width: 10%; vertical-align: center; horiz-align: center"><b>{{ k }}:</b> {{ predictedSNARE|get_item:k }} (<p style="color:
+															{% if predictedSNARE|get_item:prob_k < 10 %} red {% elif predictedSNARE|get_item:prob_k < 50 %} orange {% else %} green {% endif %} ; display: inline;">{{ predictedSNARE|get_item:prob_k|floatformat:2 }}</p>)</td>
+														{% endwith %}
 													{% endif %}
-												</td>
-												<td style="width: 33%; vertical-align: center; horiz-align: center">
-													{% if predictedSNARE|get_item:'sug_group' %}
-													<b>Alternative prediction:</b> {{ predictedSNARE|get_item:'sug_group' }}
-													(<p style="color:{% if predictedSNARE|get_item:'sug_group_prob' < 10 %} red {% elif predictedSNARE|get_item:'sug_group_prob' < 50 %} orange {% else %} green {% endif %} ; display: inline;"> {{ predictedSNARE|get_item:'sug_group_prob' }} </p>)
-													{% endif %}
-												</td>
-												<td style="width: 33%; vertical-align: center; horiz-align: center">
-													{% if predictedSNARE|get_item:'sug_subgroup' %}
-													<b>Alternative prediction:</b> {{ predictedSNARE|get_item:'sug_subgroup' }}
-													(<p style="color:{% if predictedSNARE|get_item:'sug_subgroup_prob' < 10 %} red {% elif predictedSNARE|get_item:'sug_subgroup_prob' < 50 %} orange {% else %} green {% endif %} ; display: inline;"> {{ predictedSNARE|get_item:'sug_subgroup_prob' }} </p>)
-													{% endif %}
-												</td>
+												{% endfor %}
 											</tr>
+
 										</table>
 									</div>
 								</div>

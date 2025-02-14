@@ -469,16 +469,12 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                                             <tr>
                                                 <td class="td-header"><b>Sequence with motif: </b></td>
                                                 <td class="td-data">
-                                                    <div style="overflow-x:auto;">
-                                                        <table style="font-family: monospace; width: 100%; text-align: justify;">
-                                                            <tr><td style="border: red;">
-                                                                {% for leter in sequence.sequence %}
-                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %} red {% endif %};">{{ leter }}</a>
-                                                                {% endfor %}
-                                                            </td></tr>
-                                                        </table>
-                                                    </div>
-                                                </td>
+													<div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
+														{% with verifymotifs|get_item:m|get_item:'stopposition' as stopposition %}
+															{% for letter in sequence.sequence %}{% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %}<span style=" color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
+														{% endwith %}
+													</div>
+												</td>
                                             </tr>
                                         </table>
                                     </div>
@@ -591,16 +587,12 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                                             <tr>
                                                 <td class="td-header"><b>Sequence with motif: </b></td>
                                                 <td class="td-data">
-                                                    <div style="overflow-x:auto;">
-                                                        <table style="font-family: monospace; width: 100%; text-align: justify;">
-                                                            <tr><td style="border: red;">
-                                                                {% for leter in sequence.sequence %}
-                                                                    <a style="pointer-events: none; color: {% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %} red {% endif %};">{{ leter }}</a>
-                                                                {% endfor %}
-                                                            </td></tr>
-                                                        </table>
-                                                    </div>
-                                                </td>
+													<div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
+														{% with motifs|get_item:m|get_item:'stopposition' as stopposition %}
+															{% for letter in sequence.sequence %}{% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %}<span style=" color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
+														{% endwith %}
+													</div>
+												</td>
                                             </tr>
                                         </table>
                                     </div>

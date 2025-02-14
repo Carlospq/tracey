@@ -764,7 +764,7 @@ def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutof
 
 	# Convert sequence to pyhmmer format
 	alphabet = pyhmmer.easel.Alphabet.amino()
-	background = pyhmmer.plan7.Background(alphabet)
+	# background = pyhmmer.plan7.Background(alphabet)
 	seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
 	# Fetch HMMs
@@ -893,16 +893,8 @@ def QueryMotifsResultsView(request):
 		context['hits_d'] = {}
 
 	# Predict domain if any SNARE motif is selected
-	if context['domain'][0] in ["HabcSNARE"]:
-		bothDomains = True
-	elif context['domain'][0] in ["all", "Habc", "SNARE"]:
-		bothDomains = False
-	if context['domain'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
-		bypass=context['domain'][0] if context['domain'][0] in ["Habc", "SNARE"] else ''
-	if context['motifname'][0] in ["all", "HabcSNARE", "Habc", "SNARE"]:
-		bypass=context['motifname'][0] if context['motifname'][0] in ["Habc", "SNARE"] else ''
-		# TODO: Change hmmmsearch using cmd to pyhmmer
-		context["predictedSNARE"] = predictMotifs(context['protseq'][0], bothDomains=bothDomains, probCutOff=80, bypass=bypass, onlyPrint=False)
+	if context['domain'][0] == "SNARE":
+		context["predictedSNARE"] = motifPrediction(context['protseq'][0], probCutOff=80)["Query_sequence"]
 
 	if request.method == "POST":
 		context['error_seq'] = ''
@@ -961,8 +953,8 @@ def saveVerifyMotifs(sequence_id, hits):
 				method.save()
 			vm = Verifymotifs(sequence_id = sequence_id,
 							  motifname = motif,
-							  startposition = d['env_from'],
-							  stopposition = d['env_to'],
+							  startposition = d['aln_from'],
+							  stopposition = d['aln_to'],
 							  verifymotifcomments = '',
 							  domaingroup_id = Domaingroups.objects.get(domaingroupname = d['dg']).domaingroup_id,
 							  gaps = countGaps(d['alignment'].target_sequence),
