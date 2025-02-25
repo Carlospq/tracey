@@ -451,21 +451,6 @@
           taxonomy.push($(this).val());
         });
 
-        // Data for domaingroup_rank field
-        $.ajax({
-			url: "{% url 'ajax_load_domaingroups_rank1' %}",
-			data: {
-                'proteinlayout': proteinlayout,
-				'domainname': domainname,
-				'domaingroup_rank': domaingroup_rank
-			},
-
-			success: function (data) {
-                $("#domaingroup_rank").html(data);
-                $("#id_domaingroup_rank").html("");
-            }
-        });
-
 		// Update sequences
 		$.ajaxSetup({traditional: true});
 		$.ajax({
@@ -493,7 +478,7 @@
 
     });
 
-    // formField.reload on formField.change
+    // formField.reload on formField.change (proteinlayout)
 	$("#proteinlayout").change(function () {
     	var url = $("#MotifForm").attr("data-load-domains-url");
         var urlshortnames = $("#MotifForm").attr("data-load-sequenceshortnames-url");
@@ -503,7 +488,8 @@
 		$.ajax({
 			url: urlshortnames,
 			data: {
-                'proteinlayout': proteinlayout
+                'proteinlayout': proteinlayout,
+				'verifymotifs': 'true'
 			},
 			success: function (data) {
                 $("#shortname").html(data);
@@ -525,15 +511,19 @@
 
     });
 
+    // formField.reload on formField.change (domainname)
     $("#domainname").change(function () {
         var urlrank1 = $("#MotifForm").attr("data-load-domaingroups-rank1-url");
         var urlshortnames = $("#MotifForm").attr("data-load-sequenceshortnames-url");
+        var proteinlayout = $("#proteinlayout").val();
         var domainname = $(this).val();
 
         $.ajax({
 			url: urlshortnames,
 			data: {
-                'domainname': domainname
+                'proteinlayout': proteinlayout,
+                'domainname': domainname,
+				'verifymotifs': 'true'
 			},
 			success: function (data) {
                 $("#shortname").html(data);
@@ -543,6 +533,7 @@
         $.ajax({
 			url: urlrank1,
 			data: {
+                'proteinlayout': proteinlayout,
                 'domainname': domainname
 			},
 			success: function (data) {
@@ -554,6 +545,7 @@
         $.ajax({
 			url: "{% url 'ajax_load_domaingroups_rank2' %}",
 			data: {
+                'proteinlayout': proteinlayout,
                 'domainname': domainname,
 				'domaingroup_rank': ''
 			},
@@ -565,28 +557,64 @@
 
     });
 
-    // Load domaingroups
+    // formField.reload on formField.change (domaiungroup_rank)
     $("#domaingroup_rank").change(function () {
-      var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
-      var domainname = $("#domainname").val();
-      var domaingroup_rank = $(this).val();
+        var url = $("#MotifForm").attr("data-load-domaingroups-rank2-url");
+        var domainname = $("#domainname").val();
+        var domaingroup_rank = $(this).val();
+        var urlshortnames = $("#MotifForm").attr("data-load-sequenceshortnames-url");
+        var proteinlayout = $("#proteinlayout").val();
 
-      $.ajax({
-        url: url,
-        data: {
-          'domainname': domainname,
-          'domaingroup_rank': domaingroup_rank
-        },
+        // Load shortnames
+		$.ajax({
+			url: urlshortnames,
+			data: {
+                'proteinlayout': proteinlayout,
+				'domaingroup_rank': domaingroup_rank,
+				'domainname': domainname,
+				'verifymotifs': 'true'
+			},
+			success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
 
-        success: function (data) {
-          $("#domaingroup").html(data);
-          $("#id_domaingroup").html("");
-          // $('#domainsubgroup')[0].selectize.clear();
-        }
-      });
+		$.ajax({
+			url: url,
+			data: {
+                'proteinlayout': proteinlayout,
+                'domainname': domainname,
+				'domaingroup_rank': domaingroup_rank
+			},
+			success: function (data) {
+                $("#domaingroup").html(data);
+			}
+		});
     });
 
+	// formField.reload on formField.change (domaingroup)
+	$("#domaingroup").change(function () {
+        var urlshortnames = $("#MotifForm").attr("data-load-sequenceshortnames-url");
+        var proteinlayout = $("#proteinlayout").val();
+        var domainname = $("#domainname").val();
+        var domaingroup_rank = $("#domaingroup_rank").val();
+        var domaingroup = $(this).val();
 
+        // Load shortnames
+        $.ajax({
+            url: urlshortnames,
+            data: {
+                'proteinlayout': proteinlayout,
+                'domaingroup_rank': domaingroup_rank,
+                'domainname': domainname,
+				'domaingroup': domaingroup,
+				'verifymotifs': 'true'
+            },
+            success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
+    });
 
 
 </script>

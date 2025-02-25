@@ -96,7 +96,7 @@
 									</div>
 								</div>
 
-								<!-- Domain Groups -->
+								<!-- Domain Groups rank-->
 								<div class="mb-3 formrow">
 									<!-- domainGroup_rank -->
 									<div class="formcell1"><label for="{{ form.domaingroup_rank.id_for_label }}">Domain group</label></div>
@@ -114,7 +114,7 @@
 								</div>
 
 								<!-- domainGroups -->
-								<div class="fieldWrapper" style="height: 14.5em; width: 100%; padding: 0">
+								<div class="fieldWrapper" id="domaingroup" style="height: 14.5em; width: 100%; padding: 0" onclick="loadShortNames()">
 									{{ form.domaingroup }}
 								</div>
 
@@ -273,7 +273,7 @@
 	// Change in Protein Layout
 	$("#proteinlayout").change(function () {
         var urldomains = $("#FamilyForm").attr("data-load-domains-url");
-		var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
+		//var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
         var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
         var proteinlayout = $(this).val();
 
@@ -285,20 +285,22 @@
 			},
 			success: function (data) {
 				$("#domainname").html(data);
+                $("#domaingroup_rank").html("");	 // Update rank1
+				$("#id_domaingroup").html("");		 // Clear rank2
 			}
 		});
 
         // Load Domain Group rank1
-        $.ajax({
-			url: urldomaingroupsrank1,
-			data: {
-				'proteinlayout': proteinlayout
-			},
-			success: function (data) {
-				 $("#domaingroup_rank").html(data);	 // Update rank1
-                 $("#id_domaingroup").html("");		 // Clear rank2
-			}
-		});
+        //$.ajax({
+		//	url: urldomaingroupsrank1,
+		//	data: {
+		//		'proteinlayout': proteinlayout
+		//	},
+		//	success: function (data) {
+		//		 $("#domaingroup_rank").html(data);	 // Update rank1
+		//		 $("#id_domaingroup").html("");		 // Clear rank2
+		//	}
+		//});
 
         // Load shortnames
         $.ajax({
@@ -316,12 +318,14 @@
     $("#domainname").change(function () {
 		var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
         var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
+        var proteinlayout = $("#proteinlayout").val();
 		var domainname = $(this).val();
 
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank1,
 			data: {
+                'proteinlayout': proteinlayout,
 				'domainname': domainname
 			},
 			success: function (data) {
@@ -334,6 +338,7 @@
 		$.ajax({
 			url: urlshortnames,
 			data: {
+                'proteinlayout': proteinlayout,
                 'domainname': domainname
 			},
 			success: function (data) {
@@ -344,21 +349,70 @@
 
     // Change in domain group rank
     $("#domaingroup_rank").change(function () {
-      var url = $("#FamilyForm").attr("data-load-domaingroups-rank2-url");  // get the url of the `load_cities` view
-      var domaingroup_rank = $(this).val();                                 // get the selected country ID from the HTML input
-      var domainname = $("#domainname").val();
+        var url = $("#FamilyForm").attr("data-load-domaingroups-rank2-url");
+        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
+		var proteinlayout = $("#proteinlayout").val();
+		var domainname = $("#domainname").val();
+        var domaingroup_rank = $(this).val();
 
-      $.ajax({
-		  url: url,
-		  data: {
-              'domaingroup_rank': domaingroup_rank,
-			  'domainname': domainname
-		  },
-		  success: function (data) {
-              $("#id_domaingroup").html(data);
-          }
-      });
+        $.ajax({
+			url: url,
+			data: {
+                'proteinlayout': proteinlayout,
+				'domaingroup_rank': domaingroup_rank,
+				'domainname': domainname
+			},
+			success: function (data) {
+                $("#id_domaingroup").html(data);
+            }
+        });
+
+        // Load shortnames
+		$.ajax({
+			url: urlshortnames,
+			data: {
+                'proteinlayout': proteinlayout,
+                'domainname': domainname,
+				'domaingroup_rank': domaingroup_rank
+			},
+			success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
     });
+
+    // Click on domaingroups
+    //$("#id_domaingroup").onchange(function () {
+	function loadShortNames() {
+        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
+		var proteinlayout = $("#proteinlayout").val();
+		var domainname = $("#domainname").val();
+        var domaingroup_rank = $("#domaingroup_rank").val();
+        var domaingroup = document.getElementById("id_domaingroup");
+
+		var result = [];
+        var options = domaingroup.options;
+        var opt;
+        for (var i=0, iLen=options.length; i<iLen; i++) {
+            opt = options[i];
+            if (opt.selected) {
+                result.push(opt.value || opt.text);
+            }
+        }
+        // Load shortnames
+		$.ajax({
+			url: urlshortnames,
+			data: {
+                'proteinlayout': proteinlayout,
+                'domainname': domainname,
+				'domaingroup_rank': domaingroup_rank,
+				'domaingroup': result
+			},
+			success: function (data) {
+                $("#shortname").html(data);
+            }
+        });
+    }
 
 </script>
 

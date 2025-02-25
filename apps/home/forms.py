@@ -294,7 +294,8 @@ class MotifForm(forms.Form):
         label="Protein Layout",
         required=False,
         initial="",
-        widget=forms.Select(choices = [("","")] + sorted([(x.proteinlayoutname, x.proteinlayoutname) for x in Proteinlayouts.objects.all()]))
+        # widget=forms.Select(choices = [("","")] + sorted([(x.proteinlayoutname, x.proteinlayoutname) for x in Proteinlayouts.objects.all()]))
+        widget=forms.Select(choices = [("","")] + [('AAA', 'AAA'), ('C2', 'C2'), ('MUN', 'MUN'), ('NSR', 'NSR'), ('Proppin', 'Proppin'), ('Ras superfamily', 'Ras superfamily'), ('Rhomboid', 'Rhomboid'), ('Rint', 'Rint'), ('SM', 'SM'), ('SNAP', 'SNAP'), ('SNARE', 'SNARE'), ('TMR', 'TMR'), ('Zw10', 'Zw10')])
     )
 
     domainname = forms.CharField(

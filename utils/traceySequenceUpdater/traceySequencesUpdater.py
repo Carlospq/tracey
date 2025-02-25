@@ -1,9 +1,8 @@
 ##############################################################################################################################
 #### IMPORTS ####
-import os, sys, django
+import os, re, sys, django
 import subprocess
 import xmltodict
-import re
 import pyhmmer
 
 from datetime import date, datetime

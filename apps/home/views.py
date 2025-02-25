@@ -43,6 +43,8 @@ from utils.traceySequenceUpdater import traceySequencesUpdater
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
 from utils.motifPredictor.predictor import *
 
+from apps.templates.menus.query_sequences import *
+
 from django import template
 
 register = template.Library()
@@ -117,31 +119,17 @@ def get_sequences(query, verify=False):
 
 	elif 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
 
-		domainname = query['domainname'][0]
-		domaingrouprank = Domaingroups.objects.filter(domain = Domains.objects.get(domainname=domainname))
-		domaingrouprank = domaingrouprank.filter(domaingroupname = query['domaingroup_rank'][0].replace("-",""))
-		domaingrouprank_children = get_children(Domaingroups, domaingrouprank, "domaingroup_id", "domaingroupparent_id", children=[])
-		children_ids = [x.domaingroup_id for x in domaingrouprank_children] + [x.domaingroup_id for x in domaingrouprank]
-		domaingroups = Domaingroups.objects.filter(domaingroup_id__in = children_ids)
+		domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[query['proteinlayout'][0]][query['domainname'][0]][query['domaingroup_rank'][0]]))
 
 	elif ('proteinlayout' in query and notEmpty(query, 'proteinlayout')) or ('domainname' in query and notEmpty(query, 'domainname')):
 
-		if 'proteinlayout' in query and notEmpty(query, 'proteinlayout'):
-			proteinlayout = Proteinlayouts.objects.get(proteinlayoutname=query['proteinlayout'][0])
-			proteinlayoutgroups = Proteinlayoutgroups.objects.filter(proteinlayout=proteinlayout)
-			p2d = P2Dmapping.objects.filter(proteinlayoutgroup__in=proteinlayoutgroups)
-			domaingroupsProteinlayout = Domaingroups.objects.filter(domaingroup_id__in=p2d.values('domaingroup_id'))
-
 		if 'domainname' in query and notEmpty(query, 'domainname'):
-			domain = Domains.objects.get(domainname=query['domainname'][0])
-			domaingroupsDomainname = Domaingroups.objects.filter(domain_id=domain.domain_id)
 
-		if ('proteinlayout' in query and notEmpty(query, 'proteinlayout')) and ('domainname' in query and notEmpty(query, 'domainname')):
-			domaingroups = domaingroupsProteinlayout & domaingroupsDomainname
+			domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively( menu[ query['proteinlayout'][0] ][ query['domainname'][0] ]) )
+
 		elif 'proteinlayout' in query and notEmpty(query, 'proteinlayout'):
-			domaingroups = domaingroupsProteinlayout
-		elif 'domainname' in query and notEmpty(query, 'domainname'):
-			domaingroups = domaingroupsDomainname
+
+			domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[query['proteinlayout'][0]]))
 
 	else:
 		domaingroups = Domaingroups.objects.all()
@@ -167,7 +155,6 @@ def get_sequences(query, verify=False):
 
 	# Filter seqs if shortname/foreignAnnotation or taxonomy is provided
 	if 'shortname' in query and notEmpty(query, 'shortname'):
-		# taxonomies = Taxonomies.objects.filter(taxonomyshortname__iexact = query['shortname'][0])
 		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0]) if t.taxonomyshortname.lower() == query['shortname'][0].lower() or t.taxonomyshortname.lower().startswith(query['shortname'][0].lower()+"_") ]
 		seqs = seqs.filter(taxonomy__in=taxonomies)
 
@@ -200,6 +187,7 @@ def get_sequences(query, verify=False):
 		context = {'error': 'This query returned too many sequences (>4000). Please refine your search.'}
 		return context
 	return seqs.order_by('sequenceshortname')
+
 
 def notEmpty(query, element):
 	try:
@@ -303,9 +291,7 @@ def proteinlayoutToDomains(proteinLayoutname):
 
 def load_domains(request):
 	if request.GET.get('proteinlayout'):
-		pl = Proteinlayouts.objects.get(proteinlayoutname=request.GET.get('proteinlayout'))
-		plgs = pl.proteinlayoutgroups_set.all()
-		domains = set([d2p.domaingroup.domain.domainname for plg in plgs for d2p in plg.p2dmapping_set.all()])
+		domains = [d for d in menu[request.GET.get('proteinlayout')]]
 	else:
 		domains = [x.domainname for x in Domains.objects.all()]
 	return render(request, 'home/query-sequences-family-domains.html', {'domains': domains})
@@ -313,23 +299,42 @@ def load_domains(request):
 def load_domaingroups_rank1(request):
 	proteinlayout = request.GET.get('proteinlayout')
 	domainname = request.GET.get('domainname')
-	domain = Domains.objects.filter(domainname=domainname)
-	domaingroup_rank = request.GET.get('domaingroup_rank')
-	domainGroupNames = sorted([x.domaingroupname for x in Domaingroups.objects.filter(domain_id__in=domain.values('domain_id')) if x.analysislevel == 2]) if domainname else []
+	if proteinlayout and domainname:
+		domaingroups_rank_list = [dg_name for dg_name in menu[proteinlayout][domainname]]
+	else:
+		domaingroups_rank_list = []
 
-	return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domainGroupNames, 'domaingroup_rank': domaingroup_rank})
+	return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domaingroups_rank_list})
 
 
 def load_sequenceshortnames(request):
-	if request.GET.get('domainname'):
-		domainID = Domains.objects.get(domainname = request.GET.get('domainname')).domain_id
-		domaingroups = Domaingroups.objects.filter(domain_id = domainID)
+	if 'domaingroup' in request.GET and notEmpty(request.GET, 'domaingroup'):
+		domaingroup = [x.replace("-","") for x in request.GET.get('domaingroup')] if isinstance(request.GET.get('domaingroup'), list) else [request.GET.get('domaingroup').replace("-","")]
+		domaingroups = Domaingroups.objects.filter(domaingroupname__in=domaingroup)
+		sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))] )
+		sequence_ids_vmotifs = set( [m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+	elif 'domaingroup_rank' in request.GET and notEmpty(request.GET, 'domaingroup_rank'):
+		proteinlayout = request.GET.get('proteinlayout')
+		domainname = request.GET.get('domainname')
+		domaingroup_rank = request.GET.get('domaingroup_rank')
+		domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[proteinlayout][domainname][domaingroup_rank]))
+		sequence_ids = set([m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+		sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+	elif request.GET.get('domainname'):
+		domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[request.GET.get('proteinlayout')][request.GET.get('domainname')]))
 		sequence_ids = set( Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id', flat=True) )
-	if request.GET.get('proteinlayout'):
-		domaingroups = proteinlayoutToDomaingroups(request.GET.get('proteinlayout'))
+		sequence_ids_vmotifs = set(Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id',flat=True))
+	elif request.GET.get('proteinlayout'):
+		domaingroups = Domaingroups.objects.filter(domaingroupname__in = get_keys_recursively(menu[request.GET.get('proteinlayout')]))
 		sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))] )
+		sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
 	else:
 		sequence_ids = set([m.sequence_id for m in Motifs.objects.all()])
+		sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.all()])
+
+	if "verifymotifs" in request.GET:
+		sequence_ids = sequence_ids | sequence_ids_vmotifs
+
 	sequences = Sequences.objects.filter(sequence_id__in=sequence_ids)
 	shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomy_id__in=sequences.values('taxonomy_id')) ]) ))
 	return render(request, 'home/query-sequences-family-sequenceshortnames.html', {'shortnames': shortnames})
@@ -337,13 +342,13 @@ def load_sequenceshortnames(request):
 
 def load_domaingroups_rank2(request):
 
-	children_list = []
-	rank = request.GET.get('domaingroup_rank')
-	if not rank:
+	if not request.GET.get('domaingroup_rank'):
 		children_list = []
 	else:
-		children_list = get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=rank), "domaingroup_id", "domaingroupparent_id", children=children_list)
-		children_list = [ "-" * (int(x.analysislevel)-2) + x.domaingroupname for x in children_list if x.analysislevel >= 2 and (any(x.motifs_set.all()) or any(x.verifymotifs_set.all()))]
+		proteinlayout = request.GET.get('proteinlayout')
+		domainname = request.GET.get('domainname')
+		domaingroup_rank = request.GET.get('domaingroup_rank')
+		children_list = get_keys_level_recursively(menu[proteinlayout][domainname][domaingroup_rank])
 	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
 
@@ -384,7 +389,8 @@ def QuerySequences(request):
 	form = FamilyForm
 
 	## GET QUERIES ##
-	proteinLayoutsList = sorted([x.proteinlayoutname for x in Proteinlayouts.objects.all()])
+	# proteinLayoutsList = sorted([x.proteinlayoutname for x in Proteinlayouts.objects.all()])
+	proteinLayoutsList = sorted([pfam for pfam in menu])
 	domainsList = sorted([x.domainname for x in Domains.objects.filter(domainname__in=["SNARE", "Habc", "LGL"])])
 
 	SNAREdomainID = Domains.objects.get(domainname = "SNARE").domain_id
@@ -1625,7 +1631,7 @@ def update_taxonomy(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_sequences(request):
-	cmd = ['python3', 'manage.py', 'UpdateTraceySequences', '--onlyActive', "--" + request.GET['continueVal']]
+	cmd = ['python3', 'manage.py', 'UpdateTraceySequences', '--onlyActive', "--%s"%(request.GET['continueVal']), "--%s"%(request.GET['domain'])]
 	if request.GET['shortName'] != "All":
 		cmd.append("--species")
 		cmd.append(request.GET['shortName'])
