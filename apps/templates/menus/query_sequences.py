@@ -487,15 +487,15 @@ menu = {
 				}
 			},
 			'SNAP': {
-				'SNAPb': {
-					'SNAPb.Sec9': {},
-					'SNAPb.SN25': {},
-					'SNAPb.SN29': {}
+				'SNAP.b': {
+					'SNAP.b.Sec9': {},
+					'SNAP.b.SN25': {},
+					'SNAP.b.SN29': {}
 				},
-				'SNAPc': {
-					'SNAPc.Sec9': {},
-					'SNAPc.SN25': {},
-					'SNAPc.SN29': {}
+				'SNAP.c': {
+					'SNAP.c.Sec9': {},
+					'SNAP.c.SN25': {},
+					'SNAP.c.SN29': {}
 				},
 			}
 		},
@@ -518,8 +518,6 @@ menu = {
 			'Hb': {
 				'Hb.I': {},
 				'Hb.II': {
-					'Hb.II.a': {},
-					'Hb.II.b': {},
 					'Hb.II.Bos1': {},
 					'Hb.II.Gos1': {},
 					'Hb.II.Membrin': {}
