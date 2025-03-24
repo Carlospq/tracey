@@ -33,34 +33,34 @@ class Command(BaseCommand):
                 sys.exit("Species name not found in TRACEY. Please confirm that the given species name is correct.")
 
         # Continue update from last log file
+        logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
         if options['continue']:
+            print("Continuing from the last log file")
+            # Rename old log with today's date
+            if any([f for f in os.listdir("./utils/traceySequenceUpdater/") if f.endswith(".log")]):
+                logfile = [f for f in os.listdir("./utils/traceySequenceUpdater/") if f.endswith(".log")][0]
+                os.rename("./utils/traceySequenceUpdater/%s" % logfile, logFileName)
+
             oldLogs = [x for x in os.listdir('./utils/traceySequenceUpdater') if 'log' in x]
             # If not log files, ask if user wants to start a new complete update
             if len(oldLogs) == 0:
                 inputValue = input("There are no old log files in the folder. Do you want to start a new complete update of TRACEY sequences? [y/n]: ")
                 if inputValue.lower() == 'y':
-                    logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
                     logFile = open(logFileName, "w")
                     logFile.write("traceyID\tncbiID\tshortname_old\tshortname_new\tcomment\n")
                 else:
                     sys.exit("Update cancelled.")
             # If log files, continue from the last one
             else:
-                # print("Checking previous log file...")
-                oldDate = ".".join(oldLogs[-1].split('.')[-4:-1])
-                logFileNameOld = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % oldDate
-                logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
-                os.rename(logFileNameOld, logFileName)
                 logFile = open(logFileName, "r")
                 sequencesAnalysed = [int(x.split()[0]) for x in logFile.readlines() if x.split()[0].isdigit()]
         # Force a new complete update of TRACEY sequences
         elif options['force']:
-            logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
+            print("Forcing a new complete update of TRACEY sequences")
             logFile = open(logFileName, "w")
             logFile.write("traceyID\tncbiID\tshortname_old\tshortname_new\tcomment\n")
         else:
             sys.exit("Please specify if you want to continue from the last log file or force a new complete update of TRACEY sequences.")
         logFile.close()
 
-        # updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE", onlyActive=False)
         updateSequences(sequencesAnalysed, options['species'], options['traceyIds'], options['domain'], options['onlyActive'])

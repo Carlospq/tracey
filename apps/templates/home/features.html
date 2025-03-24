@@ -184,7 +184,7 @@
 									<form method='post' action='#' name="UpdateSequencesForm" id="UpdateSequencesForm">
 										{% csrf_token %}
 										<div class="feature-body-main">
-											<p style="margin-bottom: 15px;">'Live' sequences from TRACEY containing NCBI Id will be updated according to NCBI data.</p>
+											<p style="margin-bottom: 15px;">Sequences from TRACEY containing NCBI Id will be updated according to NCBI data.</p>
 											<p style="margin-bottom: 15px;">'Live' sequences without NCBI Id will remain as they are.</p>
 											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
 											{% if last_sequences_update_end != "Update in progress" %}
@@ -193,6 +193,15 @@
 										</div>
 										<div class="feature-body-footer">
 											{% if last_sequences_update_end != "Update in progress" %}
+
+												<div style="display:inline-flex">
+													<input type="checkbox" id="onlyActive" name="onlyActive" value="onlyActive" checked style="margin-right: 5px">
+													<label for="onlyActive" style="margin-right: 10px; height: 1em"> Only active sequences</label><br>
+													<select id="continue" name="continue" style="">
+														<option value="continue">Continue</option>
+														<option value="force">Force new</option>
+													</select>
+												</div>
 												<select id="shortName" name="shortName">
 													<option value="All">All</option>
 													<option value="HoSa">Homo sapiens</option>
@@ -206,10 +215,7 @@
 														<option value="{{ domain }}">{{ domain }}</option>
 													{% endfor %}
 												</select>
-												<select id="continue" name="continue">
-													<option value="continue">Continue</option>
-													<option value="force">Force new</option>
-												</select>
+
 												<input class="mt-1" type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
 											{% endif %}
 											<i><p class="p-footer" id='sequences_last_update'>Last update on: {{last_sequences_update}}</p></i>
@@ -305,6 +311,7 @@
         var shortName = document.getElementById("shortName").value;
         var domain = document.getElementById("domain").value;
         var continueVal = document.getElementById("continue").value;
+        var onlyActive = document.getElementById("onlyActive").checked;
         var loader = document.getElementById("loader_sequences");
         var msg = document.getElementById("loader_msg_sequences");
         document.getElementById("sequences_last_update").innerHTML = "This will take several hours... Go for a coffee!";
@@ -319,6 +326,7 @@
 			  'shortName': shortName,
 			  'continueVal': continueVal,
 			  'domain': domain,
+			  'onlyActive': onlyActive,
           },
 
           success: function (data) {

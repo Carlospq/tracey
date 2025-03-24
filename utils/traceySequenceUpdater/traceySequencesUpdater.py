@@ -57,10 +57,14 @@ def esummary(idx, db="protein"):
 			output, error = "", "Invalid db name"
 		elif b'gi is not found' in output:
 			output, error = "", "gi not found"
-		elif b'Invalid uid syntaxin' in output:
-			output, error = "", "Invalid uid syntaxin"
+		elif b'Invalid uid' in output:
+			output, error = "", "Invalid uid"
 		elif b'Otherdb' in output:
 			warning = xmltodict.parse(output)['DocumentSummarySet']['Warning']
+			# try:
+			# 	output, error = esummary(warning['Otherdb']['@uid'], db=warning['Otherdb']['@db'])
+			# except:
+			# 	output, error = "", "ID %s not found in db '%s', but found in db '%s' with id %s" % (idx, db, warning['Otherdb']['@db'], warning['Otherdb']['@uid'])
 			output, error = "", "ID %s not found in db '%s', but found in db '%s' with id %s" % (idx, db, warning['Otherdb']['@db'], warning['Otherdb']['@uid'])
 		else:
 			output, error = "", "Invalid ID format"
@@ -386,10 +390,6 @@ def predictShortnameByTraceyId(traceySeqId):
 
 
 def newEntryForReplacedBy(replaced_by, seqId, updateLog={}):
-	if any(Sequences.objects.filter(foreignannotation__icontains=replaced_by)):
-		updateLog[seqId]['comment'] += ' NCBI ID %s already exists in TRACEY;' % replaced_by
-		replaced_by_seq = Sequences.objects.filter(foreignannotation__icontains=replaced_by)[0]
-		return replaced_by_seq, esummary(replaced_by)[0]
 
 	fetch_output, fetch_error = efetch(replaced_by)
 	esummary_output, esummary_error = esummary(replaced_by)
@@ -400,14 +400,38 @@ def newEntryForReplacedBy(replaced_by, seqId, updateLog={}):
 	elif "Status" in esummary_output and not "replaced" in esummary_output["Status"]:
 		updateLog[seqId]['comment'] += 'NCBI ID %s is %s - Sequence not created;' % (replaced_by, esummary_output["Status"])
 	elif "Status" in esummary_output and "replaced" in esummary_output["Status"]:
-		updateLog[seqId]['comment'] += ' NCBI ID %s is replaced by %s;' % (replaced_by, esummary_output["ReplacedBy"])
+
+		# If replaced_by is already in TRACEY, updateLog
+		if any(Sequences.objects.filter(foreignannotation__icontains=replaced_by)):
+			updateLog[seqId]['comment'] += ' NCBI ID %s already exists in TRACEY;' % replaced_by
+			s = Sequences.objects.get(sequence_id=seqId)
+			if s.sequenceshortname == Sequences.objects.filter(foreignannotation__icontains=replaced_by)[0].sequenceshortname:
+				s.sequenceshortname = s.sequenceshortname + "_replaced"
+				s.save()
+			replacedBySequence = Sequences.objects.filter(foreignannotation__icontains=replaced_by)[0]
+			seqId = replacedBySequence.sequence_id
+			if not seqId in updateLog:
+				updateLog[seqId] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
+									'comment': ' NCBI ID %s is replaced by %s;' % (replaced_by, esummary_output["ReplacedBy"]),
+									'newshortname': replacedBySequence.sequenceshortname}
+		else:
+			updateLog[seqId]['comment'] += ' NCBI ID %s is replaced by %s;' % (replaced_by, esummary_output["ReplacedBy"])
+
+		# Check replaced_by NCBI status
 		newEntrySequence, esummary_output = newEntryForReplacedBy(esummary_output["ReplacedBy"], seqId, updateLog=updateLog)
+
 	else:
-		# Fetch data from ncbi for replaced_by and create new sequence entry in TRACEY
-		newEntrySequence = newSequenceEntryFromEfetch(esummary_output, fetch_output, seqId, updateLog)
+
+		if any(Sequences.objects.filter(foreignannotation__icontains=replaced_by)):
+			newEntrySequence = Sequences.objects.filter(foreignannotation__icontains=replaced_by)[0]
+			updateLog[seqId]['comment'] += ' NCBI ID %s already exists in TRACEY;' % replaced_by
+		else:
+			# Fetch data from ncbi for replaced_by and create new sequence entry in TRACEY
+			newEntrySequence = newSequenceEntryFromEfetch(esummary_output, fetch_output, seqId, updateLog)
+			updateLog[seqId]['comment'] += ' creating new entry for NCBI ID %s in TRACEY;' % replaced_by
+
 		if newEntrySequence == "":
 			updateLog[seqId]['comment'] += ' NCBI ID %s is not a SNARE' % (replaced_by)
-		# Use TRACEY ID of newly created sequence entry
 		else:
 			updateLog[newEntrySequence.sequence_id] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
 													   'comment': 'New sequence entry created replacing TRACEY ID %s;' % seqId,
@@ -417,13 +441,21 @@ def newEntryForReplacedBy(replaced_by, seqId, updateLog={}):
 
 def analyzeSequence(newSeq):
 
+	def overlap(start1, end1, start2, end2):
+		"""Does the range (start1, end1) overlap with (start2, end2)?"""
+		return (
+				start1 <= start2 <= end1 or
+				start1 <= end2 <= end1 or
+				start2 <= start1 <= end2 or
+				start2 <= end1 <= end2
+		)
+
 	# Scan sequence for all motifs in TRACEY
 	with pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb") as hmm_file:
 		alphabet = pyhmmer.easel.Alphabet.amino()
 		proteins = [pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=newSeq.sequence).digitize(alphabet)]
 		all_hits = pyhmmer.hmmer.hmmscan(proteins, hmm_file, E=1e-5)
 
-	# print(newSeq.foreignannotation)
 	hits_d = {}
 	for hits in all_hits:
 		for h in hits:
@@ -445,51 +477,7 @@ def analyzeSequence(newSeq):
 								  'alignment': d.alignment,
 								  'dg': dg,
 								  'motif': motif}
-	# Save motifs to database
-	# Only one motif per maingroup
-	# motifs_lists = {'mainMotifs': {'list': ['Ha', 'Hb','Hc', 'Qa', 'Qb', 'Qc', 'R', 'Habc', 'SNARE'], 'value': 1},
-	# 				'secondaryMotifs': {'list': ['Ha.I', 'Ha.II', 'Ha.III', 'Ha.IV', 'Hb.I', 'Hb.II', 'Hb.III', 'Hc.I', 'Hc.III',
-	# 											 'Qa.I', 'Qa.II', 'Qa.III', 'Qa.IV', 'Qb.I', 'Qb.II', 'Qb.III', 'Qc.I', 'Qc.II', 'Qc.III',
-	# 											 'R.I', 'R.II', 'R.III', 'R.IV', 'R.Reg', 'Lgl', 'SNAP'], 'value': 2},
-	# 				'terniaryMotifs': {'list': ['Ha.III.a', 'Ha.III.b', 'Ha.IV.Sso', 'Ha.IV.Syx', 'Hb.II.a', 'Hb.II.b', 'Hc.III.b', 'Hc.III.c',
-	# 											'Qa.III.a', 'Qa.III.b', 'Qb.III.b', 'Qb.III.d', 'Qc.III.b', 'Qc.III.c', 'SNAP.b', 'SNAP.c'], 'value': 3}}
-	# besthits = {'Habc': {}, 'SNARE': []}
 
-	# for hit in hits_d:
-	# 	hit = hits_d[hit]
-	# 	# skip hits with p-value > 1e-5 || only for SNAREs
-	# 	# if hit['pvalue'] > 1e-5 or hit['length'] < 45: continue
-	# 	dg_name = hit['dg'].domaingroupname
-	# 	motif_name = hit['motif']
-	# 	list_value = [motifs_lists[l]['value'] for l in motifs_lists if dg_name in motifs_lists[l]['list']][0]
-	# 	hit['list_value'] = list_value
-	# 	if motif_name == 'Habc':
-	# 		if not besthits['Habc']:
-	# 			besthits[hit['motif']] = hit
-	# 		elif list_value >= besthits['Habc']['list_value'] and hit['pvalue'] < besthits['Habc']['pvalue']:
-	# 			besthits[hit['motif']] = hit
-	# 	elif motif_name == 'SNARE':
-	# 		snap_list = [snap_hit for snap_hit in besthits['SNARE'] if 'SNAP' in snap_hit['dg'].domaingroupname]
-	# 		if not besthits['SNARE']:
-	# 			besthits['SNARE'].append(hit)
-	# 		elif 'SNAP.' in dg_name:
-	# 			if not dg_name in [snap_hit['dg'].domaingroupname for snap_hit in snap_list]:
-	# 				besthits['SNARE'].append(hit)
-	# 			else:
-	# 				for i in range(1, len(besthits['SNARE'])):
-	# 					if dg_name == besthits['SNARE'][i]['dg'].domaingroupname and hit['pvalue'] < besthits['SNARE'][i]['pvalue']:
-	# 						besthits['SNARE'][i] = hit
-	# 		elif hit['pvalue'] < besthits['SNARE'][0]['pvalue']:
-	# 			besthits['SNARE'][0] = hit
-
-	def overlap(start1, end1, start2, end2):
-		"""Does the range (start1, end1) overlap with (start2, end2)?"""
-		return (
-				start1 <= start2 <= end1 or
-				start1 <= end2 <= end1 or
-				start2 <= start1 <= end2 or
-				start2 <= end1 <= end2
-		)
 	# Find best hit from all overlapping hits
 	best_hits =[]
 	for hit in hits_d:
@@ -498,7 +486,6 @@ def analyzeSequence(newSeq):
 		best_overlapping_hit = [h for h in overlapping_hits if h['pvalue'] == min([h['pvalue'] for h in overlapping_hits])][0]
 		if not best_overlapping_hit in best_hits:
 			best_hits.append(best_overlapping_hit)
-
 
 	# all_best_hits = [hit for hit in besthits['SNARE']] + [besthits['Habc']]
 	for hit in hits_d:
@@ -615,15 +602,6 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 			accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
 
 			comment = ''
-			# if seq.dbxref != accessionVersion:
-			# 	seq.dbxref = accessionVersion
-			# 	seq.save()
-			# 	comment += 'dbxref updated to %s; ' % accessionVersion
-
-			# if seq.sequencestatus not in ['replaced', 'replaced NCBI']:
-			# 	comment += 'Sequencestatus changed from %s to replaced NCBI; ' % (seq.sequencestatus)
-				# seq.sequencestatus = 'replaced NCBI'
-
 			if "Comment" in identicalSeqSummaryOutput and "has been updated." in identicalSeqSummaryOutput["Comment"]:
 				comment += 'Sequence updated into NCBI ID %s; ' % (replaced_by)
 			else:
@@ -797,7 +775,7 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 
 #### MAIN FUNCTION ####
 def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE", onlyActive=False):
-	#### NOTE: Script adapted for any proteins domain in TRACEY (needs final testing) ####
+	#### NOTE: Script adapted for any proteins domain in TRACEY ####
 
 	######### UPDATE SEQUENCES WITH NCBI SOURCE #########
 	# This first section collects all the sequences from the database that are sourced from NCBI
@@ -807,15 +785,24 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 	# Collect all sequences in tracey matching the domain
 	if domain == "SNARE":
 		snareMotifsIds = set([m.sequence_id for m in Motifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
-		snareVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
+		sequences = Sequences.objects.filter(sequence_id__in=list(snareMotifsIds))
 
-		sequences = Sequences.objects.filter(sequence_id__in=list(snareMotifsIds | snareVerifymotifsIds))
+		if not onlyActive:
+			snareVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
+			sequences = sequences.filter(sequence_id__in=list(snareVerifymotifsIds))
+
 		sequences = sequences.exclude(sequence_id__in=sequencesAnalysed)
 	else:
 		sequencesMotifsIds = set([m.sequence_id for m in Motifs.objects.filter(motifname__in=[domain])])
-		sequencesVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=[domain])])
-		sequences = Sequences.objects.filter(sequence_id__in=list(sequencesMotifsIds | sequencesVerifymotifsIds))
+		sequences = Sequences.objects.filter(sequence_id__in=list(sequencesMotifsIds))
+
+		if not onlyActive:
+			sequencesVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=[domain])])
+			sequences = sequences.filter(sequence_id__in=list(sequencesVerifymotifsIds | sequencesMotifsIds))
+
 		sequences = sequences.exclude(sequence_id__in=sequencesAnalysed)
+
+	logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
 
 	# Filter sequences by species -- if any specified
 	if species:
@@ -829,29 +816,44 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 		except Taxonomies.DoesNotExist:
 			sys.exit("Species not found in database. Please confirm that the given species name is correct.")
 
+		if len(sequences) == 0:
+			logFile = open(logFileName, "a")
+			logFile.write("No sequences found to update for the specified species\nUpdate completed\n")
+			print("No sequences found to update for the specified species")
+			return
+
 	# Filter sequences by traceyIds -- if any specified
 	if traceyIds:
 		sequences = sequences.filter(sequence_id__in=traceyIds)
 
+		if len(sequences) == 0:
+			logFile = open(logFileName, "a")
+			logFile.write("No sequences found to update for the specified tracey IDs \nUpdate completed\n")
+			print("No sequences found to update for the specified tracey IDs ")
+			return
+
 	# Filter sequences by source -- collect only those obtained from NCBI
 	sequencesNCBI = sequences.filter(sourcedatabase__in=['NCBI_est', 'NCBI_nr', 'NCBI_refseq'])
+	if len(sequencesNCBI) == 0:
+		logFile = open(logFileName, "a")
+		logFile.write("No sequences found to update from NCBI \nUpdate completed\n")
+		print("No sequences found to update from NCBI")
+		return
 
 	# Filter sequences by sequence status -- only active sequences
 	if onlyActive:
-		# sequencesNCBI = [s for s in sequencesNCBI if any(m.motifname == "SNARE" for m in s.motifs_set.all())]
-		sequencesNCBI = [s for s in sequencesNCBI if any(m.motifname == "SNARE" for m in s.motifs_set.all())]
 		sequencesNCBI = [s for s in sequencesNCBI if s.sequencestatus == 'live']
-	print("Sequences to analyze: %d" % len(sequencesNCBI))
 
-	if len(sequencesNCBI) == 0:
-		logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
-		logFile.write("All sequences selected are up to date\nUpdate completed\n")
-		return
+		if len(sequencesNCBI) == 0:
+			logFile = open(logFileName, "a")
+			logFile.write("No active sequences found to update \nUpdate completed\n")
+			print("No active sequences found to update")
+			return
 
 	counter = 0
+	print("Updating %d sequences" % len(sequencesNCBI))
 	for sequence in sequencesNCBI:
 
-		print(sequence.sequence_id)
 		counter += 1
 		logFile = open("./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d"), "a")
 
@@ -859,13 +861,14 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 		if sequence.sequence_id in sequencesAnalysed:
 			continue
 
-		# If summary_error from NCBI: write sequence ID and error into log file and continue
+		# If not foreignannotation, write to log file and continue - Sequence status does not change
 		if sequence.foreignannotation == "none":
 			comment = "ERROR with sequence tracey_id %s: Foreignannotation missing; " % (sequence.sequence_id)
 			writeLog(logFile, sequence.sequence_id, '', sequence.sequenceshortname, '', comment)
 			continue
 
 		ncbi_id = get_ncbi_id(sequence)
+		# If not ncbi_id, write to log file and continue - Sequence status does not change
 		if not ncbi_id:
 			comment = "ERROR with sequence tracey_id %s: No NCBI ID found; " % (sequence.sequence_id)
 			writeLog(logFile, sequence.sequence_id, '', sequence.sequenceshortname, '', comment)
@@ -874,7 +877,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 		# Get summary data for idx
 		summary_output, summary_error = esummary(ncbi_id)
 
-		# If summary_error from NCBI: write sequence ID and error into log file and continue
+		# If summary_error from NCBI: write sequence ID and error into log file and continue - Change sequencestatus???
 		if summary_error:
 			comment = "ERROR with sequence tracey_id %s: Not able to get summary from NCBI Id %s; %s" % (sequence.sequence_id, ncbi_id, summary_error)
 			writeLog(logFile, sequence.sequence_id, ncbi_id, sequence.sequenceshortname, '', comment)
@@ -882,7 +885,6 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 
 		# Update sequence if needed and print log into logFile
 		updateLog = sequenceUpdate(sequence, summary_output, sequencesAnalysed)
-		print(updateLog)
 		logFile.write("Similarity block (%d/%d):\n" % (counter, len(sequencesNCBI)))
 		for updateId in updateLog:
 			if not updateId in sequencesAnalysed:

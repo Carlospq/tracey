@@ -324,7 +324,7 @@ class Motifs(models.Model):
         data = ET.fromstring(self.asciioutput)
         for x in data:
             data_[x.tag] = x.text
-        match = re.search(data_["motif"].strip().replace("-", "").upper(), self.sequence.sequence)
+        match = re.search(data_["motif"].strip().replace("-", "").replace("*", "X").upper(), self.sequence.sequence.replace("*", "X"))
         return [match.start() + 1, match.end()]
 
     def get_real_startposition(self):

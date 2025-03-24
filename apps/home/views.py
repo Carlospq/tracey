@@ -900,7 +900,7 @@ def QueryMotifsResultsView(request):
 
 	# Predict domain if any SNARE motif is selected
 	if context['domain'][0] == "SNARE":
-		context["predictedSNARE"] = motifPrediction(context['protseq'][0], probCutOff=80)["Query_sequence"]
+		context["predictedSNARE"] = predictFromSeq(context['protseq'][0], probCutOff=80)["Query_sequence"]
 
 	if request.method == "POST":
 		context['error_seq'] = ''
@@ -1551,11 +1551,11 @@ def features(request):
 	runout = subprocess.run(['ps', 'aux'], capture_output=True)
 
 	taxonomy_file = 'utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt'
+	tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
 	try:
-		sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][0]
+		sequences_file = [f for f in os.listdir('utils/traceySequenceUpdater/') if f.endswith('.log')][-1]
 	except:
 		sequences_file = ''
-	tree_file = 'utils/ncbi_taxonomy/TRACEY_phylogeneticTree.newick'
 
 	# Check UpdateTraceyTaxonomy status
 	psLine = [x for x in str(runout.stdout.decode("utf-8")).strip().split("\n") if "UpdateTraceyTaxonomies" in x]
@@ -1631,11 +1631,12 @@ def update_taxonomy(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_sequences(request):
-	cmd = ['python3', 'manage.py', 'UpdateTraceySequences', '--onlyActive', "--%s"%(request.GET['continueVal']), "--%s"%(request.GET['domain'])]
+	cmd = ['python3', 'manage.py', 'UpdateTraceySequences', "--%s"%(request.GET['continueVal']), "--domain",  "%s"%(request.GET['domain'])]
+	if request.GET["onlyActive"] == "true":
+		cmd.append("--onlyActive")
 	if request.GET['shortName'] != "All":
 		cmd.append("--species")
 		cmd.append(request.GET['shortName'])
-	# outcome = subprocess.run(cmd, capture_output=True)
 	outcome = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 	return HttpResponse(outcome)
 
