@@ -40,7 +40,7 @@ for sequence in seqs:
 
 		hmmpath = 'utils/hmmModels/%s/' % m.domaingroup.domain.domainname.upper()
 
-		# - collect hmm names from menu
+		# Collect hmm names from menu
 		hmms = [m.domaingroup.domaingroupname]
 		split_name = m.domaingroup.domaingroupname.split(".")
 		d = menu['SNARE'][m.domaingroup.domain.domainname]
@@ -54,7 +54,7 @@ for sequence in seqs:
 
 		print(m.domaingroup.domaingroupname, hmms)
 
-		# - prepare DB for specific HMMs
+		# Prepare DB for specific HMMs
 		tmpHMMdb = "utils/motifPredictor/tmpHMMdb.hmmDb"
 		with open(tmpHMMdb, "w") as f:
 			for hmm in hmms:
@@ -105,7 +105,7 @@ for sequence in seqs:
 
 		# Get best hit
 		best_hit = sorted(hits_d.items(), key=lambda x: x[1]['pvalue'])[0][1]
-		if best_hit['dg'] == m.domaingroup: continue
+		if not best_hit or best_hit['dg'] == m.domaingroup: continue
 
 		try:
 			method = Methods.objects.get(domaingroup_id=Domaingroups.objects.get(domaingroupname=best_hit['dg']).domaingroup_id)
