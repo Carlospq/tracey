@@ -66,42 +66,34 @@ for sequence in seqs:
 		subprocess.call(cmd, shell=True, stdout=open(os.devnull, 'wb'))
 
 		# Scan sequence for all motifs in TRACEY
-		with pyhmmer.plan7.HMMFile(tmpHMMdb) as hmm_file:
-			alphabet = pyhmmer.easel.Alphabet.amino()
-			proteins = [pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence.sequence.strip()).digitize(alphabet)]
-			all_hits = pyhmmer.hmmer.hmmscan(proteins, hmm_file, E=1e-0, F1=1, F2=1, F3=1)
+with pyhmmer.plan7.HMMFile(tmpHMMdb) as hmm_file:
+	alphabet = pyhmmer.easel.Alphabet.amino()
+	proteins = [pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence.sequence.strip()).digitize(alphabet)]
+	all_hits = pyhmmer.hmmer.hmmscan(proteins, hmm_file, E=1e-0, F1=1, F2=1, F3=1)
 
-		hits_d = {}
-		for hits in all_hits:
-			pass
-			for h in hits:
-
-				h_name = h.name.decode()
-
-				for d in h.domains:
-
-					# Continue if a best hit for same dg is already in hits_d
-					if h_name in hits_d and d.pvalue > hits_d[h_name]['pvalue']: continue
-
-					if "RF\n" in str(d.alignment):
-						dg_name = str(d.alignment).split("RF\n")[1].split()[0]
-					else:
-						dg_name = str(d.alignment).split("\n")[0].split()[0]
-
-					dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name)][0]
-
-					# Continue if dg does not belong to SNARE
-					# if not dg.domain.domainname == "SNARE": continue
-
-					motif = Domains.objects.get(domain_id=dg.domain_id).domainname
-					hits_d[h_name] = {'evalue': format(d.pvalue, '.1E'),
-									  'pvalue': d.pvalue,
-									  'env_from': d.env_from,
-									  'env_to': d.env_to,
-									  'length': d.env_to - d.env_from,
-									  'alignment': d.alignment,
-									  'dg': dg,
-									  'motif': motif}
+hits_d = {}
+for hits in all_hits:
+	for h in hits:
+		h_name = h.name.decode()
+		for d in h.domains:
+			# Continue if a best hit for same dg is already in hits_d
+			if h_name in hits_d and d.pvalue > hits_d[h_name]['pvalue']: continue
+			if "RF\n" in str(d.alignment):
+				dg_name = str(d.alignment).split("RF\n")[1].split()[0]
+			else:
+				dg_name = str(d.alignment).split("\n")[0].split()[0]
+			dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name)][0]
+			# Continue if dg does not belong to SNARE
+			# if not dg.domain.domainname == "SNARE": continue
+			motif = Domains.objects.get(domain_id=dg.domain_id).domainname
+			hits_d[h_name] = {'evalue': format(d.pvalue, '.1E'),
+							  'pvalue': d.pvalue,
+							  'env_from': d.env_from,
+							  'env_to': d.env_to,
+							  'length': d.env_to - d.env_from,
+							  'alignment': d.alignment,
+							  'dg': dg,
+							  'motif': motif}
 
 		# Get best hit
 		best_hit = sorted(hits_d.items(), key=lambda x: x[1]['pvalue'])[0][1]
