@@ -6,14 +6,14 @@
 # 	- either a single protein sequence or
 # 	- path to a fasta file with multiple protein sequences
 
-import os, sys
+import os
 import subprocess, tempfile
 import pickle
 import numpy as np
+import pyhmmer
 
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-# from scripts.motifNames import *
 from utils.motifPredictor.motifNames import *
+from apps.home.models import *
 
 #### hmmsearch on fasta file to obtain evalues for each motif
 def searchHMMs(sequences_file, hmm_file, domtbloutPath):
@@ -42,6 +42,20 @@ def retriveEvalues(domtbloutFile, all_motifs):
 			if evalue < results[seq_name][hmm_name]:
 				results[seq_name][hmm_name] = evalue
 	return results
+
+
+def retriveEvaluesPyHmmer(all_hits, all_motifs):
+	hits_d = {m:np.log(10e10) for m in all_motifs}
+	for h in all_hits:
+		h_name = h.name.decode()
+		for d in h.domains:
+			if h_name in hits_d and d.pvalue > hits_d[h_name]:
+				continue
+			dg_name = str(d.alignment).split("\n")[0].split()[0]
+			dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name)][0]
+			motif = Domains.objects.get(domain_id=dg.domain_id).domainname
+			hits_d[h_name] = np.log(d.pvalue)
+	return hits_d
 
 
 #### Function to get all keys in a nested dictionary
@@ -202,6 +216,39 @@ def predictFromSeq(sequence, SNARETree=SNARETree, hmmDB=None, seqName="Query_seq
 	return results
 
 
+def predictFromSeqPyHmmer(sequence, SNARETree=SNARETree, hmmDB=None, probCutOff=60, domainfamily="SNARE"):
+	#### This function is used on 'query-motifs-results' view as default prediction method
+	#### This version of the function uses pyhmmer instead of hmmsearch
+
+	if hmmDB == None:
+		hmmDB = "./utils/motifPredictor/HmmDb/SNAREDb.hmm"
+
+	### Get all domains in lists
+	domainSNARE = nestedDictValues(SNARETree)[0]
+	groupSNARE = nestedDictValues(SNARETree)[1]
+	subgroupSNARE = [hmm for rank in nestedDictValues(SNARETree) for hmm in nestedDictValues(SNARETree)[rank] if rank >= 2]
+	allSNARE = domainSNARE + groupSNARE + subgroupSNARE
+
+	# Convert sequence to pyhmmer format
+	alphabet = pyhmmer.easel.Alphabet.amino()
+	seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
+
+	# Read HMM database; Convert hmms to optimized profiles -> optimizad block
+	optimized_block = pyhmmer.plan7.OptimizedProfileBlock(alphabet=alphabet)
+	for h in pyhmmer.plan7.HMMFile(hmmDB):
+		optimized_block.append(h.to_profile().to_optimized())
+
+	# Scan the sequence for hits
+	pipeline = pyhmmer.plan7.Pipeline(pyhmmer.easel.Alphabet.amino())
+	all_hits = pipeline.scan_seq(seq1, optimized_block)
+	hits_d = retriveEvaluesPyHmmer(all_hits, allSNARE)
+
+	# Predict SNARE group
+	seqEvals = [hits_d[x] for x in hits_d]
+	results = domainPredict(seqEvals, SNARETree, probCutOff=probCutOff, domainfamily=domainfamily)
+	return results
+
+
 # Test
 if __name__ == '__main__':
 
@@ -227,52 +274,6 @@ if __name__ == '__main__':
 		seqEvals = [evals[seqId][x] for x in evals[seqId]]
 		results = domainPredict(seqEvals, SNARETree, probCutOff = 60, domainfamily=domain)
 		print(formatPrediction(results))
-
-
-
-
-
-
-
-
-# domains = ["Qa", "Qb", "Qc", "R", "SNAPbc"]
-# domains = Domaingroups.objects.filter(domain__domainname="SNARE", analysislevel=2)
-# for domain in domains:
-#
-# 	print(domain)
-#
-# 	# collect motifs
-# 	dg = Domaingroups.objects.get(domaingroupname=domain)
-# 	children = getChildren(Domaingroups, [dg], "domaingroup_id", "domaingroupparent_id", childs=[], search_type='iexact')
-# 	motifs = [m for dg in children for m in dg.motifs_set.all() if m.sequence.sequencestatus == "live"]
-#
-# 	# print motif sequence to fasta
-# 	fasta = 'utils/motifPredictor/%s.fasta' % domain
-# 	with open(fasta, 'w') as f:
-# 		for motif in motifs:
-# 			header = "%s/%s-%s" % (motif.sequence.sequenceshortname, motif.startposition, motif.stopposition)
-# 			f.write(">%s\n%s\n" % (header, motif.sequence.sequence[motif.get_real_startposition()-1:motif.get_real_stopposition()]))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

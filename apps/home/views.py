@@ -900,7 +900,8 @@ def QueryMotifsResultsView(request):
 
 	# Predict domain if any SNARE motif is selected
 	if context['domain'][0] == "SNARE":
-		context["predictedSNARE"] = predictFromSeq(context['protseq'][0], probCutOff=80)["Query_sequence"]
+		context["predictedSNARE"] = predictFromSeqPyHmmer(context['protseq'][0])
+		#context["predictedSNARE"] = predictFromSeq(context['protseq'][0], probCutOff=80)["Query_sequence"]
 
 	if request.method == "POST":
 		context['error_seq'] = ''
