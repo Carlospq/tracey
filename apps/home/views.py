@@ -159,11 +159,7 @@ def get_sequences(query, verify=False):
 		seqs = seqs.filter(taxonomy__in=taxonomies)
 
 	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
-		pattern = re.compile("^gi\|([0-9]+)$")
-		if not pattern.match(query['foreignannotation'][0]):
-			context = {'error': 'Foreign Annotation format is not correct. Plase use NCBI format.'}
-			return context
-		seqs = seqs.filter(foreignannotation = query['foreignannotation'][0])
+		seqs = seqs.filter(foreignannotation__icontains = query['foreignannotation'][0])
 
 	if 'species_list' in query:
 		taxonomies_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(scientificname__in=query['species_list'])]
@@ -308,35 +304,36 @@ def load_domaingroups_rank1(request):
 
 
 def load_sequenceshortnames(request):
-	if 'domaingroup' in request.GET and notEmpty(request.GET, 'domaingroup'):
-		domaingroup = [x.replace("-","") for x in request.GET.get('domaingroup')] if isinstance(request.GET.get('domaingroup'), list) else [request.GET.get('domaingroup').replace("-","")]
-		domaingroups = Domaingroups.objects.filter(domaingroupname__in=domaingroup)
-		sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))] )
-		sequence_ids_vmotifs = set( [m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
-	elif 'domaingroup_rank' in request.GET and notEmpty(request.GET, 'domaingroup_rank'):
-		proteinlayout = request.GET.get('proteinlayout')
-		domainname = request.GET.get('domainname')
-		domaingroup_rank = request.GET.get('domaingroup_rank')
-		domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[proteinlayout][domainname][domaingroup_rank]))
-		sequence_ids = set([m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
-		sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
-	elif request.GET.get('domainname'):
-		domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[request.GET.get('proteinlayout')][request.GET.get('domainname')]))
-		sequence_ids = set( Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id', flat=True) )
-		sequence_ids_vmotifs = set(Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id',flat=True))
-	elif request.GET.get('proteinlayout'):
-		domaingroups = Domaingroups.objects.filter(domaingroupname__in = get_keys_recursively(menu[request.GET.get('proteinlayout')]))
-		sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))] )
-		sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
-	else:
-		sequence_ids = set([m.sequence_id for m in Motifs.objects.all()])
-		sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.all()])
-
-	if "verifymotifs" in request.GET:
-		sequence_ids = sequence_ids | sequence_ids_vmotifs
-
-	sequences = Sequences.objects.filter(sequence_id__in=sequence_ids)
-	shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomy_id__in=sequences.values('taxonomy_id')) ]) ))
+	# if 'domaingroup' in request.GET and notEmpty(request.GET, 'domaingroup'):
+	# 	domaingroup = [x.replace("-","") for x in request.GET.get('domaingroup')] if isinstance(request.GET.get('domaingroup'), list) else [request.GET.get('domaingroup').replace("-","")]
+	# 	domaingroups = Domaingroups.objects.filter(domaingroupname__in=domaingroup)
+	# 	sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))] )
+	# 	sequence_ids_vmotifs = set( [m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+	# elif 'domaingroup_rank' in request.GET and notEmpty(request.GET, 'domaingroup_rank'):
+	# 	proteinlayout = request.GET.get('proteinlayout')
+	# 	domainname = request.GET.get('domainname')
+	# 	domaingroup_rank = request.GET.get('domaingroup_rank')
+	# 	domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[proteinlayout][domainname][domaingroup_rank]))
+	# 	sequence_ids = set([m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+	# 	sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+	# elif request.GET.get('domainname'):
+	# 	domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[request.GET.get('proteinlayout')][request.GET.get('domainname')]))
+	# 	sequence_ids = set( Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id', flat=True) )
+	# 	sequence_ids_vmotifs = set(Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id')).values_list('sequence_id',flat=True))
+	# elif request.GET.get('proteinlayout'):
+	# 	domaingroups = Domaingroups.objects.filter(domaingroupname__in = get_keys_recursively(menu[request.GET.get('proteinlayout')]))
+	# 	sequence_ids = set( [m.sequence_id for m in Motifs.objects.filter(domaingroup_id__in = domaingroups.values('domaingroup_id'))] )
+	# 	sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))])
+	# else:
+	# 	sequence_ids = set([m.sequence_id for m in Motifs.objects.all()])
+	# 	sequence_ids_vmotifs = set([m.sequence_id for m in Verifymotifs.objects.all()])
+	#
+	# if "verifymotifs" in request.GET:
+	# 	sequence_ids = sequence_ids | sequence_ids_vmotifs
+	#
+	# sequences = Sequences.objects.filter(sequence_id__in=sequence_ids)
+	# shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomy_id__in=sequences.values('taxonomy_id')) ]) ))
+	shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomyrank='species')])))
 	return render(request, 'home/query-sequences-family-sequenceshortnames.html', {'shortnames': shortnames})
 
 

@@ -148,5 +148,4 @@ if __name__ == "django.core.management.commands.shell":
 	domain_name = 'SNARE'
 	seq_ids = Motifs.objects.filter(domaingroup__domain__domainname=domain_name).values('sequence_id')
 	sequences = Sequences.objects.filter(sequence_id__in=seq_ids, sequencestatus="live")
-	sequences = sequences[1:10]
 	updateSnareMotifs(sequences, analyzed_sequences=[])

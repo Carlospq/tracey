@@ -425,17 +425,29 @@ def newEntryForReplacedBy(replaced_by, seqId, updateLog={}):
 		if any(Sequences.objects.filter(foreignannotation__icontains=replaced_by)):
 			newEntrySequence = Sequences.objects.filter(foreignannotation__icontains=replaced_by)[0]
 			updateLog[seqId]['comment'] += ' NCBI ID %s already exists in TRACEY;' % replaced_by
+
+			if newEntrySequence.sequenceshortname == Sequences.objects.get(sequence_id=seqId).sequenceshortname:
+				s = Sequences.objects.get(sequence_id=seqId)
+				s.sequenceshortname = s.sequenceshortname + "_replaced"
+				s.save()
+				updateLog[seqId]['comment'] += ' Shortname changed from %s to %s; ' % (newEntrySequence.sequenceshortname, s.sequenceshortname)
+
+			updateLog[newEntrySequence.sequence_id] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
+													   'comment': ' This sequence replace TRACEY ID %s;' % seqId,
+													   'newshortname': newEntrySequence.sequenceshortname}
+
 		else:
 			# Fetch data from ncbi for replaced_by and create new sequence entry in TRACEY
 			newEntrySequence = newSequenceEntryFromEfetch(esummary_output, fetch_output, seqId, updateLog)
-			updateLog[seqId]['comment'] += ' creating new entry for NCBI ID %s in TRACEY;' % replaced_by
+			updateLog[seqId]['comment'] += ' Creating new entry for NCBI ID %s in TRACEY;' % replaced_by
 
-		if newEntrySequence == "":
-			updateLog[seqId]['comment'] += ' NCBI ID %s is not a SNARE' % (replaced_by)
-		else:
-			updateLog[newEntrySequence.sequence_id] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
-													   'comment': 'New sequence entry created replacing TRACEY ID %s;' % seqId,
-													   'newshortname': newEntrySequence.sequenceshortname}
+			if newEntrySequence == "":
+				updateLog[seqId]['comment'] += ' Entry for NCBI ID %s was not possible to create' % (replaced_by)
+			else:
+				updateLog[newEntrySequence.sequence_id] = {'accessionVersion': fetch_output['GBSeq_accession-version'],
+														   'comment': 'New sequence entry created replacing TRACEY ID %s;' % seqId,
+														   'newshortname': newEntrySequence.sequenceshortname}
+
 	return [newEntrySequence, esummary_output]
 
 
@@ -516,7 +528,11 @@ def analyzeSequence(newSeq):
 	return hits_d
 
 
-def newSequenceEntryFromEfetch(esummary_out, efetch_out, seqId, updateLog):
+def newSequenceEntryFromEfetch(esummary_out, efetch_out, seqId=None, updateLog=None):
+
+	if not updateLog:
+		updateLog = {}
+
 	# Create new sequence entry in TRACEY
 	# Returns: new sequence entry
 	newSeq = Sequences()
@@ -535,17 +551,19 @@ def newSequenceEntryFromEfetch(esummary_out, efetch_out, seqId, updateLog):
 									for x in efetch_out['GBSeq_feature-table']['GBFeature']]
 									for d in l
 									if isinstance(l, list) and "gene" in d['GBQualifier_name'] ])
-	# Give replaced sequence shortname to new sequence; otherwise generate new shortname
-	# Rename replaced sequence shortname to "shortname_replaced"
-	replacedSequence = Sequences.objects.get(sequence_id=seqId)
-	replacedSequenceShortname = replacedSequence.sequenceshortname
-	if "old" in replacedSequenceShortname or replacedSequenceShortname.count("_") >= 2 or not replacedSequenceShortname:
-		newSeq.sequenceshortname = predictShortname({'sequence': newSeq, 'summary_output': esummary_out})
-	else:
-		newSeq.sequenceshortname = replacedSequenceShortname
-	updateLog[seqId]['comment'] += 'Shortname changed from %s to %s; ' % (replacedSequenceShortname, replacedSequenceShortname + "_replaced")
-	replacedSequence.sequenceshortname = replacedSequenceShortname + "_replaced"
-	replacedSequence.save()
+
+	if seqId:
+		# Give replaced sequence shortname to new sequence; otherwise generate new shortname
+		# Rename replaced sequence shortname to "shortname_replaced"
+		replacedSequence = Sequences.objects.get(sequence_id=seqId)
+		replacedSequenceShortname = replacedSequence.sequenceshortname
+		if "old" in replacedSequenceShortname or replacedSequenceShortname.count("_") >= 2 or not replacedSequenceShortname:
+			newSeq.sequenceshortname = predictShortname({'sequence': newSeq, 'summary_output': esummary_out})
+		else:
+			newSeq.sequenceshortname = replacedSequenceShortname
+		replacedSequence.sequenceshortname = replacedSequenceShortname + "_replaced"
+		replacedSequence.save()
+		updateLog[seqId]['comment'] += 'Shortname changed from %s to %s; ' % (replacedSequenceShortname, replacedSequenceShortname + "_replaced")
 
 	if newSeq.sequenceshortname == "Not SNARE":
 		return ""
@@ -597,9 +615,15 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 		seq = identicalSeq['sequence']
 		identicalSeqSummaryOutput = identicalSeq['summary_output']
 
+		accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
+		newShortname = identicalSeq['sequence'].sequenceshortname
+		updateLog[identicalSeqId] = {'accessionVersion': accessionVersion,
+									 'comment': '',
+									 'newshortname': newShortname}
+
 		if "Status" in identicalSeqSummaryOutput and identicalSeqSummaryOutput["Status"] == "replaced":
 			replaced_by = identicalSeqSummaryOutput["ReplacedBy"]
-			accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
+			# accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
 
 			comment = ''
 			if "Comment" in identicalSeqSummaryOutput and "has been updated." in identicalSeqSummaryOutput["Comment"]:
@@ -609,10 +633,11 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 
 			# This naming function only works for SNARE proteins
 			# newShortname = predictShortname(identicalSeq)
-			newShortname = identicalSeq['sequence'].sequenceshortname
-			updateLog[identicalSeqId] = {'accessionVersion': accessionVersion,
-										 'comment': comment,
-										 'newshortname': newShortname}
+			# newShortname = identicalSeq['sequence'].sequenceshortname
+			# updateLog[identicalSeqId] = {'accessionVersion': accessionVersion,
+			# 							 'comment': comment,
+			# 							 'newshortname': newShortname}
+			updateLog[identicalSeqId]['comment'] = comment
 
 			newSeq, newEsummary_output = newEntryForReplacedBy(replaced_by, identicalSeqId, updateLog=updateLog)
 			if not newSeq: continue
@@ -633,7 +658,7 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 
 		identicalSeq = identicalSequences[identicalSeqId]
 		identicalSeqSummaryOutput = identicalSeq['summary_output']
-		seq = identicalSeq['sequence']
+		seq = Sequences.objects.get(sequence_id=identicalSeq['sequence'].sequence_id)
 
 		if identicalSeqId in updateLog:
 			comment = updateLog[identicalSeqId]['comment']
@@ -803,6 +828,8 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 		sequences = sequences.exclude(sequence_id__in=sequencesAnalysed)
 
 	logFileName = "./utils/traceySequenceUpdater/traceySequencesUpdater.%s.log" % today.strftime("%Y.%m.%d")
+	with open(logFileName, 'a') as fo:
+		fo.write("Update for %s on %s domain(s) - %s\n" % (species, domain, today.strftime("%Y.%m.%d")))
 
 	# Filter sequences by species -- if any specified
 	if species:
@@ -906,5 +933,4 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 # Run code when run as script
 if __name__ == "django.core.management.commands.shell":
 	sequencesAnalysed = []
-	# updateSequences(sequencesAnalysed)
 	updateSequences(sequencesAnalysed, species="HoSa", traceyIds=[], domain="C2", onlyActive=False)
