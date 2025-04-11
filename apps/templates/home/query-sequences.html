@@ -158,14 +158,35 @@
 							<!-- Column 3 -->
 							<div class="col-lg-4 col-sm-4">
 
-								<!-- Foreign annotation -->
-								<div class="mb-3 formrow">
-									<div class="formcell1"><label for="{{ form.foreignannotation.id_for_label }}">Foreign annotation</label></div>
-									<div class="formcell2"><a><abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue; width: 5%'> ? </abbr></a></div>
-									<div class="formcell3 fieldWrapper">
-										{{ form.foreignannotation }}
+								<div class="row mb-0">
+
+									<!-- Aliases -->
+									<div class="col-lg-6 col-sm-6">
+
+										<div class="mb-3 formrow">
+											<div class="formcell1"><label for="{{ form.aliases.id_for_label }}">Aliases</label></div>
+											<div class="formcell2"></div>
+											<div class="formcell3 fieldWrapper">
+												{{ form.aliases }}
+											</div>
+										</div>
+
 									</div>
-									{% if error %}<p style="color: red; width: 100%">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
+
+									<!-- Foreign annotation -->
+									<div class="col-lg-6 col-sm-6">
+
+										<div class="mb-3 formrow">
+											<div class="formcell1"><label for="{{ form.foreignannotation.id_for_label }}">Foreign annotation</label></div>
+											<div class="formcell2"><a><abbr data-toggle="tooltip" title='NCBI annotation' style='color: blue; width: 5%'> ? </abbr></a></div>
+											<div class="formcell3 fieldWrapper">
+												{{ form.foreignannotation }}
+											</div>
+											{% if error %}<p style="color: red; width: 100%">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
+										</div>
+
+									</div>
+
 								</div>
 
 								<!-- Species List -->

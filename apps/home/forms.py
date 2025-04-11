@@ -84,12 +84,21 @@ class FamilyForm(forms.Form):
                             label = "foreignannotation",
                             required = False,
                             validators = [validators.RegexValidator('^gi\|([0-9]+)$',
-                                                         'Foreign annotation format is not correct. Please use NCBI format.')]
+                                                                    'Foreign annotation format is not correct. Please use NCBI format.')] # [NCBIpattern]
                         )
-                        # [NCBIpattern]
+
     foreignannotation.widget.attrs.update({'type': 'text',
                                            'style': 'width: 100%; display: table-cell',
                                            'placeholder': "ex: 'gi|21426793'"})
+
+    # Foreign annotation
+    aliases = forms.CharField(
+                            label="aliases",
+                            required=False,
+                            )
+    aliases.widget.attrs.update({'type': 'text',
+                                 'style': 'width: 100%; display: table-cell',
+                                 'placeholder': "ex: 'synaptobrevin3'"})
 
     # Domain group
     domaingroup_rank = forms.CharField(

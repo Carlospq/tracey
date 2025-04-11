@@ -279,32 +279,39 @@
                         <th class="border-bottom" scope="col" style="width:2%; text-align:center">
                             <input type="checkbox" id="maincheck" name="maincheck" onClick="toggle(this)">
                         </th>
-                        <th class="border-bottom" scope="col" name="1" style="width:10%; text-align: center; position: relative">
+                        <th class="border-bottom" scope="col" name="1" style="width:9%; text-align: center; position: relative">
                             <div class="dt-column-title" role="button">Short Name</div>
                             <div class="dt-column-order">
                                 <span class="sortbtnUp" onclick="sortTable(1, this)"></span>
                                 <span class="sortbtnDown" onclick="sortDown(1, this)"></span>
                             </div>
                         </th>
-                        <th class="border-bottom" scope="col" style="width:10%; text-align: center; position: relative" id="2" >
-                            <div class="dt-column-title" role="button">Species</div>
+						<th class="border-bottom" scope="col" style="width:5%; text-align: center; position: relative" id="2" >
+                            <div class="dt-column-title" role="button">Aliases</div>
                             <div class="dt-column-order">
                                 <span class="sortbtnUp" onclick="sortTable(2, this)"></span>
                                 <span class="sortbtnDown" onclick="sortDown(2, this)"></span>
                             </div>
-                         </th>
-                        <th class="border-bottom" scope="col" style="width:8%; text-align: center; position: relative" id="2">
-                            <div class="dt-column-title" role="button">Motifs</div>
+                        </th>
+                        <th class="border-bottom" scope="col" style="width:9%; text-align: center; position: relative" id="3" >
+                            <div class="dt-column-title" role="button">Species</div>
                             <div class="dt-column-order">
                                 <span class="sortbtnUp" onclick="sortTable(3, this)"></span>
                                 <span class="sortbtnDown" onclick="sortDown(3, this)"></span>
                             </div>
-                        </th>
-                        <th class="border-bottom" scope="col" style="width:10%; text-align: center; position: relative" id="3">
-                            <div class="dt-column-title" role="button">Source database</div>
+                         </th>
+                        <th class="border-bottom" scope="col" style="width:7%; text-align: center; position: relative" id="4">
+                            <div class="dt-column-title" role="button">Motifs</div>
                             <div class="dt-column-order">
                                 <span class="sortbtnUp" onclick="sortTable(4, this)"></span>
                                 <span class="sortbtnDown" onclick="sortDown(4, this)"></span>
+                            </div>
+                        </th>
+                        <th class="border-bottom" scope="col" style="width:8%; text-align: center; position: relative" id="5">
+                            <div class="dt-column-title" role="button">Source database</div>
+                            <div class="dt-column-order">
+                                <span class="sortbtnUp" onclick="sortTable(5, this)"></span>
+                                <span class="sortbtnDown" onclick="sortDown(5, this)"></span>
                             </div>
                         </th>
                         <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="5">Foreign Annotation</th>
@@ -337,10 +344,11 @@
                             <td class="border-bottom" scope="col" style="width:2%;">
                                 <input type="checkbox" id="cb{{seq.sequence_id}}" name="checkbox" value='{{seq.sequence_id}}'>
                             </td>
-                            <td style="width: 10%;"><a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a></td>
-                            <td style="width: 10%;">{{ speciesname|get_item:seq.sequence_id }}</td>
-                            <td style="width: 8%;">{{ motifnames|get_item:seq.sequence_id }}</td>
-                            <td style="width: 10%;">{{ seq.sourcedatabase }}</td>
+                            <td style="width: 9%;"><a href="/query-sequences/{{ seq.sequence_id }}/details/" style="color: blue">{{ seq.sequenceshortname }}</a></td>
+							<td style="width: 5%; font-size: 12px">{{ seq.aliases }}</td>
+                            <td style="width: 9%;">{{ speciesname|get_item:seq.sequence_id }}</td>
+                            <td style="width: 7%;">{{ motifnames|get_item:seq.sequence_id }}</td>
+                            <td style="width: 8%;">{{ seq.sourcedatabase }}</td>
                             <td style="width: 30%;">
                                 <textarea readonly style="resize: none; width:100%; vertical-align: middle;">{{ seq.foreignannotation }}</textarea>
                             </td>

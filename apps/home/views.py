@@ -131,6 +131,9 @@ def get_sequences(query, verify=False):
 
 			domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[query['proteinlayout'][0]]))
 
+		if query['proteinlayout'][0]=="C2" or query['domainname'][0]=="C2 classical":
+			domaingroups = domaingroups.union(Domaingroups.objects.filter(domaingroupname="C2"))
+
 	else:
 		domaingroups = Domaingroups.objects.all()
 
@@ -145,6 +148,9 @@ def get_sequences(query, verify=False):
 			seqs = seqs | verifyseqs # OR operator for querysets
 		if query['unverified'][0] == 'true' and query['verified'][0] == 'false':
 			seqs = verifyseqs
+
+	if 'aliases' in query and notEmpty(query, 'aliases'):
+		seqs = seqs.filter(aliases__icontains = query['aliases'][0])
 
 	if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
 		status = ['live' if query['sequencestatus'][0] == '1' else query['sequencestatus'][0]][0]

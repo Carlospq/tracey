@@ -599,3 +599,54 @@ def get_dict(dg, d=None):
 	for dg2 in Domaingroups.objects.filter(domaingroupparent_id=dg.domaingroup_id):
 		get_dict(dg2, d[dg.domaingroupname])
 	return d
+
+
+# CODE for domaingroups network ggplot
+# def get_dgs_hierarchy(domaingroup=None, childs=None, level=None, analysed=None):
+# 	"""
+# 	Returns the hierarchy of domain groups as a nested dictionary.
+# 	Returns:
+# 		dict: A nested dictionary representing the hierarchy of domain groups.
+# 	"""
+# 	if level is None:
+# 		level = 0
+# 	if childs is None:
+# 		childs = []
+# 	if analysed is None:
+# 		analysed = []
+#
+# 	for dg in Domaingroups.objects.all():
+# 		dg_parent = Domaingroups.objects.get(domaingroup_id=dg.domaingroupparent_id) if any(Domaingroups.objects.filter(domaingroup_id=dg.domaingroupparent_id)) else ""
+# 		parent_name = dg_parent.domaingroupname if any(Domaingroups.objects.filter(domaingroup_id=dg.domaingroupparent_id)) else ""
+# 		parent_analysis_level = dg_parent.analysislevel if any(Domaingroups.objects.filter(domaingroup_id=dg.domaingroupparent_id)) else 0
+# 		parent_domain = dg_parent.domain.domainname if any(Domaingroups.objects.filter(domaingroup_id=dg.domaingroupparent_id)) else ""
+# 		print(f'c("{parent_name}", "{dg.domaingroupname}", "{parent_domain}", {parent_analysis_level}),')
+#
+# 		# if dg in analysed:
+# 		# 	continue
+# 		# else:
+# 		# 	analysed.append(dg)
+# 		#
+# 		# dg_parent_name = Domaingroups.objects.get(domaingroup_id=dg.domaingroupparent_id).domaingroupname if any(Domaingroups.objects.get(domaingroup_id=dg.domaingroupparent_id)) else ""
+# 		#
+# 		# print([dg.domaingroupname, dg_parent_name, dg.domain.domainname, level])
+# 		# childs.append([dg.domaingroupname, dg_parent_name, dg.domain.domainname, level])
+# 		#
+# 		# if Domaingroups.objects.filter(**{"domaingroupparent_id__iexact": getattr(dg, "domaingroup_id")}):
+# 		# 	get_dgs_hierarchy(domaingroup=Domaingroups.objects.filter(pk=dg.pk), childs=childs, level=level + 1, analysed=analysed)
+#
+# 	return (childs)
+#
+#
+#
+#
+#
+#
+#
+# for dg_parent in Domaingroups.objects.filter(domain=Domains.objects.get(domainname='SNARE')):
+# 	for dg_child in Domaingroups.objects.filter(domaingroupparent_id=dg_parent.domaingroup_id):
+# 		print(f'c("{dg_parent.domaingroupname}", "{dg_child.domaingroupname}"),')
+#
+# for dg_parent in Domaingroups.objects.all():
+# 	for dg_child in Domaingroups.objects.filter(domaingroupparent_id=dg_parent.domaingroup_id):
+# 		print(f'c("{dg_parent.domaingroupname}", "{dg_child.domaingroupname}", "{dg_child.domain.domainname}"),')
