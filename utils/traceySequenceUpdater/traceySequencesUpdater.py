@@ -546,11 +546,14 @@ def newSequenceEntryFromEfetch(esummary_out, efetch_out, seqId=None, updateLog=N
 	newSeq.dbxref = esummary_out['AccessionVersion']
 	newSeq.replacedby = -1
 	newSeq.changelog = 'New sequence entry created by SequenceUpdater - %s' % today.strftime("%Y.%m.%d")
-	newSeq.aliases = "; ".join([ d['GBQualifier_value']
-									for l in [x["GBFeature_quals"]['GBQualifier']
-									for x in efetch_out['GBSeq_feature-table']['GBFeature']]
-									for d in l
-									if isinstance(l, list) and "gene" in d['GBQualifier_name'] ])
+	try:
+		newSeq.aliases = "; ".join([ d['GBQualifier_value']
+										for l in [x["GBFeature_quals"]['GBQualifier']
+										for x in efetch_out['GBSeq_feature-table']['GBFeature']]
+										for d in l
+										if isinstance(l, list) and "gene" in d['GBQualifier_name'] ])
+	except:
+		newSeq.aliases = ""
 
 	if seqId:
 		# Give replaced sequence shortname to new sequence; otherwise generate new shortname
@@ -760,11 +763,13 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 		# Check for protein aliases
 		if seq.sequencestatus == 'live' and (not seq.aliases or seq.aliases == 'null'):
 			efetch_output, efetch_error = efetch(seq.dbxref)
-			seq.aliases = "; ".join([d['GBQualifier_value']
-									for l in [x["GBFeature_quals"]['GBQualifier']
-											  for x in efetch_output['GBSeq_feature-table']['GBFeature']]
-									for d in l
-									if isinstance(l, list) and "gene" in d['GBQualifier_name']])
+			try:
+				seq.aliases = "; ".join([d['GBQualifier_value']
+										 for l in [x["GBFeature_quals"]['GBQualifier'] for x in efetch_output['GBSeq_feature-table']['GBFeature']]
+										 for d in l
+										 if isinstance(l, list) and "gene" in d['GBQualifier_name']])
+			except:
+				seq.aliases = ""
 
 		# Update changeLog
 		if comment:
@@ -783,7 +788,8 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 
 	# Confirm that Live sequence has shortname
 	for seqId in mainSequences:
-		seq = mainSequences[seqId]['sequence']
+		# seq = mainSequences[seqId]['sequence']
+		seq = Sequences.objects.get(sequence_id=seqId)
 		# Check for shortname in last "live" sequence
 		# if not seq.sequenceshortname or seq.sequenceshortname.count("_") >= 2:
 		if not seq.sequenceshortname or re.search('_.+old$', seq.sequenceshortname):
