@@ -940,3 +940,25 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 if __name__ == "django.core.management.commands.shell":
 	sequencesAnalysed = []
 	updateSequences(sequencesAnalysed, species="HoSa", traceyIds=[], domain="C2", onlyActive=False)
+
+
+####
+# seqs = []
+# duplicated = []
+# missing = []
+# for line in open('../../Downloads/tracey_table_c2_validated.tsv', 'r'):
+# 	if "Short Name" in line: continue
+# 	line = line.strip().split("\t")
+# 	name = line[0]
+# 	fannotation = line[4]
+# 	l = len(Sequences.objects.filter(sequenceshortname=name))
+# 	if l == 0:
+# 		missing.append(name)
+# 	elif l > 1:
+# 		duplicated.append([name, fannotation])
+# 	else:
+# 		seqs.append(Sequences.objects.get(sequenceshortname=name))
+#
+#
+# for dup in duplicated:
+# 	seqs.append(Sequences.objects.filter(sequenceshortname=dup[0], foreignannotation=dup[1])[0])
