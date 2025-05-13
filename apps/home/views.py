@@ -119,17 +119,20 @@ def get_sequences(query, verify=False):
 
 	elif 'domaingroup_rank' in query and notEmpty(query, 'domaingroup_rank'):
 
-		domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[query['proteinlayout'][0]][query['domainname'][0]][query['domaingroup_rank'][0]]))
+		dg_list = get_keys_recursively(menu[query['proteinlayout'][0]][query['domainname'][0]][query['domaingroup_rank'][0]]) + query['domaingroup_rank']
+		domaingroups = Domaingroups.objects.filter(domaingroupname__in = dg_list)
 
 	elif ('proteinlayout' in query and notEmpty(query, 'proteinlayout')) or ('domainname' in query and notEmpty(query, 'domainname')):
 
 		if 'domainname' in query and notEmpty(query, 'domainname'):
 
-			domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively( menu[ query['proteinlayout'][0] ][ query['domainname'][0] ]) )
+			dg_list = get_keys_recursively( menu[ query['proteinlayout'][0] ][ query['domainname'][0] ]) + query['domainname']
+			domaingroups = Domaingroups.objects.filter(domaingroupname__in = dg_list)
 
 		elif 'proteinlayout' in query and notEmpty(query, 'proteinlayout'):
 
-			domaingroups = Domaingroups.objects.filter(domaingroupname__in=get_keys_recursively(menu[query['proteinlayout'][0]]))
+			dg_list = get_keys_recursively(menu[query['proteinlayout'][0]]) + query['proteinlayout']
+			domaingroups = Domaingroups.objects.filter(domaingroupname__in=dg_list)
 
 		if query['proteinlayout'][0]=="C2" or query['domainname'][0]=="C2 classical":
 			domaingroups = domaingroups.union(Domaingroups.objects.filter(domaingroupname="C2"))
@@ -159,9 +162,15 @@ def get_sequences(query, verify=False):
 	if 'private' in query and notEmpty(query, 'private'):
 		seqs = seqs.filter(private = query['private'][0])
 
-	# Filter seqs if shortname/foreignAnnotation or taxonomy is provided
+	# Filter seqs if shortname/shortnamesearch/foreignAnnotation or taxonomy is provided
 	if 'shortname' in query and notEmpty(query, 'shortname'):
-		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0]) if t.taxonomyshortname.lower() == query['shortname'][0].lower() or t.taxonomyshortname.lower().startswith(query['shortname'][0].lower()+"_") ]
+		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0]) if t.taxonomyshortname.lower() == query['shortname'][0].lower() or
+					  																								t.taxonomyshortname.lower().startswith(query['shortname'][0].lower()+"_") or
+					  																								t.taxonomyshortname.lower().startswith(query['shortname'][0].lower()+".")]
+		seqs = seqs.filter(taxonomy__in=taxonomies)
+
+	if 'shortnamesearch' in query and notEmpty(query, 'shortnamesearch'):
+		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__icontains=query['shortnamesearch'][0])]
 		seqs = seqs.filter(taxonomy__in=taxonomies)
 
 	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):

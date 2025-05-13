@@ -91,7 +91,7 @@ class FamilyForm(forms.Form):
                                            'style': 'width: 100%; display: table-cell',
                                            'placeholder': "ex: 'gi|21426793'"})
 
-    # Foreign annotation
+    # Aliases
     aliases = forms.CharField(
                             label="aliases",
                             required=False,
@@ -99,6 +99,15 @@ class FamilyForm(forms.Form):
     aliases.widget.attrs.update({'type': 'text',
                                  'style': 'width: 100%; display: table-cell',
                                  'placeholder': "ex: 'synaptobrevin3'"})
+
+    # shortnamesearch
+    shortnamesearch = forms.CharField(
+        label="shortname_search",
+        required=False,
+    )
+    shortnamesearch.widget.attrs.update({'type': 'text',
+                                         'style': 'width: 100%; display: table-cell',
+                                         'placeholder': "ex: 'PhySp'"})
 
     # Domain group
     domaingroup_rank = forms.CharField(

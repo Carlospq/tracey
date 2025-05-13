@@ -111,8 +111,21 @@ def create_ncbi_taxonomy(ncbi_id, ncbi, report_file=''):
         lengths = [[2,2], [2,3], [3,2], [3,3]]
         for l in lengths:
             tax_shortname = _name[0][:l[0]].title()+_name[1][:l[1]].title()
+
+            if tax_shortname.endswith("."):
+                related_taxonomies = Taxonomies.objects.filter(taxonomyshortname__istartswith=tax_shortname[:-1])
+                get_index = [int(t.taxonomyshortname[-1]) for t in related_taxonomies if "_" in t.taxonomyshortname]
+                if get_index:
+                    tax_shortname = tax_shortname[:-1] + "_" + str(max(get_index)+1)
+                else:
+                    tax_shortname = tax_shortname[:-1] + "_1"
+
             if not Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
                 break
+
+        if not tax_shortname:
+            pass
+
         if Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
             tax_shortname = ''
     taxonomy = Taxonomies(scientificname = name['name_txt'],
