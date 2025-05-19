@@ -41,8 +41,9 @@
                     </div>
 
                     <form method='post' action='' name="motifForm" id="motifForm"
-					data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
-					data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
+						  data-load-domains-url="{% url 'ajax_load_domains' %}"
+						  data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+						  data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                     {% csrf_token %}
 
                     <div class="row mb-4">
@@ -50,18 +51,32 @@
 
 								<label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}"> Motifs to scan: </label>
 
+								<!-- Protein Layout -->
+								<div class="formrow">
+									<div class="formcell">Protein Layout: </div>
+									<div class="formcell">
+										<select style="width: 100%" name="proteinlayout" id="proteinlayout">
+											<option value= "ALL">All</option>
+											{% for val in proteinLayoutsList %}
+												<option value= "{{ val }}"> {{ val }} </option>
+											{% endfor %}
+										</select>
+									</div>
+								</div>
+
 								<!-- domain name -->
 								<div class="formrow">
 									<div class="formcell">Domain: </div>
 									<div class="formcell">
 										<select style="width: 100%" name="domain" id="domain">
-											<option value= "all" selected>All</option>
+											<option value= "" selected></option>
 											{% for val in domainList %}
 												<option value= "{{ val }}"> {{ val }} </option>
 											{% endfor %}
 										</select>
 									</div>
 								</div>
+
 								<!-- domain groups -->
 								<div class="formrow">
 									<div class="formcell">Domain Group: </div>
@@ -71,6 +86,7 @@
 										</select>
 									</div>
 								</div>
+
 								<!-- domain subgroups -->
 								<div class="formrow">
 									<div class="formcell">Domain Subgroup: </div>
@@ -80,6 +96,7 @@
 										</select>
 									</div>
 								</div>
+
 								<!-- E-value cutoff -->
 								<div class="formrow">
 									<div class="formcell"> E-value cutoff:</div>
@@ -88,6 +105,7 @@
 									</div>
 								</div>
                             </div>
+
                         <div class="col-sm-12">
                             <label style="vertical-align: top;"> Protein sequence (max length: 2000 aa): </label>
                             <textarea class="mb-3" type="text" id="protseq" name="protseq" style="width: 100%; height:100px; vertical-align: top; resize: none;"></textarea>
@@ -113,16 +131,37 @@
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
 
+	// Change in ProteinLayout
+	$("#proteinlayout").change(function () {
+        var urldomains = $("#motifForm").attr("data-load-domains-url");
+        var proteinlayout = $(this).val();
+
+        // Load domain names
+        $.ajax({
+			url: urldomains,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				$("#domain").html(data);
+                $("#domaingroup").html("");	 	// Clear rank1
+				$("#domainsubgroup").html("");	// Clear rank2
+			}
+		});
+    })
+
 	// Change in Domain
 	$("#domain").change(function () {
 		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
         var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var proteinlayout = $("#proteinlayout").val();
         var domain = $(this).val();
 
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank1,
 			data: {
+                'proteinlayout': proteinlayout,
 				'domainname': domain
 			},
 			success: function (data) {
@@ -141,15 +180,19 @@
 		});
     })
 
-	// Change in Domain
+	// Change in Domain Group
 	$("#domaingroup").change(function () {
 		var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var proteinlayout = $("#proteinlayout").val();
+        var domain = $("#domain").val();
         var domaingroup = $(this).val();
 
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank2,
 			data: {
+                'proteinlayout': proteinlayout,
+				'domainname': domain,
 				'domaingroup_rank': domaingroup
 			},
 			success: function (data) {

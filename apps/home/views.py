@@ -302,7 +302,10 @@ def proteinlayoutToDomains(proteinLayoutname):
 
 def load_domains(request):
 	if request.GET.get('proteinlayout'):
-		domains = [d for d in menu[request.GET.get('proteinlayout')]]
+		if request.GET.get('proteinlayout').upper() == "ALL":
+			domains = ['']
+		else:
+			domains = [d for d in menu[request.GET.get('proteinlayout')]]
 	else:
 		domains = [x.domainname for x in Domains.objects.all()]
 	return render(request, 'home/query-sequences-family-domains.html', {'domains': domains})
@@ -311,6 +314,8 @@ def load_domaingroups_rank1(request):
 	proteinlayout = request.GET.get('proteinlayout')
 	domainname = request.GET.get('domainname')
 	if proteinlayout and domainname:
+		domaingroups_rank_list = [dg_name for dg_name in menu[proteinlayout][domainname]]
+	elif domainname:
 		domaingroups_rank_list = [dg_name for dg_name in menu[proteinlayout][domainname]]
 	else:
 		domaingroups_rank_list = []
@@ -719,14 +724,16 @@ def DetailsSequencesFastaFormat(request, sequence_id):
 def QueryMotifsView(request):
 	segment = request.path.split('/')[-1]
 	context = {"segment": segment,
-			   "domainList": sorted(list( set([ x.domainname for x in Domains.objects.all() ]+["HabcSNARE"]) ))
+			   "proteinLayoutsList": sorted([pfam for pfam in menu]),
+			   "domainList": [],
 			  }
 
 	if request.method == "POST":
 		context['protseq'] = dict(request.POST)['protseq']
-		context['domain'] = dict(request.POST)['domain']
-		context['domaingroup'] = dict(request.POST)['domaingroup']
-		context['domainsubgroup'] = dict(request.POST)['domainsubgroup']
+		context['proteinlayout'] = dict(request.POST)['proteinlayout'] if 'proteinlayout' in request.POST else ['']
+		context['domain'] = dict(request.POST)['domain'] if 'domain' in request.POST else ['']
+		context['domaingroup'] = dict(request.POST)['domaingroup'] if 'domaingroup' in request.POST else ['']
+		context['domainsubgroup'] = dict(request.POST)['domainsubgroup'] if 'domainsubgroup' in request.POST else ['']
 		context['evalcutoff'] = [request.POST.get('evalcutoff')] if request.POST.get('evalcutoff') else ['10']
 
 		if not context['protseq'][0]:
@@ -766,7 +773,7 @@ def getMotifPlot_fromPyhammer(hit, sequence, evalcutoff=1e-10):
 	return uri
 
 
-def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutoff=1e-10):
+def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgroup="", evalcutoff=1e-10):
 
 	hits_d = {}
 
@@ -782,29 +789,44 @@ def motifScan(sequence, domainname, domaingroup="", domainsubgroup="", evalcutof
 
 	# Convert sequence to pyhmmer format
 	alphabet = pyhmmer.easel.Alphabet.amino()
-	# background = pyhmmer.plan7.Background(alphabet)
 	seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
 	# Fetch HMMs
-	domainname = domainname[0].upper() if type(domainname)==list else domainname.upper()
-	if domainname == "ALL":
+	# domainname = domainname[0].upper() if type(domainname)==list else domainname.upper()
+	if proteinlayout == "ALL":
 		hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
 	else:
-		hmms = []
+		# hmms = []
+		# if domainsubgroup:
+		# 	hmmToScan = domainsubgroup
+		# elif domaingroup:
+		# 	hmmToScan = "SNAP" if domaingroup == "SNAPbc" else domaingroup
+		# else:
+		# 	hmmToScan = domainname
+		# hmmNamesList = [x.domaingroupname+".hmm" for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
+		# hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if x in hmmNamesList]
+
 		if domainsubgroup:
-			hmmToScan = domainsubgroup
+			hmms = [domainsubgroup.replace("-", "")]
 		elif domaingroup:
-			hmmToScan = "SNAP" if domaingroup == "SNAPbc" else domaingroup
+			hmms = get_keys_recursively(menu[proteinlayout][domain][domaingroup])
+		elif domain:
+			hmms = get_keys_recursively(menu[proteinlayout][domain])
+		elif proteinlayout:
+			hmms = get_keys_recursively(menu[proteinlayout])
 		else:
-			hmmToScan = domainname
-		hmmNamesList = [x.domaingroupname+".hmm" for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
-		hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if x in hmmNamesList]
+			hmms = get_keys_recursively(menu)
+
+		hmmList = [hmm for folder in os.listdir('utils/hmmModels/') if os.path.isdir('utils/hmmModels/%s'%(folder)) for hmm in os.listdir('utils/hmmModels/%s'%(folder)) if hmm.replace(".hmm", "") in hmms]
 
 		if not hmmList:
 			hits_d['error'] = 'No HMM model found for this motif.'
 			return hits_d
+
+		hmms = []
 		for hmmModel in hmmList:
-			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(domainname, hmmModel)) as hmm_file:
+			folder = [f for f in os.listdir('utils/hmmModels/') if os.path.isdir('utils/hmmModels/%s'%f) and hmmModel in os.listdir('utils/hmmModels/%s'%f)][0]
+			with pyhmmer.plan7.HMMFile('utils/hmmModels/%s/%s'%(folder, hmmModel)) as hmm_file:
 				hmm = hmm_file.read()
 				hmms.append(hmm)
 
@@ -873,9 +895,15 @@ def QueryMotifsResultsView(request):
 	segment = request.path.split('/')[-1]
 	context["segment"] = segment
 
-	context["domainList"] = sorted(list(set([ x.motifname for x in Motifs.objects.all() ] + ["HabcSNARE"] )))
+	context["proteinLayoutsList"] = sorted([pfam for pfam in menu])
+	context["domainList"] = []
 	context["domaingroupList"] = []
 	context["domainsubgroupList"] = []
+
+	context['proteinlayout'] = context['proteinlayout'] if 'proteinlayout' in context else ['']
+	context['domain'] = context['domain'] if 'domain' in context else ['']
+	context['domaingroup'] = context['domaingroup'] if 'domaingroup' in context else ['']
+	context['domainsubgroup'] = context['domainsubgroup'] if 'domainsubgroup' in context else ['']
 
 	if context['domain'][0] != "all":
 		domain = Domains.objects.filter(domainname = context['domain'][0])
@@ -893,8 +921,10 @@ def QueryMotifsResultsView(request):
 		elif len(context['protseq'][0]) == 0:
 			context['error_seq'] = 'Please provide a protein sequence to analyze.'
 		else:
-			domainsubgroup = [context['domainsubgroup'][0].replace("-", "")] if 'domainsubgroup' in context else ['']
-			context["hits_d"] = motifScan(context["protseq"][0], context['domain'],
+			#domainsubgroup = [context['domainsubgroup'][0].replace("-", "")] if 'domainsubgroup' in context else ['']
+			context["hits_d"] = motifScan(context["protseq"][0],
+										  proteinlayout=context['proteinlayout'][0],
+										  domain=context['domain'][0],
 										  domaingroup=context['domaingroup'][0],
 										  domainsubgroup=context['domainsubgroup'][0].replace("-", ""),
 										  evalcutoff=float('1e-' + context['evalcutoff'][0] if 'evalcutoff' in context else '1e-10'))
@@ -1369,6 +1399,7 @@ def QueryVerifyView(request, sequence_id):
 	segment = request.path.split('/')[-2]
 	context = {'segment': segment}
 	context['sequence_id'] = sequence_id
+	context['proteinLayoutsList'] = sorted([pfam for pfam in menu])
 
 	try:
 		seq = Sequences.objects.get(pk=sequence_id)
@@ -1466,11 +1497,18 @@ def QueryVerifyView(request, sequence_id):
 		# scan sequence for new motifs if Scan button is pressed
 		if request.POST.get("scan"):
 			# Check if domain and domaingroup or selected
-			if not form.data['domain']:
-				context['scanerror'] = 'Protein domain is required to scan sequence for HMM matches'
-			elif form.data['sequence'] and form.data['domain']:
+			if not form.data['proteinlayout']:
+				context['scanerror'] = 'Protein layout is required to scan sequence for HMM matches'
+			elif form.data['sequence'] and form.data['proteinlayout']:
+				mutable_ =  form.data._mutable
+				form.data._mutable = True
 				evalcutoff = float('1e-' + request.POST.get('evalcutoff') if request.POST.get('evalcutoff') else '10')
-				hits_d = motifScan(form.data['sequence'], [form.data['domain']], domaingroup=form.data['domaingroups'], evalcutoff=evalcutoff)
+				form.data['domain'] = form.data['domain'] if 'domain' in form.data else ''
+				form.data['domaingroup'] = form.data['domaingroup'] if 'domaingroup' in form.data else ''
+				form.data['domainsubgroup'] = form.data['domainsubgroup'] if 'domainsubgroup' in form.data else ''
+				form.data._mutable = mutable_
+
+				hits_d = motifScan(form.data['sequence'], proteinlayout = form.data['proteinlayout'], domain = form.data['domain'], domaingroup=form.data['domaingroups'], domainsubgroup = form.data['domainsubgroups'], evalcutoff=evalcutoff)
 				if 'error' in hits_d:
 					context['scanerror'] = hits_d['error']
 				else:

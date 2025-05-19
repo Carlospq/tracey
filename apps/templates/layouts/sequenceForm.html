@@ -101,8 +101,9 @@
 
 
 <form method='post' action='' name="motifForm" id="motifForm"
-data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
-data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
+	  data-load-domains-url="{% url 'ajax_load_domains' %}"
+	  data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
+	  data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
 
     {% csrf_token %}
     <!-- Sequence fields from InsertSequence form model -->
@@ -369,6 +370,17 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
 	<div class="row mb-4" style="object-fit: contain; margin-top: 5px;">
 		<p>Scan sequence against HMM models:<abbr data-toggle="tooltip" title="Scan sequence against selected motifs. Hits will be added to Not verify motif list" style='color: blue; text-align: right'> ? </abbr></p>
 		<table style="width: 450px;">
+			<tr style="margin-bottom: 5px;">
+				<td style="width: 50%; padding-left: 50px;"> Protein layout:</td>
+				<td style="width: 50%; padding-left: 25px;">
+					<select name="proteinlayout" id="proteinlayout" style="width: 100px;">
+						<option value="all" selected>All</option>
+						{% for val in proteinLayoutsList %}
+							<option value= "{{ val }}"> {{ val }} </option>
+						{% endfor %}
+					</select>
+				</td>
+			</tr>
 			<tr style="margin-bottom: 5px;">
 				<td style="width: 50%; padding-left: 50px;"> Protein Domain:</td>
 				<td style="width: 50%; padding-left: 25px;">
@@ -669,16 +681,37 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
 <script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
 <script>
 
+	// Change in ProteinLayout
+	$("#proteinlayout").change(function () {
+        var urldomains = $("#motifForm").attr("data-load-domains-url");
+        var proteinlayout = $(this).val();
+
+        // Load domain names
+        $.ajax({
+			url: urldomains,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				$("#domain").html(data);
+                $("#domaingroups").html("");	 	// Clear rank1
+				$("#domainsubgroups").html("");		// Clear rank2
+			}
+		});
+    })
+
 	// Change in Domain
 	$("#domain").change(function () {
 		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
         var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var proteinlayout = $("#proteinlayout").val();
         var domainname = $(this).val();
 
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank1,
 			data: {
+                'proteinlayout': proteinlayout,
 				'domainname': domainname
 			},
 			success: function (data) {
@@ -702,12 +735,16 @@ data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
 	// Change in Domain group
 	$("#domaingroups").change(function () {
         var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var proteinlayout = $("#proteinlayout").val();
+        var domain = $("#domain").val();
         var domaingroup_rank = $(this).val();
 
         // Load Domainsubgroup
         $.ajax({
 			url: urldomaingroupsrank2,
 			data: {
+                'proteinlayout': proteinlayout,
+				'domainname': domain,
 				'domaingroup_rank': domaingroup_rank
 			},
 			success: function (data) {

@@ -47,6 +47,7 @@
                     <div class="row mb-0">
                         <div class="col-sm-12 mb-3" style="padding-top: 10px; display: inline-block">
 							<form method='post' action='' name="motifForm" id="motifForm"
+								  data-load-domains-url="{% url 'ajax_load_domains' %}"
 								  data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
 								  data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
                             {% csrf_token %}
@@ -58,16 +59,28 @@
 
 										<label style="vertical-align: top;" for="{{ form.shortname.id_for_label }}"> Motifs to scan: </label>
 
-										<!-- domain name -->
-										<div class="row" style="width: 75%">
-											<div style="width: 50%">Domain: </div>
-											<select style="width: 50%" name="domain" id="domain">
-												<option value= "all" selected>All</option>
-												{% for val in domainList %}
-													<option value= "{{ val }}" {% if val == domain.0 %} selected {% endif %}> {{ val }} </option>
+										<!-- Protein Layout -->
+										<div class="row" style="width: 75%; margin-top: 10px;">
+											<div style="width: 50%">Protein Layout: </div>
+											<select style="width: 50%" name="proteinlayout" id="proteinlayout">
+												<option value= "ALL">All</option>
+												{% for val in proteinLayoutsList %}
+													<option value= "{{ val }}"> {{ val }} </option>
 												{% endfor %}
 											</select>
 										</div>
+
+										<!-- domain name -->
+										<div class="row" style="width: 75%; margin-top: 10px;">
+											<div style="width: 50%">Domain: </div>
+											<select style="width: 50%" name="domain" id="domain">
+												<option value= "" selected></option>
+												{% for val in domainList %}
+													<option value= "{{ val }}"> {{ val }} </option>
+												{% endfor %}
+											</select>
+										</div>
+
 										<!-- domain groups -->
 										<div class="row" style="width: 75%; margin-top: 10px;">
 											<div style="width: 50%">Domain Group: </div>
@@ -78,6 +91,7 @@
 												{% endfor %}
 											</select>
 										</div>
+
 										<!-- domain subgroups -->
 										<div class="row" style="width: 75%; margin-top: 10px;">
 											<div style="width: 50%">Domain Subgroup: </div>
@@ -88,6 +102,7 @@
 												{% endfor %}
 											</select>
 										</div>
+
 										<!-- E-value cutoff -->
 										<div class="row" style="width: 75%; margin-top: 10px;">
 											<div style="width: 50%;"> E-value cutoff:</div>
@@ -332,44 +347,68 @@
 		});
     }
 
+    // Change in ProteinLayout
+	$("#proteinlayout").change(function () {
+        var urldomains = $("#motifForm").attr("data-load-domains-url");
+        var proteinlayout = $(this).val();
+
+        // Load domain names
+        $.ajax({
+			url: urldomains,
+			data: {
+				'proteinlayout': proteinlayout
+			},
+			success: function (data) {
+				$("#domain").html(data);
+                $("#domaingroup").html("");	 	// Clear rank1
+				$("#domainsubgroup").html("");	// Clear rank2
+			}
+		});
+    })
+
 	// Change in Domain
 	$("#domain").change(function () {
 		var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
         var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
-        var domainname = $(this).val();
+        var proteinlayout = $("#proteinlayout").val();
+        var domain = $(this).val();
 
         // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank1,
 			data: {
-				'domainname': domainname
+                'proteinlayout': proteinlayout,
+				'domainname': domain
 			},
 			success: function (data) {
-				 $("#domaingroup").html(data);	 // Update rank1
+                $("#domaingroup").html(data);	// Update rank1
 			}
 		});
-
-        // Load Domaingroup
+        // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank2,
 			data: {
 				'domaingroup_rank': ''
 			},
 			success: function (data) {
-				 $("#domainsubgroup").html(data);	 // Update rank2
+				$("#domainsubgroup").html(data);	// Update rank2 blank
 			}
 		});
     })
 
-	// Change in Domaingroup
+	// Change in Domain Group
 	$("#domaingroup").change(function () {
-        var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+		var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+        var proteinlayout = $("#proteinlayout").val();
+        var domain = $("#domain").val();
         var domaingroup = $(this).val();
 
-        // Load Domain Group rank2
+        // Load Domain Group rank1
         $.ajax({
 			url: urldomaingroupsrank2,
 			data: {
+                'proteinlayout': proteinlayout,
+				'domainname': domain,
 				'domaingroup_rank': domaingroup
 			},
 			success: function (data) {
