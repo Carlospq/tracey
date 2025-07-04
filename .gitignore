@@ -7,6 +7,7 @@ staticfiles/
 
 # If you are using PyCharm #
 .idea/
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
@@ -52,3 +53,7 @@ utils/ncbi-blast-2.13.0+/query_vm.fasta
 utils/ncbi_taxonomy/taxdmp
 utils/ncbi_taxonomy/TRACEY_*
 utils/ncbi_taxonomy/.Rhistory
+
+# SQL dump files
+utils/tracey_20180606_0400.dump2
+utils/tracey_20250401.backup.sql

@@ -16,16 +16,16 @@ if __name__ == "django.core.management.commands.shell":
 
 	for protein in alpha_data:
 
-		alpha_id = protein[0] #AF-A0A0L7KTD5-F1-v4
-		uniprot_id = protein[1] #A0A0L7KTD5
+		alpha_id = protein[0] #AF-A0A0L7KTD5-F1-v4 or AF-Q16623-F1 (human syx18)
+		uniprot_id = protein[1] #A0A0L7KTD5 or Q16623
 		#ncbi_id = protein[2]
 
 		# structure = [structure for structure in get_structural_models_for(uniprot_id)][0]
-		#chains_sequences = {chain.id: seq1(''.join(residue.resname for residue in chain)) for chain in structure.get_chains()}
+		# chains_sequences = {chain.id: seq1(''.join(residue.resname for residue in chain)) for chain in structure.get_chains()}
 
 		# Get metadata from alphafold_db - assuming it only has one prediction
-		pred = [x for x in alphafold_db.get_predictions('A0A0L7KTD5')][0]
-		metadata = dict([x for x in alphafold_db.get_predictions('A0A0L7KTD5')][0].items())
+		# pred = [x for x in alphafold_db.get_predictions('A0A0L7KTD5')][0]
+		metadata = dict([x for x in alphafold_db.get_predictions(uniprot_id)][0].items())
 
 		organism_taxid = metadata['taxId']
 		prot_desc = metadata['uniprotDescription']
@@ -40,26 +40,41 @@ if __name__ == "django.core.management.commands.shell":
 		# organism_taxid = metadata['header']['source']['1']['organism_taxid']
 
 		# Generate taxonomy if not in tracey
-		create_ncbi_taxonomy(organism_taxid, ncbi, report_file='')
+		taxonomy = create_ncbi_taxonomy(organism_taxid, ncbi, report_file='')
 
 		# Get sequence - assuming it only has one chain
 		# chain = [chain for chain in structure.get_chains()][0]
 		# chain_sequence = ''.join(residue.resname for residue in chain)
 
 
-		#transform uniprot ID to ncbi ID with Unipressed
+		# Transform uniprot ID to ncbi ID with Unipressed
 		from unipressed import IdMappingClient
+
 		request = IdMappingClient.submit(source="UniProtKB_AC-ID",
 										 dest="RefSeq_Protein",
 										 ids={dbxref})
-		ncbi_ids = list(request.each_result())
+		while True:
+			if request.get_status() == "RUNNING":
+				continue
+			elif request.get_status() == "FINISHED":
+				ncbi_ids = list(request.each_result())
+				break
+			# elif request.get_status().startswith("Unknown response returned by UniProt"):
+			else:
+				print(request.get_status())
+				ncbi_ids = []
+				break
 
-		if ncbi_ids:
+		if not ncbi_ids:
+			continue
+		else:
 			for ncbi_id in [x['to'] for x in ncbi_ids]:
-				if not any(Sequences.objects.filter(foreignannotation__icontains=ncbi_id, dbxref=ncbi_id)):
+				print(ncbi_id)
+				if not any(Sequences.objects.filter( Q(foreignannotation__icontains=ncbi_id) | Q(dbxref=ncbi_id)) ):
+					print("Adding sequence to database")
 					esummary_output, esummary_error = esummary(ncbi_id)
-					fetch_output, fetch_error = efetch(ncbi_id)
-					newSequenceEntryFromEfetch(esummary_output, fetch_output, seqId=None, updateLog=None)
+					efetch_output, efetch_error = efetch(ncbi_id)
+					newSequenceEntryFromEfetch(esummary_output, efetch_output, seqId=None, updateLog=None)
 
 
 

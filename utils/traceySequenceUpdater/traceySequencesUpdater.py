@@ -477,7 +477,8 @@ def analyzeSequence(newSeq):
 				# print(h_name, format(d.pvalue, '.1E'))
 				if h_name in hits_d and d.pvalue > hits_d[h_name]['pvalue']:
 					continue
-				dg_name = str(d.alignment).split("\n")[1].split()[0]
+				# dg_name =  str(d.alignment).split("\n")[0].split()[0] # <- Sometimes alignment has a different structure??? name is in line 1 instead of line 0
+				dg_name = [str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else str(d.alignment).split("\n")[1].split()[0]][0]
 				# dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name) if d.domain.domainname in ["SNARE", "Habc"]][0]
 				dg = [d for d in Domaingroups.objects.filter(domaingroupname=dg_name)][0]
 				motif = Domains.objects.get(domain_id=dg.domain_id).domainname
@@ -939,7 +940,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 # Run code when run as script
 if __name__ == "django.core.management.commands.shell":
 	sequencesAnalysed = []
-	updateSequences(sequencesAnalysed, species="HoSa", traceyIds=[], domain="C2", onlyActive=False)
+	updateSequences(sequencesAnalysed, species="HoSa", traceyIds=[], domain="SNARE", onlyActive=False)
 
 
 ####

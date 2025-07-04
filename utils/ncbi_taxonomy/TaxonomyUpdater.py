@@ -85,24 +85,28 @@ def read_ncbi_files(path):
 
 
 def create_ncbi_taxonomy(ncbi_id, ncbi, report_file=''):
+
     # Check if ID exists in NCBI files
     try:
         node = ncbi['dict_nodes'][str(ncbi_id)]
         name = ncbi['dict_names'][str(ncbi_id)]
     except:
         print('NCBI id %s does not exists.'%(str(ncbi_id)))
+
     # Check if taxonomy already exists
     try:
-        Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_id)
+        taxonomy = Taxonomies.objects.get(ncbi_taxonomy_id=ncbi_id)
         print('Taxonomy exists. Aborted..')
-        return
+        return taxonomy
     except:
         pass
+
     # Create NCBI parent Taxonomy if does not exists in TRACEY
     try:
         taxonomy_parent = Taxonomies.objects.get(ncbi_taxonomy_id=node['parent_tax_id'])
     except:
         taxonomy_parent = create_ncbi_taxonomy(node['parent_tax_id'], ncbi)
+
     # Check if shortname exists
     _name = [name['name_txt'].split(" ") if len(name['name_txt'].split(" ")) > 1 else ''][0]
     if not _name or len(_name) < 2:
