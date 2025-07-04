@@ -46,41 +46,65 @@
 				{% for error in form.errors %}{{error}}{% endfor %}
 				<div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
 
+					<div class="row">
+
+						<div class="col-md-6" style="padding-left: 0;">
+							<h4>Sequence Information</h4>
+							<table class="detailTable">
+								<tr>
+									<td class="td-header">Short name:</td>
+									<td class="td-data">{{ sequence.sequenceshortname }}</td>
+								</tr>
+								<tr>
+									<td class="td-header">Aliases:</td>
+									<td class="td-data">{% if sequence.aliases == "null" %}{% else %}{{ sequence.aliases }}{% endif %}</td>
+								</tr>
+								<tr>
+									<td class="td-header">Species:</td>
+									<td class="td-data">{{ speciesname }}</td>
+								</tr>
+								<tr>
+									<td class="td-header">Status:</td>
+									<td class="td-data">{{ sequence.sequencestatus }}</td>
+								</tr>
+								<tr>
+									<td class="td-header">dbxref:</td>
+									<td class="td-data"><a href="https://www.ncbi.nlm.nih.gov/protein/{{ sequence.dbxref }}" target="_blank" style="color: blue;">{{ sequence.dbxref }}</a></td>
+								</tr>
+								<tr>
+									<td class="td-header">Source database:</td>
+									<td class="td-data">{{ sequence.sourcedatabase }}</td>
+								</tr>
+								{% if pdb %}
+									<tr>
+										<td class="td-header">PDB:</td>
+										<td class="td-data"><a href="https://www.rcsb.org/structure/{{ pdb }}" target="_blank" style="color: blue;">{{ pdb }}</a> {{ pdb_name }}</td>
+									</tr>
+								{% endif %}
+								<tr>
+									<td class="td-header">Foreign annotation:</td>
+									<td class="td-data">{{ sequence.foreignannotation }}</td> <!-- <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.foreignannotation }}</textarea> -->
+								</tr>
+							</table>
+						</div>
+
+						<div class="col-md-6" style="padding-left: 0;">
+							<h4>Taxonomy Information</h4>
+							<table class="detailTable" style="margin-left: 15px;">
+								{% for k in sequence.get_TaxInfo %}
+								<tr>
+									<td class="td-header">{{ k }}:</td>
+									<td class="td-data">{{ sequence.get_TaxInfo|get_item:k }}</td>
+								</tr>
+								{% endfor %}
+							</table>
+						</div>
+
+					</div>
+
 					<table class="detailTable">
 						<tr>
-							<td class="td-header">Short name:</td>
-							<td class="td-data">{{ sequence.sequenceshortname }}</td>
-						</tr>
-						<tr>
-							<td class="td-header">Aliases:</td>
-							<td class="td-data">{% if sequence.aliases == "null" %}{% else %}{{ sequence.aliases }}{% endif %}</td>
-						</tr>
-						<tr>
-							<td class="td-header">Species:</td>
-							<td class="td-data">{{ speciesname }}</td>
-						</tr>
-						<tr>
-							<td class="td-header">Status:</td>
-							<td class="td-data">{{ sequence.sequencestatus }}</td>
-						</tr>
-						<tr>
-							<td class="td-header">dbxref:</td>
-							<td class="td-data"><a href="https://www.ncbi.nlm.nih.gov/protein/{{ sequence.dbxref }}" target="_blank" style="color: blue;">{{ sequence.dbxref }}</a></td>
-						</tr>
-						<tr>
-							<td class="td-header">Source database:</td>
-							<td class="td-data">{{ sequence.sourcedatabase }}</td>
-						</tr>
-						{% if pdb %}
-							<tr>
-								<td class="td-header">PDB:</td>
-								<td class="td-data"><a href="https://www.rcsb.org/structure/{{ pdb }}" target="_blank" style="color: blue;">{{ pdb }}</a> {{ pdb_name }}</td>
-							</tr>
-						{% endif %}
-						<tr>
-							<td class="td-header">Foreign annotation:</td>
-							<td class="td-data">{{ sequence.foreignannotation }}</td> <!-- <textarea style="resize: none; width:100%; vertical-align: middle;">{{ sequence.foreignannotation }}</textarea> -->
-						</tr>
+							<td class="td-header"><br></td></tr>
 						<tr>
 							<td class="td-header">Sequence:</td>
 							<td class="td-data">
@@ -103,6 +127,7 @@
 							</td>
 						</tr>
 						{% endif %}
+						<tr><td><br></td></tr>
 						<tr>
 							<td class="td-header">Protein Layout</td>
 							<td class="td-data">

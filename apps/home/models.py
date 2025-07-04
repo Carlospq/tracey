@@ -514,6 +514,11 @@ class Sequences(models.Model):
 
         return name
 
+    def get_TaxInfo(self):
+        taxas = ["superkingdom", "clade", "kingdom", "phylum", "order", "family", "genus"]
+        fullTaxa = {k.split(":")[0]:k.split(":")[1] for k in  [x.strip() for x in self.get_fullTaxa().split("|")] if ":" in k and k.split(":")[0] in taxas}
+        return fullTaxa
+
 
 class Species(models.Model):
     species_id = models.AutoField(primary_key=True)
