@@ -1,5 +1,34 @@
+<style type="text/css">
+	#download-outputs {
+		position: absolute;
+		float: left;
+		display: flex;
+		padding: 5px;
+	}
+	#tree-newick, #tree-pdf {
+		margin-right: 10px;
+		padding: 5px;
+		border: 1px solid black;
+		border-radius: 5px;
+		background-color: lightgray;
+		z-index: 9999;
+	}
+	#tree-newick:hover, #tree-pdf:hover {
+		background-color: darkgray;
+		text-decoration: none;
+		cursor: pointer;
+	}
+</style>
+
 {% if error %}
 		<p style="color: red">{{error}}</p>
 {% else %}
+		<!-- download outputs section -->
+		<div id="download-outputs">
+			<div id="tree-newick"><a href="{% url 'download_file' treeNewick %}" target="_blank">newick</a></div>
+			<div id="tree-pdf"><a href="{% url 'download_file' treeplot %}" target="_blank">png</a></div>
+		</div>
+
+		<!-- tree plot section -->
 		<img id="treeplot" src="static/assets/img/tmpTrees/{{treeplot}}" alt="Something weird happend while plotting... is better if you go for a beer and relax&#10;&#10;&#10;&#10;&#10;&#10;&#10;&#10;{{error_length}}" style="white-space: pre-line">
 {% endif %}

@@ -1158,7 +1158,7 @@ def plotTrees(request):
 	bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + values
 	subprocess.run(bashCommand)
 
-	return render(request, 'home/treeplot.html', {'treeplot': treeFileName+'.png'})
+	return render(request, 'home/treeplot.html', {'treeplot': treeFileName+'.png', 'treeNewick': treeFileName})
 
 
 @login_required(login_url="/noPermits.html")
@@ -1731,6 +1731,8 @@ def download_file(request, filename=''):
 		# Define the full file path
 		if 'Tree' in filename:
 			filepath = 'utils/ncbi_taxonomy/' + filename
+		elif "newick" in filename:
+			filepath = 'apps/static/assets/img/tmpTrees/' + filename
 		else:
 			filepath = BASE_DIR + ''
 		# Open the file for reading content

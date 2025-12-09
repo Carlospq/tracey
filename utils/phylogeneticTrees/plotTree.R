@@ -11,7 +11,7 @@ groupNames <- str_replace_all(args[3:length(args)], fixed(" "), "")
 
 newickFile <- paste0('apps/static/assets/img/tmpTrees/', nwk)
 tree <- read.tree(file = newickFile)
-unlink(newickFile)
+# unlink(newickFile)
 
 
 groupInfo <- split(tree$tip.label, sapply(strsplit(tree$tip.label, "\\|"), "[", 2))
