@@ -43,6 +43,7 @@ taxonomyGraph.pdf
 utils/traceySequenceUpdater/traceySequencesUpdater.*.log
 *test.py
 *tmp.py
+utils/motifPredictortmp*
 
 # Blast bin and databases
 utils/ncbi-blast-2.13.0+/bin
