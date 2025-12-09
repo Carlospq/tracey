@@ -42,6 +42,7 @@ apps/static/assets/img/tmpTrees/*
 taxonomyGraph.pdf
 utils/traceySequenceUpdater/traceySequencesUpdater.*.log
 *test.py
+*tmp.py
 
 # Blast bin and databases
 utils/ncbi-blast-2.13.0+/bin
@@ -56,4 +57,7 @@ utils/ncbi_taxonomy/.Rhistory
 
 # SQL dump files
 utils/tracey_20180606_0400.dump2
-utils/tracey_20250401.backup.sql
+utils/*.backup.sql
+
+# large files from utils/stats
+utils/stats/*.tsv

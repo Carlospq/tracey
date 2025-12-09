@@ -1,3 +1,10 @@
+## Update HMM info for SNARE motifs in the database
+#  1. Collect all sequences with SNARE motifs
+#  2. For each sequence, collect all SNARE-related HMMs from utils/hmmModels/SNARE/
+#  3. Create a temporary HMM database with these HMMs
+#  4. Scan the sequence against this temporary HMM database using hmmscan
+#  5. If a better SNARE motif is found, create a new Motifs entry with the new motif and deactivate the old one
+
 import os, pyhmmer
 import subprocess
 
@@ -22,7 +29,7 @@ def countGaps(alignment):
 		gaps.append("%s:%s" % (gapInitialPosition, count))
 	return ", ".join(gaps)
 
-def updateSnareMotifs(sequences, analyzed_sequences=None):
+def updateSnareMotifs(sequences, protein_family='SNARE', analyzed_sequences=None):
 
 	if not analyzed_sequences:
 		analyzed_sequences = []
@@ -46,7 +53,7 @@ def updateSnareMotifs(sequences, analyzed_sequences=None):
 			# Collect hmm names from menu
 			hmms = [m.domaingroup.domaingroupname]
 			split_name = m.domaingroup.domaingroupname.split(".")
-			d = menu['SNARE'][m.domaingroup.domain.domainname]
+			d = menu[protein_family][m.domaingroup.domain.domainname]
 			for i in range(len(split_name)):
 				try:
 					d = d[".".join(split_name[:i+1])]
@@ -148,4 +155,4 @@ if __name__ == "django.core.management.commands.shell":
 	domain_name = 'SNARE'
 	seq_ids = Motifs.objects.filter(domaingroup__domain__domainname=domain_name).values('sequence_id')
 	sequences = Sequences.objects.filter(sequence_id__in=seq_ids, sequencestatus="live")
-	updateSnareMotifs(sequences, analyzed_sequences=[])
+	updateSnareMotifs(sequences, protein_family=domain_name, analyzed_sequences=[])

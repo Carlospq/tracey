@@ -502,37 +502,72 @@ menu = {
 		'Habc': {
 			'Ha': {
 				'Ha.I': {
-					'Ha.I.Syx18': {},
+					'Ha.I.Syx18': {
+						'Ha.I.Syx18.Metazoa': {},
+						'Ha.I.Syx18.Viridiplantae': {}
+					},
 					'Ha.I.Ufe1': {}
 				},
 				'Ha.II': {},
 				'Ha.III': {
-					'Ha.III.b': {},
-					'Ha.III.a': {}
+					'Ha.III.a': {},
+					'Ha.III.b': {
+						'Ha.III.b.Fungi': {},
+						'Ha.III.b.Metazoa': {},
+						'Ha.III.b.Syx17': {},
+						'Ha.III.b.Viridiplantae': {}
+					}
 				},
 				'Ha.IV': {
+					'Ha.IV.Metazoa': {},
+					'Ha.IV.Sso': {},
 					'Ha.IV.Syx': {},
-					'Ha.IV.Sso': {}
-				},
+					'Ha.IV.Syx1x': {},
+					'Ha.IV.Viridiplantae': {}
+				}
 			},
 			'Hb': {
-				'Hb.I': {},
+				'Hb.I': {
+					'Hb.I.fungi': {},
+					'Hb.I.metazoa': {},
+					'Hb.I.viridiplantae': {}
+				},
 				'Hb.II': {
-					'Hb.II.Bos1': {},
-					'Hb.II.Gos1': {},
-					'Hb.II.Membrin': {}
+					'Hb.II.Gos': {
+						'Hb.II.Gos.fungi': {},
+						'Hb.II.Gos.zoophyta': {}
+					},
+					'Hb.II.Membos': {
+						'Hb.II.Membos.Bos1': {},
+						'Hb.II.Membos.Membrin': {}
+					}
 				},
 				'Hb.III': {
-					'Hb.III.b': {},
-					'Hb.III.d': {}
+					'Hb.III.b': {
+						'Hb.III.b.Vti1a': {},
+						'Hb.III.b.Vti1b': {},
+						'Hb.III.b.Vtifungi': {},
+						'Hb.III.b.Vtiviridiplantae': {}
+					}
 				}
 			},
 			'Hc': {
-				'Hc.I': {},
-				'Hc.III': {
-					'Hc.III.b': {},
-					'Hc.III.c': {}
+				'Hc.I': {
+					'Hc.I.Fungi': {},
+					'Hc.I.Metazoa': {},
+					'Hc.I.Viridiplantae': {}
 				},
+				'Hc.III': {
+					'Hc.III.b': {
+						'Hc.III.b.Fungi': {},
+						'Hc.III.b.Metazoa': {}
+					},
+					'Hc.III.c': {
+						'Hc.III.c.Fungi': {},
+						'Hc.III.c.Metazoa': {},
+						'Hc.III.c.Vam7': {}
+					}
+				}
 			}
 		},
 		'LGL': {}

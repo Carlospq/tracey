@@ -1,9 +1,12 @@
 # Run code when run as script
 # python manage.py shell < utils/traceySequenceUpdater/domaingroupsNamesReduction.py
 
+#! Script adapted only for SNARE and Habc domaingroups
+
 if __name__ == "django.core.management.commands.shell":
 
 	from apps.home.models import *
+
 	# Remove old domaingroups that don't have an hmm associated to them
 	domaingroupsNames = {'Qa.I': ['Syx18', 'Ufe1'],
 						 'Qa.II': ['Syx5', 'Sed5', 'Syp3-plants'],
@@ -27,6 +30,16 @@ if __name__ == "django.core.management.commands.shell":
 						 'SNAP.c': ['SNAP25.c', 'SNAP29.c', 'SNAP-plants.c', 'SNAP47.c', 'Sec9.c']
 						 }
 
+	# new_fullsequence_domaingroups = {'SNAREa.I': ['SNAREa.I.Syx18', 'SNAREa.I.Ufe1'],
+	# 								 'SNAREa.II': ['SNAREa.II.Sed5', 'SNAREa.II.Syx5'],
+	# 								 'SNAREa.III': ['SNAREa.III.a', 'SNAREa.III.b'],
+	# 								 'SNAREa.IV': ['SNAREa.IV.Sso', 'SNAREa.IV.Syx'],
+	# 								 'SNAREb.I': [],
+	# 								 'SNAREb.II': ['SNAREb.II.Bos1', 'SNAREb.II.Gos1', 'SNAREb.II.Membrin'],
+	# 								 'SNAREb.III': ['SNAREb.III.b', 'SNAREb.III.d'],
+	# 								 'SNAREc.I': [],
+	# 								 'SNAREc.III': ['SNAREc.III.b', 'SNAREc.III.c']}
+
 	for dgKeyName in domaingroupsNames:
 		dgKey = Domaingroups.objects.get(domaingroupname=dgKeyName)
 		for dgName in domaingroupsNames[dgKeyName]:
@@ -37,93 +50,108 @@ if __name__ == "django.core.management.commands.shell":
 				m.save()
 
 
-	# Add new domaingroups matching new SNARE HMMs
-	new_domaingroups = {'Habc': {'Ha.I': ['Ha.I.Syx18', 'Ha.I.Ufe1'],
-								 'Ha.II': [],
-								 'Ha.III': ['Ha.III.a', 'Ha.III.b'],
-								 'Ha.IV': ['Ha.IV.Sso', 'Ha.IV.Syx'],
-								 'Hb.I': [],
-								 'Hb.II': ['Hb.II.Bos1', 'Hb.II.Gos1', 'Hb.II.Membrin'],
-								 'Hb.III': ['Hb.III.b', 'Hb.III.d'],
-								 'Hc.I': [],
-								 'Hc.III': ['Hc.III.b', 'Hc.III.c']},
-						'SNARE': {'Qa.I': ['Qa.I.Syx18', 'Qa.I.Ufe1'],
-								  'Qa.II': ['Qa.II.Sed5', 'Qa.II.Syx5'],
-								  'Qa.III': ['Qa.III.a', 'Qa.III.b'],
-								  'Qa.IV': ['Qa.IV.Sso', 'Qa.IV.Syx'],
-								  'Qb.I': [],
-								  'Qb.II': ['Qb.II.Bos1', 'Qb.II.Gos1', 'Qb.II.Membrin'],
-								  'Qb.III': ['Qb.III.b', 'Qb.III.d'],
-								  'Qc.I': [],
-								  'Qc.II': [],
-								  'Qc.III': ['Qc.III.b', 'Qc.III.c'],
-								  'R.I': [],
-								  'R.II': [],
-								  'R.III': [],
-								  'R.IV': [],
-								  'R.Reg': [],
-								  'SNAP': ['SNAPb', 'SNAPc']}
-						}
-	new_fullsequence_domaingroups = {'SNAREa.I': ['SNAREa.I.Syx18', 'SNAREa.I.Ufe1'],
-									 'SNAREa.II': ['SNAREa.II.Sed5', 'SNAREa.II.Syx5'],
-									 'SNAREa.III': ['SNAREa.III.a', 'SNAREa.III.b'],
-									 'SNAREa.IV': ['SNAREa.IV.Sso', 'SNAREa.IV.Syx'],
-									 'SNAREb.I': [],
-									 'SNAREb.II': ['SNAREb.II.Bos1', 'SNAREb.II.Gos1', 'SNAREb.II.Membrin'],
-									 'SNAREb.III': ['SNAREb.III.b', 'SNAREb.III.d'],
-									 'SNAREc.I': [],
-									 'SNAREc.III': ['SNAREc.III.b', 'SNAREc.III.c']}
+	# Add new domaingroups matching SNARE/Habc HMMs
+	hmmPath = "utils/hmmModels"
+	HabcHMMs = [f.replace('.hmm', '') for f in os.listdir(os.path.join(hmmPath, 'HABC')) if f.endswith('.hmm')]
+	snareHMMs = [f.replace('.hmm', '') for f in os.listdir(os.path.join(hmmPath, 'SNARE')) if f.endswith('.hmm')]
+	allHMMs = HabcHMMs + snareHMMs
+	new_domaingroups = {'Habc': {}, 'SNARE': {}}
 
 
-	# For Habc / SNARE domaingroups
-	for dKeyName in new_domaingroups:
-		d = Domains.objects.get(domainname=dKeyName)
-		for dgKeyName in new_domaingroups[dKeyName]:
-			if dgKeyName == 'SNAP':
-				dgKey = Domaingroups.objects.get(pk=4)
-			else:
-				dgKey = Domaingroups.objects.get(domaingroupname=dgKeyName)
-			for dgName in new_domaingroups[dKeyName][dgKeyName]:
-				if not any(Domaingroups.objects.filter(domaingroupname=dgName)):
-					with open('utils/hmmModels/SNARE/%s' % (dgName + ".hmm"), 'r') as hmm_file:
-						dgLen = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
-					dg = Domaingroups(domaingroupname=dgName,
-									  domaingrouplength=dgLen,
-									  domain=d,
-									  domaingroupparent_id=dgKey.domaingroup_id,
-									  analysislevel=5,
-									  softcutoff=1.0,
-									  strictcutoff=1.0)
-					dg.save()
-
-	# For fullsequence HabcSNARE domaingroups
-	d = Domains.objects.get(domainname="SNARE")
-	dgSNARE = Domaingroups.objects.get(domaingroupname="SNARE")
-	for dgKeyName in new_fullsequence_domaingroups:
-
-		if not any(Domaingroups.objects.filter(domaingroupname=dgKeyName)):
-			with open('utils/hmmModels/SNARE/%s' % (dgKeyName + ".hmm"), 'r') as hmm_file:
-				dgLen = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
-			dgKey = Domaingroups(domaingroupname=dgKeyName,
-								 domaingrouplength=dgLen,
-								 domain=d,
-								 domaingroupparent_id=135,
-								 analysislevel=3,
-								 softcutoff=1.0,
-								 strictcutoff=1.0)
-			dgKey.save()
+	# - Generate Dictionary with new domaingroups // dict{domaingroup_parent: [domaingroup_children], ...}
+	for hmm in allHMMs:
+		domain = "Habc" if hmm.startswith('H') else "SNARE"
+		if hmm.count(".") == 0:
+			continue
 		else:
-			dgKey = Domaingroups.objects.get(domaingroupname=dgKeyName)
+			dg_parent = ".".join(hmm.split(".")[:-1])
+			if not dg_parent in new_domaingroups[domain]:
+				new_domaingroups[domain][dg_parent] = []
+			new_domaingroups[domain][dg_parent].append(hmm)
 
-		for dgName in new_fullsequence_domaingroups[dgKeyName]:
-			if not any(Domaingroups.objects.filter(domaingroupname=dgName)):
-				with open('utils/hmmModels/SNARE/%s' % (dgName + ".hmm"), 'r') as hmm_file:
-					dgLen = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
-				dg = Domaingroups(domaingroupname=dgName,
-								  domaingrouplength=dgLen,
-								  domain=d,
-								  domaingroupparent_id=dgKey.domaingroup_id,
-								  analysislevel=5,
+	# Recursive function to generate nested dictionary from domaingroup list
+	def generate_dictionary(dg_list, dictionary=None, level=None):
+
+		level = level if level is not None else 0
+		dictionary = dictionary if dictionary is not None else {}
+
+		dg_names = [dg_name for dg_name in dg_list if dg_name.count(".") == level]
+		for dg_name in dg_names:
+			dictionary[dg_name] = {}
+			sub_dg_list = [sub_dg_name for sub_dg_name in dg_list if sub_dg_name.startswith(dg_name + ".")]
+			if len(sub_dg_list) > 0:
+				dictionary[dg_name] = generate_dictionary(sub_dg_list, dictionary=dictionary[dg_name], level=level + 1)
+
+		return dictionary
+
+
+	habc_dg_dictionary = generate_dictionary([hmm for hmm in allHMMs if hmm.startswith('H')])
+	snare_dg_dictionary = generate_dictionary([hmm for hmm in allHMMs if not hmm.startswith('H')])
+
+	# For Habc / SNARE domaingroups - Add new domaingroups to TRACEY
+	def generate_domaingroup(dict_obj, dg_parent_name, level=None):
+
+		level = level if level is not None else 1
+		domain = Domains.objects.get(domainname='Habc' if dg_parent_name.startswith('H') else 'SNARE')
+
+		for dg_name in dict_obj:
+			dg_parent = Domaingroups.objects.get(domaingroupname=dg_parent_name)
+
+			# Create domaingroup if it doesn't exist
+			if not any(Domaingroups.objects.filter(domaingroupname=dg_name)):
+				print('Creating domaingroup:', dg_name)
+				hmmFilePath = 'utils/hmmModels/%s/%s.hmm' % (domain.domainname.upper(), dg_name)
+
+				with open(hmmFilePath, 'r') as hmm_file:
+					dg_len = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
+
+				dg = Domaingroups(domaingroupname=dg_name,
+								  domaingrouplength=dg_len,
+								  domain=domain,
+								  domaingroupparent_id=dg_parent.domaingroup_id,
+								  analysislevel=level,
 								  softcutoff=1.0,
 								  strictcutoff=1.0)
 				dg.save()
+			# Recursive call for child domaingroups
+			generate_domaingroup(dict_obj[dg_name], dg_name, level=level + 1)
+
+	# Generate Habc domaingroups
+	generate_domaingroup(habc_dg_dictionary, "Habc")
+	# Generate SNARE domaingroups
+	generate_domaingroup(snare_dg_dictionary, "SNARE")
+
+
+
+
+	# For fullsequence HabcSNARE domaingroups
+	# d = Domains.objects.get(domainname="SNARE")
+	# dgSNARE = Domaingroups.objects.get(domaingroupname="SNARE")
+	# for dgKeyName in new_fullsequence_domaingroups:
+	#
+	# 	if not any(Domaingroups.objects.filter(domaingroupname=dgKeyName)):
+	# 		with open('utils/hmmModels/SNARE/%s' % (dgKeyName + ".hmm"), 'r') as hmm_file:
+	# 			dgLen = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
+	# 		dgKey = Domaingroups(domaingroupname=dgKeyName,
+	# 							 domaingrouplength=dgLen,
+	# 							 domain=d,
+	# 							 domaingroupparent_id=135,
+	# 							 analysislevel=3,
+	# 							 softcutoff=1.0,
+	# 							 strictcutoff=1.0)
+	# 		dgKey.save()
+	# 	else:
+	# 		dgKey = Domaingroups.objects.get(domaingroupname=dgKeyName)
+	#
+	# 	for dgName in new_fullsequence_domaingroups[dgKeyName]:
+	# 		if not any(Domaingroups.objects.filter(domaingroupname=dgName)):
+	# 			with open('utils/hmmModels/SNARE/%s' % (dgName + ".hmm"), 'r') as hmm_file:
+	# 				dgLen = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
+	# 			dg = Domaingroups(domaingroupname=dgName,
+	# 							  domaingrouplength=dgLen,
+	# 							  domain=d,
+	# 							  domaingroupparent_id=dgKey.domaingroup_id,
+	# 							  analysislevel=5,
+	# 							  softcutoff=1.0,
+	# 							  strictcutoff=1.0)
+	# 			dg.save()

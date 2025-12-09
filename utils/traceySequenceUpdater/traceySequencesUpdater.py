@@ -519,11 +519,17 @@ def analyzeSequence(newSeq):
 		motif.stopposition = hit['env_to']
 		motif.domaingroup = hit['dg']
 		motif.active = 1
-		motif.method = Methods.objects.get(domaingroup_id=motif.domaingroup_id)
 		motif.gaps = hit['alignment'].target_sequence.count("-")
 		motif.evalue = hit['evalue']
 		motif.alignment = hit['alignment']
 		motif.asciioutput = ascii
+
+		try:
+			method = Methods.objects.get(domaingroup_id=motif.domaingroup_id)
+		except Methods.DoesNotExist:
+			method = Methods(domaingroup_id=motif.domaingroup_id, type="pyhmmer:0.8.1")
+		method.save()
+		motif.method = method
 		motif.save()
 
 	return hits_d
@@ -679,7 +685,7 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 		accessionVersion = identicalSeqSummaryOutput['AccessionVersion']
 		if seq.dbxref != accessionVersion:
 			try:
-				seq.dbxref = accessionVersion
+				seq.dbxref = accessionVersion[:25]
 				seq.save()
 			except django.db.utils.IntegrityError:
 				accessionVersion += "/"
@@ -821,7 +827,7 @@ def updateSequences(sequencesAnalysed, species="", traceyIds=[], domain="SNARE",
 
 		if not onlyActive:
 			snareVerifymotifsIds = set([m.sequence_id for m in Verifymotifs.objects.filter(motifname__in=["SNARE", "Snare", "Habc"])])
-			sequences = sequences.filter(sequence_id__in=list(snareVerifymotifsIds))
+			sequences = sequences.filter(sequence_id__in=list(snareVerifymotifsIds | snareMotifsIds))
 
 		sequences = sequences.exclude(sequence_id__in=sequencesAnalysed)
 	else:

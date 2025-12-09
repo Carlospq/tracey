@@ -318,13 +318,20 @@ class Motifs(models.Model):
     def __str__(self):
         return self.motifname
 
+    def get_evalue(self):
+        data_ = {}
+        data = ET.fromstring(self.asciioutput)
+        for x in data:
+            data_[x.tag] = x.text
+        return float(data_["eValue"]) if "eValue" in data_ else 0
+
     def get_ali_positions(self):
         # Returns sequence positions alignment to hmm in 1based coordinates system
         data_ = {}
         data = ET.fromstring(self.asciioutput)
         for x in data:
             data_[x.tag] = x.text
-        match = re.search(data_["motif"].strip().replace("-", "").replace("*", "X").upper(), self.sequence.sequence.replace("*", "X"))
+        match = re.search(data_["motif"].strip().replace("-", "").replace("*", "X").upper(), self.sequence.sequence.replace("*", "X").upper())
         return [match.start() + 1, match.end()]
 
     def get_real_startposition(self):
