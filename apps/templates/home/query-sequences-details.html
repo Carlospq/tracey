@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 {% extends "layouts/base.html" %}
 
 {% block title %} Sequence details {% endblock %}
@@ -9,26 +10,117 @@
 
 <head>
     <style type="text/css">
-    	  .detailTable{
-            table-layout: fixed;
-            width:100%;
-            border-collapse:collapse;
-            word-wrap: break-word;
-            word-break: break-word;
-    	  }
-        .detailTable td{
-            text-align: left;
-            padding-bottom: 5px;
-            word-wrap: break-word;
-            word-break: break-word;
-        }
+		.seq-and-tax h4 {
+			margin-bottom: 15px;
+		}
+		.detailTable {
+			table-layout: fixed;
+			width:100%;
+			border-collapse:collapse;
+			word-wrap: break-word;
+			word-break: break-word;
+		}
+		.detailTable td {
+			text-align: left;
+			padding-bottom: 5px;
+			word-wrap: break-word;
+			word-break: break-word;
+		}
+		.detailTable.seq-and-layout .td-header,
+		.detailTable.motif-data .td-header{
+			width: 7.2%;
+			font-weight: bold;
+		}
         .td-header {
-            width: 15%;
+            width: 30%;
             font-weight: bold;
         }
         .td-data {
-            width: 85%;
+            width: 60%;
         }
+		#sequence-info, #taxonomy-info {
+			width: 35%;
+			padding-right: 15px;
+			padding-left: 0;
+		}
+		#protein-display {
+			width: 30%;
+			position: relative;
+			right: 15px;
+			height: auto;
+		}
+		#protein-display.active {
+			width: 50vw;
+			height: 50vh;
+			position: absolute;
+			z-index: 9999;
+		}
+		#proteinViewer, #proteinViewerContainer {
+			height: 100%;
+			width: 100%;
+			position: relative;
+		}
+		#toggleSpin {
+			position: absolute;
+			margin-left: 10px;
+			top: 10px;
+			left: 10px;
+			z-index: 10;
+			padding: 5px 10px;
+			background-color: rgba(150, 150, 150, 0.8);
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 12px;
+		}
+		#toggleSize {
+			position: absolute;
+			margin-left: 10px;
+			bottom: 10px;
+			left: 10px;
+			z-index: 10;
+			padding: 5px 5px;
+			background-color: rgba(150, 150, 150, 0.8);
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 12px;
+		}
+		#viwerExpander {
+			position: absolute;
+			margin-left: 10px;
+			bottom: 10px;
+			left: 40px;
+			z-index: 10;
+			padding: 5px 10px;
+			background-color: rgba(150, 150, 150, 0.8);
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 12px;
+		}
+		#cif {
+			position: absolute;
+			margin-right: 10px;
+			bottom: 10px;
+			right: 10px;
+			z-index: 10;
+			padding: 5px 10px;
+			background-color: rgba(150, 150, 150, 0.8);
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 12px;
+		}
+		.loadingmessage {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			font-size: 16px;
+			color: #555;
+			z-index: 9999;
+		}
     </style>
 </head>
 
@@ -41,14 +133,19 @@
 					<h1><strong> {{ sequence }} </strong></h1>
 					<hr>
 				</div>
+
 				{% if log %}<p style="color: red;">{{ log }}</p>{% endif %}
 				{{ message }}
 				{% for error in form.errors %}{{error}}{% endfor %}
+
+				<!-- Sequence Information Section -->
 				<div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
 
-					<div class="row">
+					<!-- Sequence information and 3D display -->
+					<div class="row mb-4 seq-and-tax" style="display: flex; flex-direction: row">
 
-						<div class="col-md-6" style="padding-left: 0;">
+						<!-- Sequence info -->
+						<div id="sequence-info">
 							<h4>Sequence Information</h4>
 							<table class="detailTable">
 								<tr>
@@ -88,7 +185,8 @@
 							</table>
 						</div>
 
-						<div class="col-md-6" style="padding-left: 0;">
+						<!-- Taxonomy info -->
+						<div id="taxonomy-info">
 							<h4>Taxonomy Information</h4>
 							<table class="detailTable" style="margin-left: 15px;">
 								{% for k in sequence.get_TaxInfo %}
@@ -100,11 +198,41 @@
 							</table>
 						</div>
 
+						<!-- 3Dmol.js Protein Viewer -->
+						<div id="protein-display">
+							<div id="proteinViewerContainer">
+								{{ motif_coords|json_script:"data-motifs" }}
+
+							</div>
+
+							<!-- If structure not found -->
+							{% if not fetch3d %}
+							<div class="loadingmessage">L3D Structure not found...</div>
+							{% endif %}
+
+							<!-- Spin button -->
+							<button id="toggleSpin">Stop spin</button>
+
+							<!-- Expand button -->
+							{% if fetch3d %}
+							<button id="toggleSize" type="button" aria-label="Resize viewer">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+									<path d="M14 3h7v7m0-7L10 14M10 21H3v-7m0 7L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+							</button>
+							<button id="viwerExpander" onclick="window.open('/query-sequences/{{ sequence.sequence_id }}/3dviewer/')">New Window</button>
+
+							<!-- Download button -->
+							<div id="cif"><a href="{{ fetch3d }}" target="_blank">Download .cif</a></div>
+							{% endif %}
+
+						</div>
+
 					</div>
 
-					<table class="detailTable">
-						<tr>
-							<td class="td-header"><br></td></tr>
+					<!-- Sequence and Layout -->
+					<table class="detailTable seq-and-layout">
+						<!-- Sequence -->
 						<tr>
 							<td class="td-header">Sequence:</td>
 							<td class="td-data">
@@ -128,14 +256,20 @@
 						</tr>
 						{% endif %}
 						<tr><td><br></td></tr>
+
+						<!-- Layout -->
 						<tr>
 							<td class="td-header">Protein Layout</td>
 							<td class="td-data">
 								<img src="data:image/png;base64,{{ layout }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; margin-bottom: 20px">
 							</td>
 						</tr>
+
 					</table>
+
 				</div>
+
+				<!-- Motif Data Section -->
 				<div class="row mb-3">
 					<h4> Motif Data </h4>
 					<hr>
@@ -143,6 +277,8 @@
 
 				{% for m in motifs %}
 				<div class="row mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 0px 0px 15px;">
+
+					<!-- Headers -->
 					<div class="row mb-1" style="padding: 10px 15px 0px 15px;">
 						<table class="detailTable">
 							<tr>
@@ -155,8 +291,10 @@
 						</table>
 						<hr>
 					</div>
+
+					<!-- Motif Layout -->
 					<div class="row mb-1" style="padding: 0px 15px 0px 15px;">
-						<table class="detailTable" style="table-layout: fixed;">
+						<table class="detailTable motif-data" style="table-layout: fixed;">
 							<tr>
 								<td class="td-header"><b></b></td>
 								<td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
@@ -173,8 +311,10 @@
 							</tr>
 						</table>
 					</div>
+
+					<!-- Motif alignment -->
 					<div class="row mb-3" style="padding: 0px 15px 0px 15px;">
-						<table class="detailTable" style="table-layout: fixed;">
+						<table class="detailTable motif-data" style="table-layout: fixed;">
 							<tr>
 								<td class="td-header" style="table-layout: fixed;">
 									<table style="table-layout: fixed; width:100%;">
@@ -207,6 +347,7 @@
 							</tr>
 						</table>
 					</div>
+
 				</div>
 				{% endfor %}
 
@@ -218,4 +359,63 @@
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+	<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+	<script src="https://3Dmol.org/build/3Dmol.ui-min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+	<script>
+	let viewerContainer = document.getElementById('proteinViewerContainer');
+	let viewer = $3Dmol.createViewer( viewerContainer, {} );
+	const domainColors = {
+		"SNARE": "orange",
+		"Habc": "purple",
+		"C2": "red",
+		"default": "green"
+	};
+	window.addEventListener("DOMContentLoaded", function() {
+		let pdbUri = '{{ fetch3d }}';
+		var motifsData = JSON.parse(document.getElementById('data-motifs').textContent);
+		fetch(pdbUri)
+			.then( response => response.text() )
+			.then( data => {
+				viewer.addModel( data, "cif" );
+				viewer.setStyle({}, {cartoon: {color: 'blue'}});
+				{# Color each motif #}
+				for (const [key, value] of Object.entries(motifsData)) {
+					viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
+				}
+				{#viewer.addSurface('VDW', {opacity:.3 , color: 'white'}, {});#}
+				viewer.spin("y", 0.2);
+				viewer.enableFog(false);
+				viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
+				viewer.zoomTo();
+				viewer.render();
+			})
+			.catch( error => {
+				console.error('Error loading 3D structure:', error);
+				let loadingMessage = document.querySelector('.loadingmessage');
+				if (loadingMessage) {
+					loadingMessage.textContent = 'Error loading 3D structure.';
+				}
+			});
+	});
+	let isSpinning = true;
+	document.getElementById("toggleSpin").addEventListener("click", () => {
+		if (isSpinning) {
+			viewer.spin(false);		// stop spinning
+			isSpinning = false;
+			toggleSpin.textContent = "Start spin";
+		} else {
+			viewer.spin("y", 0.2);	// start spinning (axis, speed)
+			isSpinning = true;
+			toggleSpin.textContent = "Stop spin";
+		}
+	});
+	document.getElementById("toggleSize").addEventListener("click", () => {
+		const container = document.getElementById("protein-display");
+		container.classList.toggle("active");
+		viewer.resize();
+		viewer.render();
+	});
+	</script>
+{% endblock javascripts %}

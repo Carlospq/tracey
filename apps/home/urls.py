@@ -24,6 +24,7 @@ urlpatterns = [
     path('query-sequences', views.QuerySequences, name='query-sequences'),
     path('query-sequences-results', views.QuerySequencesResults, name='query-sequences-results'),
     path('query/fastaFormat/', views.QuerySequencesFastaFormat, name='query-sequences-fasta'),
+    path('query-sequences/<int:sequence_id>/3dviewer/', views.QuerySequences3dViewer, name='query-sequences-3dViewer'),
     path('query-sequences/<int:sequence_id>/details/', views.QuerySequencesDetails, name='query-sequences-details'),
     path('details/fastaFormat/<int:sequence_id>/', views.DetailsSequencesFastaFormat, name='details-sequences-fasta'),
 

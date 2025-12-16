@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import django_tables2 as tables
 import numpy as np
+import urllib.request
+import json
 from random import randrange
 from dna_features_viewer import GraphicFeature, GraphicRecord
 from time import gmtime, strftime
@@ -49,6 +51,8 @@ from django import template
 
 register = template.Library()
 matplotlib.use('agg')
+
+import hashlib
 
 ### FUNCTIONS ###
 def get_children(model, parent, parent_id, child_parent_id, children=[], search_type='iexact'):
@@ -208,6 +212,21 @@ def notEmpty(query, element):
 			return True
 	except:
 		return False
+
+
+def md5(fname):
+	hash_md5 = hashlib.md5()
+	with open(fname, "rb") as f:
+		for chunk in iter(lambda: f.read(4096), b""):
+			hash_md5.update(chunk)
+	return hash_md5.hexdigest()
+
+def md5_from_seq(sequence):
+	with open('utils/tmp_files/seq_md5.txt'	, 'w') as temp_file:
+		temp_file.write(sequence)
+	seq_md5 = md5(temp_file.name)
+	os.remove(temp_file.name)
+	return seq_md5
 #################
 
 # Home
@@ -662,6 +681,30 @@ def getLayoutPlot(sequence):
 	return uri
 
 
+def QuerySequences3dViewer(request, sequence_id):
+	context = {'is_staff': request.user.is_staff}
+	try:
+		context['sequence'] = Sequences.objects.get(pk=sequence_id)
+	except Sequences.DoesNotExist:
+		context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
+		return render(request, 'home/query-sequences-details.html', context)
+
+	seqmd5 = md5_from_seq(context['sequence'].sequence)
+	fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
+	fetch3d = json.loads(fetch3d)
+	context["fetch3d"] = fetch3d['structures'][0]['summary']['model_url']
+
+	motifs = context['sequence'].motifs_set.all()
+	motif_coords = {}
+	for m in motifs:
+		motif_coords[m.domaingroup.domaingroupname] = {"start": m.get_real_startposition(),
+													   "end": m.get_real_stopposition(),
+													   "domain": m.domaingroup.domain.domainname}
+	context["motif_coords"] = motif_coords
+
+	return render(request, 'home/query-sequences-3dViewer.html', context)
+
+
 def QuerySequencesDetails(request, sequence_id):
 	segment = request.path.split('/')[-4]
 	context = {"segment": segment,
@@ -679,6 +722,26 @@ def QuerySequencesDetails(request, sequence_id):
 		m = re.search(r'pdb\|([A-Z0-9]+)\|([A-z0-9\s]+)', context['sequence'].foreignannotation)
 		context["pdb"] = m.group(1)
 		context["pdb_name"] = m.group(2)
+
+	# md5sum of sequence to fetch alpha-fold pdb
+	seqmd5 = md5_from_seq(context['sequence'].sequence)
+	try:
+		# fetch url to alphaFold .cif
+		fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
+		fetch3d = json.loads(fetch3d)
+		context["fetch3d"] = fetch3d['structures'][0]['summary']['model_url']
+
+		# Get motifs coordinates to color alpha-fold structure
+		motifs = context['sequence'].motifs_set.all()
+		motif_coords = {}
+		for m in motifs:
+			motif_coords[m.domaingroup.domaingroupname] = {"start": m.get_real_startposition(),
+														   "end": m.get_real_stopposition(),
+														   "domain": m.domaingroup.domain.domainname}
+		context["motif_coords"] = motif_coords
+
+	except urllib.error.HTTPError:
+		context["fetch3d"] = False
 
 	context["layout"] = getLayoutPlot(context['sequence'])
 	motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id).order_by('startposition')

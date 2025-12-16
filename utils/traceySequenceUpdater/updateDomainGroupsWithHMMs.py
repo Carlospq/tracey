@@ -10,12 +10,19 @@ if __name__ == "django.core.management.commands.shell":
 
 	snare_domaingroupNames = menu['SNARE']['SNARE']
 
-	def updateDomainGroups(domaingroups_dict, dgParent=None):
+	def updateDomainGroups(domaingroups_dict, dgParent=None, domain="SNARE"):
 
 		if not domaingroups_dict: return
 		if not dgParent:
-			dgParent = Domaingroups.objects.get(domaingroupname="SNARE")
-		snare_domain = Domains.objects.get(domainname='SNARE')
+			if domain == "SNARE":
+				dgParent = Domaingroups.objects.get(domaingroupname="SNARE")
+			else:
+				dgParent = Domaingroups.objects.get(domaingroupname=domain)
+
+		if domain == "SNARE":
+			snare_domain = Domains.objects.get(domainname='SNARE')
+		else:
+			snare_domain = Domains.objects.get(domainname=domain)
 
 		# Add new domaingroups matching new SNARE HMMs
 		for dgKeyName in domaingroups_dict:
@@ -23,7 +30,8 @@ if __name__ == "django.core.management.commands.shell":
 			# Check if dgKeyName exists - Create new dg if not
 			if not Domaingroups.objects.filter(domaingroupname=dgKeyName):
 
-				with open('utils/hmmModels/SNARE/%s' % (dgKeyName + ".hmm"), 'r') as hmm_file:
+				folder_name = snare_domain.domainname.upper()
+				with open('utils/hmmModels/%s/%s' % (folder_name, dgKeyName + ".hmm"), 'r') as hmm_file:
 					dgLen = int([l.strip().split()[1] for l in hmm_file.readlines() if l.startswith('LENG')][0])
 
 				dg = Domaingroups(domaingroupname=dgKeyName,
@@ -36,6 +44,7 @@ if __name__ == "django.core.management.commands.shell":
 				dg.save()
 
 			if domaingroups_dict[dgKeyName]:
-				updateDomainGroups(domaingroups_dict[dgKeyName], Domaingroups.objects.get(domaingroupname=dgKeyName))
+				updateDomainGroups(domaingroups_dict[dgKeyName], Domaingroups.objects.get(domaingroupname=dgKeyName), domain=domain)
 
 	updateDomainGroups(snare_domaingroupNames)
+	updateDomainGroups(snare_domaingroupNames, Domaingroups.objects.get(domaingroupname="Habc"), domain="Habc")
