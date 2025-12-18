@@ -1,4 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <title>My Page</title>
 	<style>
 		#protein-display {
 			margin: 15px;
@@ -47,8 +51,10 @@
     </style>
 </head>
 
-<!-- 3Dmol.js Protein Viewer -->
-<div id="protein-display">
+<body>
+
+	<!-- 3Dmol.js Protein Viewer -->
+	<div id="protein-display">
 
 	<div id="proteinViewerContainer">
 		{{ motif_coords|json_script:"data-motifs" }}
@@ -67,56 +73,58 @@
 
 </div>
 
+	<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+	<script src="https://3Dmol.org/build/3Dmol.ui-min.js"></script>
 
+	<script>
+		let viewerContainer = document.getElementById('proteinViewerContainer');
+		let viewer = $3Dmol.createViewer( viewerContainer, {} );
+		const domainColors = {
+			"SNARE": "orange",
+			"Habc": "purple",
+			"C2": "red",
+			"default": "green"
+		};
+		window.addEventListener("DOMContentLoaded", function() {
+			let pdbUri = '{{ fetch3d }}';
+			var motifsData = JSON.parse(document.getElementById('data-motifs').textContent);
+			fetch(pdbUri)
+				.then( response => response.text() )
+				.then( data => {
+					viewer.addModel( data, "cif" );
+					viewer.setStyle({}, {cartoon: {color: 'blue'}});
+					{# Color each motif #}
+					for (const [key, value] of Object.entries(motifsData)) {
+						viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
+					}
+					viewer.spin("y", 0.2);
+					viewer.enableFog(false);
+					viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
+					viewer.zoomTo();
+					viewer.render();
+				})
+				.catch( error => {
+					console.error('Error loading 3D structure:', error);
+					let loadingMessage = document.querySelector('.loadingmessage');
+					if (loadingMessage) {
+						loadingMessage.textContent = 'Error loading 3D structure.';
+					}
+				});
+		});
+		let isSpinning = true;
+		document.getElementById("toggleSpin").addEventListener("click", () => {
+			if (isSpinning) {
+				viewer.spin(false);		// stop spinning
+				isSpinning = false;
+				toggleSpin.textContent = "Start spin";
+			} else {
+				viewer.spin("y", 0.2);	// start spinning (axis, speed)
+				isSpinning = true;
+				toggleSpin.textContent = "Stop spin";
+			}
+		});
+	</script>
 
-<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-<script src="https://3Dmol.org/build/3Dmol.ui-min.js"></script>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
-<script>
-	let viewerContainer = document.getElementById('proteinViewerContainer');
-	let viewer = $3Dmol.createViewer( viewerContainer, {} );
-	const domainColors = {
-		"SNARE": "orange",
-		"Habc": "purple",
-		"C2": "red",
-		"default": "green"
-	};
-	window.addEventListener("DOMContentLoaded", function() {
-		let pdbUri = '{{ fetch3d }}';
-		var motifsData = JSON.parse(document.getElementById('data-motifs').textContent);
-		fetch(pdbUri)
-			.then( response => response.text() )
-			.then( data => {
-				viewer.addModel( data, "cif" );
-				viewer.setStyle({}, {cartoon: {color: 'blue'}});
-				{# Color each motif #}
-				for (const [key, value] of Object.entries(motifsData)) {
-					viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
-				}
-				viewer.spin("y", 0.2);
-				viewer.enableFog(false);
-				viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
-				viewer.zoomTo();
-				viewer.render();
-			})
-			.catch( error => {
-				console.error('Error loading 3D structure:', error);
-				let loadingMessage = document.querySelector('.loadingmessage');
-				if (loadingMessage) {
-					loadingMessage.textContent = 'Error loading 3D structure.';
-				}
-			});
-	});
-	let isSpinning = true;
-	document.getElementById("toggleSpin").addEventListener("click", () => {
-		if (isSpinning) {
-			viewer.spin(false);		// stop spinning
-			isSpinning = false;
-			toggleSpin.textContent = "Start spin";
-		} else {
-			viewer.spin("y", 0.2);	// start spinning (axis, speed)
-			isSpinning = true;
-			toggleSpin.textContent = "Stop spin";
-		}
-	});
-</script>
+</body>
+</html>
+

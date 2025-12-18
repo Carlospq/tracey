@@ -9,6 +9,7 @@ if __name__ == "django.core.management.commands.shell":
 	from apps.templates.menus.query_sequences import *
 
 	snare_domaingroupNames = menu['SNARE']['SNARE']
+	habc_domaingroupNames = menu['SNARE']['Habc']
 
 	def updateDomainGroups(domaingroups_dict, dgParent=None, domain="SNARE"):
 
@@ -47,4 +48,4 @@ if __name__ == "django.core.management.commands.shell":
 				updateDomainGroups(domaingroups_dict[dgKeyName], Domaingroups.objects.get(domaingroupname=dgKeyName), domain=domain)
 
 	updateDomainGroups(snare_domaingroupNames)
-	updateDomainGroups(snare_domaingroupNames, Domaingroups.objects.get(domaingroupname="Habc"), domain="Habc")
+	updateDomainGroups(habc_domaingroupNames, Domaingroups.objects.get(domaingroupname="Habc"), domain="Habc")
