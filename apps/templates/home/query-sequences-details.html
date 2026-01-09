@@ -45,9 +45,9 @@
 		}
 		#protein-display {
 			width: 30%;
+			height: auto;
 			position: relative;
 			right: 15px;
-			height: auto;
 		}
 		#protein-display.active {
 			width: 50vw;
@@ -59,6 +59,9 @@
 			height: 100%;
 			width: 100%;
 			position: relative;
+		}
+		canvas {
+			border: black solid 1px;
 		}
 		#toggleSpin {
 			position: absolute;
@@ -112,7 +115,7 @@
 			cursor: pointer;
 			font-size: 12px;
 		}
-		.loadingmessage {
+		.loadingmessage, #viewerFallback {
 			position: absolute;
 			top: 50%;
 			left: 50%;
@@ -202,28 +205,33 @@
 						<div id="protein-display">
 							<div id="proteinViewerContainer">
 								{{ motif_coords|json_script:"data-motifs" }}
+							</div>
 
+							<div id="viewerFallback" style="display:none; color:red;">
+								Your browser don't support WebGL. Molecule can't be visualized in 3D.
 							</div>
 
 							<!-- If structure not found -->
 							{% if not fetch3d %}
-							<div class="loadingmessage">L3D Structure not found...</div>
-							{% endif %}
 
-							<!-- Spin button -->
-							<button id="toggleSpin">Stop spin</button>
+								<div class="loadingmessage">L3D Structure not found...</div>
 
-							<!-- Expand button -->
-							{% if fetch3d %}
-							<button id="toggleSize" type="button" aria-label="Resize viewer">
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-									<path d="M14 3h7v7m0-7L10 14M10 21H3v-7m0 7L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-								</svg>
-							</button>
-							<button id="viwerExpander" onclick="window.open('/query-sequences/{{ sequence.sequence_id }}/3dviewer/')">New Window</button>
+							{% else %}
 
-							<!-- Download button -->
-							<div id="cif"><a href="{{ fetch3d }}" target="_blank">Download .cif</a></div>
+								<!-- Spin button -->
+								<button id="toggleSpin">Stop spin</button>
+
+								<!-- Expand button -->
+								<button id="toggleSize" type="button" aria-label="Resize viewer">
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+										<path d="M14 3h7v7m0-7L10 14M10 21H3v-7m0 7L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+									</svg>
+								</button>
+								<button id="viwerExpander" onclick="window.open('/query-sequences/{{ sequence.sequence_id }}/3dviewer/')">New Window</button>
+
+								<!-- Download button -->
+								<div id="cif"><a href="{{ fetch3d }}" target="_blank">Download .cif</a></div>
+
 							{% endif %}
 
 						</div>
@@ -364,58 +372,74 @@
 	<script src="https://3Dmol.org/build/3Dmol.ui-min.js"></script>
 
 	<script>
-	let viewerContainer = document.getElementById('proteinViewerContainer');
-	let viewer = $3Dmol.createViewer( viewerContainer, {} );
-	const domainColors = {
-		"SNARE": "orange",
-		"Habc": "purple",
-		"C2": "red",
-		"default": "green"
-	};
 	window.addEventListener("DOMContentLoaded", function() {
+		let viewerContainer = document.getElementById('proteinViewerContainer');
+		let fallback = document.getElementById("viewerFallback");
 		let pdbUri = '{{ fetch3d }}';
-		var motifsData = JSON.parse(document.getElementById('data-motifs').textContent);
-		fetch(pdbUri)
-			.then( response => response.text() )
-			.then( data => {
-				viewer.addModel( data, "cif" );
-				viewer.setStyle({}, {cartoon: {color: 'blue'}});
-				{# Color each motif #}
-				for (const [key, value] of Object.entries(motifsData)) {
-					viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
-				}
-				{#viewer.addSurface('VDW', {opacity:.3 , color: 'white'}, {});#}
-				viewer.spin("y", 0.2);
-				viewer.enableFog(false);
-				viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
-				viewer.zoomTo();
-				viewer.render();
-			})
-			.catch( error => {
-				console.error('Error loading 3D structure:', error);
-				let loadingMessage = document.querySelector('.loadingmessage');
-				if (loadingMessage) {
-					loadingMessage.textContent = 'Error loading 3D structure.';
+
+		const domainColors = {
+			"SNARE": "orange",
+			"Habc": "purple",
+			"C2": "red",
+			"default": "green"
+		};
+
+		try {
+
+			let viewer = $3Dmol.createViewer( viewerContainer, {});
+
+			var motifsData = JSON.parse(document.getElementById('data-motifs').textContent);
+			fetch(pdbUri)
+				.then( response => response.text() )
+				.then( data => {
+					viewer.addModel( data, "cif" );
+					viewer.setStyle({}, {cartoon: {color: 'blue'}});
+					{# Color each motif #}
+					for (const [key, value] of Object.entries(motifsData)) {
+						viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
+					}
+					{#viewer.addSurface('VDW', {opacity:.3 , color: 'white'}, {});#}
+					viewer.spin("y", 0.2);
+					viewer.enableFog(false);
+					viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
+					viewer.zoomTo();
+					viewer.render();
+				})
+				.catch( error => {
+					console.error('Error loading 3D structure:', error);
+					let loadingMessage = document.querySelector('.loadingmessage');
+					if (loadingMessage) {
+						loadingMessage.textContent = 'Error loading 3D structure.';
+					}
+				});
+
+			let isSpinning = true;
+			document.getElementById("toggleSpin").addEventListener("click", () => {
+				if (isSpinning) {
+					viewer.spin(false);		// stop spinning
+					isSpinning = false;
+					toggleSpin.textContent = "Start spin";
+				} else {
+					viewer.spin("y", 0.2);	// start spinning (axis, speed)
+					isSpinning = true;
+					toggleSpin.textContent = "Stop spin";
 				}
 			});
-	});
-	let isSpinning = true;
-	document.getElementById("toggleSpin").addEventListener("click", () => {
-		if (isSpinning) {
-			viewer.spin(false);		// stop spinning
-			isSpinning = false;
-			toggleSpin.textContent = "Start spin";
-		} else {
-			viewer.spin("y", 0.2);	// start spinning (axis, speed)
-			isSpinning = true;
-			toggleSpin.textContent = "Stop spin";
+			document.getElementById("toggleSize").addEventListener("click", () => {
+				const container = document.getElementById("protein-display");
+				container.classList.toggle("active");
+				viewer.resize();
+				viewer.render();
+			});
+
+		} catch (e) {
+
+			console.error('WebGL not supported:', e);
+			fallback.style.display = "block";
+			viewerContainer.querySelectorAll("canvas").forEach(c => c.remove());
+
 		}
-	});
-	document.getElementById("toggleSize").addEventListener("click", () => {
-		const container = document.getElementById("protein-display");
-		container.classList.toggle("active");
-		viewer.resize();
-		viewer.render();
+
 	});
 	</script>
 {% endblock javascripts %}
