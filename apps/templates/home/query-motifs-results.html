@@ -29,6 +29,52 @@
         .td-data {
             width: 85%;
         }
+		.td-data.button button {
+			border-radius: 5px;
+			border: 1px solid;
+		}
+		.td-data.button button a {
+			color: black;
+		}
+		.motif-aligner-displayer {
+			width: auto;
+		}
+		.motif-aligner-displayer:hover {
+			background-color: #E0DFF5;
+			border-radius: 5px;
+		}
+		.motif-aligner-displayer span {
+			cursor: pointer;
+			user-select: none;
+			padding-left: 0;
+			width: auto;
+		}
+		/* Header styling */
+		.toggle-header {
+			cursor: pointer;
+			display: flex;
+			flex-direction: row;
+			{#justify-content: space-between;#}
+			align-items: center;
+			margin: 8px 0;
+			padding: 5px;
+			font-weight: bold;
+			font-size: 14px;
+			user-select: none;
+		}
+		/* Arrow icon (CSS-only) */
+		.arrow {
+			display: inline-block;
+			transition: transform 0.2s ease;
+		}
+		/* When open, rotate arrow to point up (▲) */
+		.toggle-header.open .arrow {
+			transform: rotate(180deg);
+		}
+		.motif-alignment {
+			overflow: hidden;
+			transition: max-height 0.25s ease;
+		}
     </style>
 </head>
 
@@ -154,6 +200,7 @@
 					<div style="z-index: -1; background-color: #F2F4F6; height: 40px; margin-left: -1.5rem; margin-right: -1.5rem; margin-top: -10px; margin-bottom: -10px;"></div>
 					<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem"></div>
 
+					<!-- Predicted SNARE Group -->
 					{% if predictedSNARE %}
 						<div class="row">
 							<div class="col-sm-12">
@@ -203,12 +250,15 @@
 						<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem"></div>
 					{% endif %}
 
+					<!-- Hits Details -->
                     <div class="row mb-4">
                         <div class="col-sm-12">
                             {% if error_hits %}<p style="color: red">{{error_hits}}</p>{% endif %}
-                            {% for h in hits_d %}
+
+							{% for h in hits_d %}
 								{% if hits_d|get_item:h|get_item:'domains' %}
 
+								<!-- Protein layout with all hits for that domain group -->
                                 <div class="row mb-4" style="border: lightgrey solid 1px; border-radius: 15px; border-radius: 15px; padding: 10px 15px 0px 15px;">
                                 <div class="mb-4">
                                     <table style="width: 100%;">
@@ -220,10 +270,14 @@
 									<hr>
 									<table style="width: 100%; height: 200px">
 										<tr>
-											<td style="width:100%;"><img src="data:image/png;base64,{{ hits_d|get_item:h|get_item:'plot' }}" alt="" style="width: 90%; display: block; margin-left: auto; margin-right: auto;"></td>
+											<td style="width:100%;">
+												<div>{{ hits_d|get_item:h|get_item:'plot' }}</div>
+											</td>
 										</tr>
 									</table>
                                 </div>
+
+								<!-- Individual hits for that domain group | sequence + HMM alignment -->
                                 {% for d in hits_d|get_item:h|get_item:'domains' %}
 									{% with d|get_item:"alignment" as aln %}
                                     <div class="mb-3" style="background-color: #F2F0F9; border-radius: 15px; border-radius: 15px; padding: 10px 15px 0px 15px;">
@@ -238,9 +292,9 @@
                                         <table class="detailTable" style="table-layout: fixed;">
                                             <tr>
                                                 <td class="td-data" style="table-layout: fixed;">
-                                                    <div style="overflow-x:auto;">
 
-														<!-- Sequence with highlighted motif -->
+													<!-- Sequence with highlighted motif -->
+													<div style="overflow-x:auto;">
 														<table class="detailTable" style="table-layout: fixed;">
 															<tr>
 																<td class="td-header"><b>Sequence with motif: </b></td>
@@ -250,12 +304,27 @@
 																	</div>
 																</td>
 															</tr>
+
+															<!-- Open motif sequence in fasta format | Copy to clipboard -->
+															<tr>
+																<td class="td-header"></td>
+																<td class="td-data button">
+																	<button onclick="openFastaPopup(`Query sequence [{{ d.aln_from }}:{{ d.aln_to }}]`, `{{ hits_d|get_item:h|get_item:'domainname' }}|{{ h }}|e-val: {{ d.evalue }}`, `{{ d.alignment.target_sequence }}`)">Fasta format</button>
+																	<button onclick="copyTextToClipboard(`{{ d.alignment.target_sequence }}`)">Copy motif to clipboard</button>
+																</td>
+															</tr>
 														</table>
 
                                                     </div>
 
-													<div>
+													<!-- HMM alignment -->
+													<div class="row toggle-header motif-aligner-displayer" id="motif-aligner-displayer" aria-expanded="false">
+														<span>Motif Alignment:</span>
+														<span class="arrow">&#9660</span>
+													</div>
+													<div class="row mb-3 motif-alignment" id="motif-alignment" style="padding: 0px 15px 0px 15px; max-height: 0px;">
 														<table class="detailTable" style="table-layout: fixed;">
+
 															<tr>
 																<td class="td-header" style="table-layout: fixed;">
 																	<table style="table-layout: fixed; width:100%;">
@@ -286,8 +355,8 @@
 																		</table>
 																	</div>
 																</td>
-
 															</tr>
+
 														</table>
 													</div>
 
@@ -416,6 +485,167 @@
 			}
 		});
     })
+
+	function copyTextToClipboard(text) {
+		navigator.clipboard.writeText(text.replace(/-/g, "").toUpperCase()).then(function() {
+			alert('Sequence copied to clipboard');
+		}, function(err) {
+			console.error('Could not copy text: ', err);
+		});
+	}
+
+	function openFastaPopup(seqId, hmm, fastaText) {
+		// open popup
+		const popup = window.open("", "popup", "width=600,height=500,scrollbars=yes");
+
+		// Write FASTA as plain text in <pre> so formatting is preserved
+		popup.document.write(`
+			<html>
+				<head>
+					<title>FASTA</title>
+					<style>
+						body { font-family: monospace; padding: 20px; font-size: 14px; }
+						#seqFasta { background-color: #f8f9fa; padding: 15px; width: auto; border: 1px solid #dee2e6; border-radius: 5px; font-family: monospace; word-wrap: break-word; word-break: break-word; }
+						.buttons { justify-content: center; display:flex; margin-top: 15px; gap: 20px; }
+						.btn { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; }
+						.btn-primary { background-color: #007bff; color: white; }
+						.btn-secondary { background-color: #6c757d; color: white; }
+						.btn:hover { opacity: 0.9; }
+					</style>
+				</head>
+				<body>
+					<div id="seqFasta">>${seqId}|${hmm}<br>${fastaText.toUpperCase().replace(/-/g, "")}</div>
+					<div class="buttons">
+						<button class="btn btn-primary" onclick="downloadFasta()">Download FASTA</button>
+						<button class="btn btn-primary" onclick="copyFastaToClipboard()">Copy to clipboard</button>
+						<button class="btn btn-secondary" onclick="window.close()">Close</button>
+					</div>
+			<script>
+				function downloadFasta(name, sequence) {
+					const fastaContent = document.getElementById('seqFasta').innerText;
+					const blob = new Blob([fastaContent], { type: 'text/plain' });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = '${seqId}_${hmm}.fasta';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+					alert('FASTA file downloaded');
+				}
+				function copyFastaToClipboard() {
+					const fastaText = document.getElementById('seqFasta').innerText;
+					navigator.clipboard.writeText(fastaText).then(function() {
+						alert('FASTA sequence copied to clipboard');
+					}, function(err) {
+						console.error('Could not copy text: ', err);
+					});
+				}
+			<\/script>
+			</body>
+			</html>`);
+		popup.document.close();
+	}
+
+	document.addEventListener("DOMContentLoaded", function () {
+	  const headers = document.querySelectorAll(".motif-aligner-displayer");
+
+	  headers.forEach((header, idx) => {
+		// Find the closest .motif-alignment (prefer immediate next sibling)
+		let content = null;
+		let sib = header.nextElementSibling;
+		while (sib) {
+		  if (sib.classList && sib.classList.contains("motif-alignment")) {
+			content = sib;
+			break;
+		  }
+		  // Stop if we hit another header: assume 1:1 pairing
+		  if (sib.classList && sib.classList.contains("motif-aligner-displayer")) break;
+		  sib = sib.nextElementSibling;
+		}
+
+		if (!content) return; // nothing to toggle for this header
+
+		// Accessibility: link header to content if possible
+		if (!content.id) {
+		  content.id = `motif-alignment-${idx + 1}`;
+		}
+		header.setAttribute("aria-controls", content.id);
+
+		// INITIAL STATE: read from aria-expanded (default true if missing)
+		const initiallyOpen = header.getAttribute("aria-expanded");
+		const isOpen = initiallyOpen === null ? true : initiallyOpen === "true";
+
+		// Choose one of the two toggle modes:
+
+		// --- Mode A: simple display toggle (no animation) ---
+		// content.style.display = isOpen ? "block" : "none";
+
+		// --- Mode B: animated max-height (recommended) ---
+		// Set max-height based on content's actual height
+		const setOpenState = (open) => {
+		  header.classList.toggle("open", open);
+		  header.setAttribute("aria-expanded", String(open));
+
+		  // Animation mode:
+		  if (open) {
+			content.style.display = "block";
+			// Force a reflow to enable transition from 0 -> scrollHeight
+			content.style.maxHeight = "0px";
+			content.offsetHeight; // reflow
+			content.style.maxHeight = content.scrollHeight + "px";
+		  } else {
+			content.style.maxHeight = content.scrollHeight + "px"; // set current height
+			content.offsetHeight; // reflow
+			content.style.maxHeight = "0px";
+			// After transition ends, set display:none for better accessibility and tab order
+			const onEnd = (e) => {
+			  if (e.propertyName === "max-height") {
+				content.style.display = "none";
+				content.removeEventListener("transitionend", onEnd);
+			  }
+			};
+			content.addEventListener("transitionend", onEnd);
+		  }
+		};
+
+		// Initialize styles for animation mode
+		if (isOpen) {
+		  content.style.display = "block";
+		  content.style.maxHeight = content.scrollHeight + "px";
+		  header.classList.add("open");
+		  header.setAttribute("aria-expanded", "true");
+		} else {
+		  content.style.display = "none";
+		  content.style.maxHeight = "0px";
+		  header.classList.remove("open");
+		  header.setAttribute("aria-expanded", "false");
+		}
+
+		// Toggle on click + keyboard (Enter/Space)
+		const toggle = () => setOpenState(header.getAttribute("aria-expanded") !== "true");
+
+		header.setAttribute("tabindex", "0");      // make focusable
+		header.setAttribute("role", "button");     // announce as button
+
+		header.addEventListener("click", toggle);
+		header.addEventListener("keydown", (e) => {
+		  if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			toggle();
+		  }
+		});
+
+		// If content resizes (e.g., images load), keep max-height in sync when open
+		const ro = new ResizeObserver(() => {
+		  if (header.getAttribute("aria-expanded") === "true") {
+			content.style.maxHeight = content.scrollHeight + "px";
+		  }
+		});
+		ro.observe(content);
+	  });
+	});
 
 </script>
 {% endblock javascripts %}

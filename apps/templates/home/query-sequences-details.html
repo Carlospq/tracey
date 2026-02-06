@@ -38,6 +38,13 @@
         .td-data {
             width: 60%;
         }
+		.td-data.button button {
+			border-radius: 5px;
+			border: 1px solid;
+		}
+		.td-data.button button a {
+			color: black;
+		}
 		#sequence-info, #taxonomy-info {
 			width: 35%;
 			padding-right: 15px;
@@ -117,12 +124,59 @@
 		}
 		.loadingmessage, #viewerFallback {
 			position: absolute;
+			display: flex;
 			top: 50%;
 			left: 50%;
+			width: 100%;
+			height: 100%;
+			text-align: center;
+			border: black solid 1px;
 			transform: translate(-50%, -50%);
 			font-size: 16px;
 			color: #555;
 			z-index: 9999;
+		}
+		.loadingmessage p {
+			margin: auto;
+		}
+		.motif-aligner-displayer {
+			width: auto;
+		}
+		.motif-aligner-displayer:hover {
+			background-color: #E0DFF5;
+			border-radius: 5px;
+		}
+		.motif-aligner-displayer span {
+			cursor: pointer;
+			user-select: none;
+			padding-left: 0;
+			width: auto;
+		}
+		/* Header styling */
+		.toggle-header {
+			cursor: pointer;
+			display: flex;
+			flex-direction: row;
+			justify-content: space-between;
+			align-items: center;
+			margin: 8px 0;
+			padding: 5px;
+			font-weight: bold;
+			font-size: 14px;
+			user-select: none;
+		}
+		/* Arrow icon (CSS-only) */
+		.arrow {
+			display: inline-block;
+			transition: transform 0.2s ease;
+		}
+		/* When open, rotate arrow to point up (▲) */
+		.toggle-header.open .arrow {
+			transform: rotate(180deg);
+		}
+		.motif-alignment {
+			overflow: hidden;
+			transition: max-height 0.25s ease;
 		}
     </style>
 </head>
@@ -142,7 +196,7 @@
 				{% for error in form.errors %}{{error}}{% endfor %}
 
 				<!-- Sequence Information Section -->
-				<div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 0px 15px;">
+				<div class="row mb-5" style="background-color: #F2F0F9; border-radius: 15px; padding: 10px 15px 10px 15px;">
 
 					<!-- Sequence information and 3D display -->
 					<div class="row mb-4 seq-and-tax" style="display: flex; flex-direction: row">
@@ -203,20 +257,24 @@
 
 						<!-- 3Dmol.js Protein Viewer -->
 						<div id="protein-display">
-							<div id="proteinViewerContainer">
-								{{ motif_coords|json_script:"data-motifs" }}
-							</div>
-
-							<div id="viewerFallback" style="display:none; color:red;">
-								Your browser don't support WebGL. Molecule can't be visualized in 3D.
-							</div>
-
 							<!-- If structure not found -->
 							{% if not fetch3d %}
 
-								<div class="loadingmessage">L3D Structure not found...</div>
+								<div class="loadingmessage">
+									<p>3D Structure not found...</p>
+								</div>
 
 							{% else %}
+
+								<!-- 3Dmol.js Viewer Container -->
+								<div id="proteinViewerContainer">
+									{{ motif_coords|json_script:"data-motifs" }}
+								</div>
+
+								<!-- If WebGL not supported -->
+								<div id="viewerFallback" style="display:none; color:red;">
+									Your browser don't support WebGL. Molecule can't be visualized in 3D.
+								</div>
 
 								<!-- Spin button -->
 								<button id="toggleSpin">Stop spin</button>
@@ -242,15 +300,16 @@
 					<table class="detailTable seq-and-layout">
 						<!-- Sequence -->
 						<tr>
-							<td class="td-header">Sequence:</td>
+							<td class="td-header">Aminoacid sequence:</td>
 							<td class="td-data">
 								<textarea style="resize: none; width:100%; vertical-align: middle;" disabled>{{ sequence.sequence }}</textarea>
 							</td>
 						</tr>
 						<tr>
 							<td class="td-header"></td>
-							<td class="td-data">
-								<a href="/fastaFormat/{{sequence.sequence_id}}/" target="popup" onclick="window.open('/details/fastaFormat/{{sequence.sequence_id}}/','popup','width=600,height=300'); return false;" style="color: blue"> Fasta format </a>
+							<td class="td-data button">
+								<button><a href="/fastaFormat/{{sequence.sequence_id}}/" target="popup" onclick="window.open('/details/fastaFormat/{{sequence.sequence_id}}/','popup','width=600,height=300'); return false;"> Fasta format </a></button>
+								<button id="copyBtn" type="button" aria-label="Copy sequence to clipboard" onclick="copyTextToClipboard('{{ sequence.sequence }}')">Copy to clipboard</button>
 							</td>
 						</tr>
 						{% if is_staff %}
@@ -269,7 +328,8 @@
 						<tr>
 							<td class="td-header">Protein Layout</td>
 							<td class="td-data">
-								<img src="data:image/png;base64,{{ layout }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; margin-bottom: 20px">
+{#								<img src="data:image/png;base64,{{ layout }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; margin-bottom: 20px">#}
+								<div>{{ layout|safe }}</div>
 							</td>
 						</tr>
 
@@ -305,10 +365,12 @@
 						<table class="detailTable motif-data" style="table-layout: fixed;">
 							<tr>
 								<td class="td-header"><b></b></td>
-								<td class="td-data"><img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;"></td>
+								<td class="td-data">
+									<div>{{ motifs|get_item:m|get_item:'plot' }}</div>
+								</td>
 							</tr>
 							<tr>
-								<td class="td-header"><b>Sequence with motif: </b></td>
+								<td class="td-header"><b>Aminoacid sequence with motif: </b></td>
 								<td class="td-data">
 									<div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
 										{% with motifs|get_item:m|get_item:'stopposition' as stopposition %}
@@ -317,11 +379,25 @@
 									</div>
 								</td>
 							</tr>
+
+							<!-- Open motif sequence in fasta format | Copy to clipboard -->
+							<tr>
+								<td class="td-header"></td>
+								<td class="td-data button">
+									<button onclick="openFastaPopup(`{{ sequence.sequenceshortname }}`, `{{ motifs|get_item:m|get_item:'domaingroup' }}`, `{{ motifs|get_item:m|get_item:'motif'|escapejs }}`)">Fasta format</button>
+									<button onclick="copyTextToClipboard(`{{ motifs|get_item:m|get_item:'motif'|escapejs }}`)">Copy motif to clipboard</button>
+								</td>
+							</tr>
 						</table>
 					</div>
 
+
 					<!-- Motif alignment -->
-					<div class="row mb-3" style="padding: 0px 15px 0px 15px;">
+					<div class="row toggle-header motif-aligner-displayer" id="motif-aligner-displayer" aria-expanded="false">
+						<span>Motif Alignment:</span>
+						<span class="arrow">&#9660</span>
+					</div>
+					<div class="row mb-3 motif-alignment" id="motif-alignment" style="padding: 0px 15px 0px 15px; max-height: 0px;">
 						<table class="detailTable motif-data" style="table-layout: fixed;">
 							<tr>
 								<td class="td-header" style="table-layout: fixed;">
@@ -441,5 +517,167 @@
 		}
 
 	});
+
+	document.addEventListener("DOMContentLoaded", function () {
+	  const headers = document.querySelectorAll(".motif-aligner-displayer");
+
+	  headers.forEach((header, idx) => {
+		// Find the closest .motif-alignment (prefer immediate next sibling)
+		let content = null;
+		let sib = header.nextElementSibling;
+		while (sib) {
+		  if (sib.classList && sib.classList.contains("motif-alignment")) {
+			content = sib;
+			break;
+		  }
+		  // Stop if we hit another header: assume 1:1 pairing
+		  if (sib.classList && sib.classList.contains("motif-aligner-displayer")) break;
+		  sib = sib.nextElementSibling;
+		}
+
+		if (!content) return; // nothing to toggle for this header
+
+		// Accessibility: link header to content if possible
+		if (!content.id) {
+		  content.id = `motif-alignment-${idx + 1}`;
+		}
+		header.setAttribute("aria-controls", content.id);
+
+		// INITIAL STATE: read from aria-expanded (default true if missing)
+		const initiallyOpen = header.getAttribute("aria-expanded");
+		const isOpen = initiallyOpen === null ? true : initiallyOpen === "true";
+
+		// Choose one of the two toggle modes:
+
+		// --- Mode A: simple display toggle (no animation) ---
+		// content.style.display = isOpen ? "block" : "none";
+
+		// --- Mode B: animated max-height (recommended) ---
+		// Set max-height based on content's actual height
+		const setOpenState = (open) => {
+		  header.classList.toggle("open", open);
+		  header.setAttribute("aria-expanded", String(open));
+
+		  // Animation mode:
+		  if (open) {
+			content.style.display = "block";
+			// Force a reflow to enable transition from 0 -> scrollHeight
+			content.style.maxHeight = "0px";
+			content.offsetHeight; // reflow
+			content.style.maxHeight = content.scrollHeight + "px";
+		  } else {
+			content.style.maxHeight = content.scrollHeight + "px"; // set current height
+			content.offsetHeight; // reflow
+			content.style.maxHeight = "0px";
+			// After transition ends, set display:none for better accessibility and tab order
+			const onEnd = (e) => {
+			  if (e.propertyName === "max-height") {
+				content.style.display = "none";
+				content.removeEventListener("transitionend", onEnd);
+			  }
+			};
+			content.addEventListener("transitionend", onEnd);
+		  }
+		};
+
+		// Initialize styles for animation mode
+		if (isOpen) {
+		  content.style.display = "block";
+		  content.style.maxHeight = content.scrollHeight + "px";
+		  header.classList.add("open");
+		  header.setAttribute("aria-expanded", "true");
+		} else {
+		  content.style.display = "none";
+		  content.style.maxHeight = "0px";
+		  header.classList.remove("open");
+		  header.setAttribute("aria-expanded", "false");
+		}
+
+		// Toggle on click + keyboard (Enter/Space)
+		const toggle = () => setOpenState(header.getAttribute("aria-expanded") !== "true");
+
+		header.setAttribute("tabindex", "0");      // make focusable
+		header.setAttribute("role", "button");     // announce as button
+
+		header.addEventListener("click", toggle);
+		header.addEventListener("keydown", (e) => {
+		  if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			toggle();
+		  }
+		});
+
+		// If content resizes (e.g., images load), keep max-height in sync when open
+		const ro = new ResizeObserver(() => {
+		  if (header.getAttribute("aria-expanded") === "true") {
+			content.style.maxHeight = content.scrollHeight + "px";
+		  }
+		});
+		ro.observe(content);
+	  });
+	});
+
+	function openFastaPopup(seqId, hmm, fastaText) {
+		// open popup
+		const popup = window.open("", "popup", "width=600,height=500,scrollbars=yes");
+
+		// Write FASTA as plain text in <pre> so formatting is preserved
+		popup.document.write(`
+			<html>
+				<head>
+					<title>FASTA</title>
+					<style>
+						body { font-family: monospace; padding: 20px; font-size: 14px; }
+						#seqFasta { background-color: #f8f9fa; padding: 15px; width: auto; border: 1px solid #dee2e6; border-radius: 5px; font-family: monospace; word-wrap: break-word; word-break: break-word; }
+						.buttons { justify-content: center; display:flex; margin-top: 15px; gap: 20px; }
+						.btn { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; }
+						.btn-primary { background-color: #007bff; color: white; }
+						.btn-secondary { background-color: #6c757d; color: white; }
+						.btn:hover { opacity: 0.9; }
+					</style>
+				</head>
+				<body>
+					<div id="seqFasta">>${seqId}|${hmm}<br>${fastaText.toUpperCase().replace(/-/g, "")}</div>
+					<div class="buttons">
+						<button class="btn btn-primary" onclick="downloadFasta()">Download FASTA</button>
+						<button class="btn btn-primary" onclick="copyFastaToClipboard()">Copy to clipboard</button>
+						<button class="btn btn-secondary" onclick="window.close()">Close</button>
+					</div>
+			<script>
+				function downloadFasta(name, sequence) {
+					const fastaContent = document.getElementById('seqFasta').innerText;
+					const blob = new Blob([fastaContent], { type: 'text/plain' });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = '${seqId}_${hmm}.fasta';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+					alert('FASTA file downloaded');
+				}
+				function copyFastaToClipboard() {
+					const fastaText = document.getElementById('seqFasta').innerText;
+					navigator.clipboard.writeText(fastaText).then(function() {
+						alert('FASTA sequence copied to clipboard');
+					}, function(err) {
+						console.error('Could not copy text: ', err);
+					});
+				}
+			<\/script>
+			</body>
+			</html>`);
+		popup.document.close();
+	}
+	function copyTextToClipboard(text) {
+		navigator.clipboard.writeText(text.replace(/-/g, "").toUpperCase()).then(function() {
+			alert('Sequence copied to clipboard');
+		}, function(err) {
+			console.error('Could not copy text: ', err);
+		});
+	}
+
+
 	</script>
 {% endblock javascripts %}

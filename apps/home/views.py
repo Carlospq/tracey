@@ -4,7 +4,7 @@ Copyright (c) 2019 - present AppSeed.us
 
 import os
 import time, datetime
-import subprocess
+import subprocess, requests
 import mimetypes
 import pyhmmer
 import json as simplejson
@@ -91,17 +91,6 @@ def get_children_raw(model, modelname, parent, query_id, parent_id, child_parent
 			childs.append(entity)
 
 	return childs
-
-
-# def get_parents(model, instance, instance_id, instance_parent_id, parents=[]):
-#     if getattr(instance, instance_id) != getattr(instance, instance_parent_id): # if instance is not root...
-#         parent = model.objects.get( **{ instance_id: getattr(instance, instance_parent_id) } )
-#         parents.append( [getattr(instance, 'taxonomyrank'), getattr(instance, 'scientificname'), getattr(instance, instance_id)] )
-#         get_parents(model, parent, instance_id, instance_parent_id, parents=parents)
-#     else:
-#         parents.append( [getattr(instance, 'taxonomyrank'), getattr(instance, 'scientificname'), getattr(instance, instance_id)] )
-#         return parents
-#     return parents
 
 
 def get_sequences(query, verify=False):
@@ -227,6 +216,304 @@ def md5_from_seq(sequence):
 	seq_md5 = md5(temp_file.name)
 	os.remove(temp_file.name)
 	return seq_md5
+
+
+import plotly.graph_objects as go
+from django.utils.safestring import mark_safe
+
+def build_domain_plot(protein_length, domains, eval=None):
+	"""
+	domains = [
+		{"start": 120, "end": 180, "label": "SNARE Qb-III", "color": "#8c2d2d", "evalue": "3.2e-45"},
+		{"start": 10, "end": 40, "label": "Coiled-coil", "color": "#4f81bd", "evalue": "1.1e-10"},
+	]
+	"""
+
+	fig = go.Figure()
+
+	# Protein backbone
+	fig.add_shape(
+		type="rect",
+		x0=0,
+		x1=protein_length,
+		y0=0.45,
+		y1=0.55,
+		fillcolor="#e0e0e0",
+		line=dict(color="black")
+	)
+
+	# Add domains
+	for dom in domains:
+		# dom == Motif object
+
+		if not eval:
+			tags = {}
+			data = ET.fromstring(dom.asciioutput)
+			for x in data:
+				tags[x.tag] = x.text
+			eval = float(tags["eValue"])
+
+		start = dom.get_real_startposition()
+		end = dom.get_real_stopposition()
+		label = dom.domaingroup.domain.domainname + " - " + dom.domaingroup.domaingroupname
+		motifColors = get_motifsColors()
+		domainname = dom.domaingroup.domain.domainname
+		color = 'rgb'+str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
+		text = (f"{label}<br>Start: {start}<br>"
+				f"End: {end}<br>"
+				f"Length: {end - start + 1} aa<br>"
+				f"E-value: {eval}") if eval else f"{label}<br>Start: {start}<br>End: {end}"
+
+		# Domain rectangle
+		fig.add_shape(
+			type="rect",
+			x0=start,
+			x1=end,
+			y0=0.3,
+			y1=0.7,
+			fillcolor=color,
+			line=dict(color="black")
+		)
+
+		# Add second trace with markers for tooltip
+		xs = list(range(start, end + 1))
+		ys = [0.5] * len(xs)
+		tooltip_color = "rgb(242, 240, 249)"
+		fig.add_trace(go.Scatter(
+			x=xs, y=ys,
+			mode="markers",
+			marker=dict(size=1, opacity=0),
+			hoverinfo="text",
+			text=[f"{text}" for x in xs],
+			hovertemplate="%{text}<extra></extra>",
+			showlegend=False,
+			hoverlabel=dict(
+				bgcolor=tooltip_color,  # ← Tooltip background
+				bordercolor="black",  # ← Optional
+				font=dict(color="black")  # ← Optional, in case background is dark
+			)
+		))
+
+		# Text centered (only if domain is wide enough)
+
+		res_per_char = protein_length * 0.003  # 0.3% of the sequence per character
+		label_required_width = len(label) * res_per_char
+
+		if end - start >= label_required_width:  # approx. 5 pixels per character
+			fig.add_annotation(
+				x=(start + end) / 2,
+				y=(0.2 + 0.8) / 2,
+				text=label,
+				showarrow=False,
+				xanchor="center",
+				yanchor="middle",
+				font=dict(color="white", size=12),
+				bgcolor="rgba(0,0,0,0)",  # no background
+				borderpad=0
+			)
+
+	fig.update_layout(
+		height=155,
+		autosize=True,
+		xaxis=dict(
+			# title="Amino acid position",
+			range=[-5, protein_length + 5],
+			showgrid=False
+		),
+		yaxis=dict(
+			visible=False,
+			range=[0, 1],
+			domain=[0.10, 0.90]  # ← Padding so shapes never touch edges
+		),
+		paper_bgcolor="white",	# Color around the plot
+		plot_bgcolor="white",	# Color behind the axes
+		margin=dict(l=40, r=40, t=2, b=10),
+		showlegend=False,
+	)
+
+	# Exportar como HTML incrustable
+	return mark_safe(fig.to_html(include_plotlyjs='cdn', full_html=False))
+
+
+def build_domain_plot_from_PyHammer(protein_length, hit, evalcutoff=0):
+	"""
+	hits = list of pyhmmer.plan7.Hit objects, each containing a list of domains (pyhmmer.plan7.Domain) with alignment info and e-value.
+	"""
+
+	fig = go.Figure()
+
+	# Protein backbone
+	fig.add_shape(
+		type="rect",
+		x0=0,
+		x1=protein_length,
+		y0=0.45,
+		y1=0.55,
+		fillcolor="#e0e0e0",
+		line=dict(color="black")
+	)
+
+	# Add domains
+	for d in hit.domains:
+		if d.pvalue >= evalcutoff: continue
+
+		start = d.alignment.target_from - 1
+		end = d.alignment.target_to
+		label = str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else str(d.alignment).split("\n")[1].split()[0][0]
+		eval = str(format(d.pvalue, '.1E'))
+
+		motifColors = get_motifsColors()
+		domainname = Domaingroups.objects.get(domaingroupname=label).domain.domainname
+		color = 'rgb' + str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
+
+		label += " (%s)" % (eval) if eval else ""
+		text = f"{domainname} -  {label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>E-value: {eval}" if eval else \
+			   f"{domainname} -  {label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>"
+
+		# Domain rectangle
+		fig.add_shape(
+			type="rect",
+			x0=start,
+			x1=end,
+			y0=0.3,
+			y1=0.7,
+			fillcolor=color,
+			line=dict(color="black")
+		)
+
+		# Add second trace with markers for tooltip
+		xs = list(range(start, end + 1))
+		ys = [0.5] * len(xs)
+		tooltip_color = color = 'rgb(242,240,249)'
+		fig.add_trace(go.Scatter(
+			x=xs, y=ys,
+			mode="markers",
+			marker=dict(size=1, opacity=0),
+			hoverinfo="text",
+			text=[f"{text}" for x in xs],
+			hovertemplate="%{text}<extra></extra>",
+			showlegend=False,
+			hoverlabel=dict(
+				bgcolor=tooltip_color,		# ← Tooltip background
+				bordercolor="black", 		# ← Optional
+				font=dict(color="black")	# ← Optional, in case background is dark
+			)
+		))
+
+		# Text centered (only if domain is wide enough)
+		res_per_char = protein_length * 0.003  # 0.3% of the sequence per character
+		label_required_width = len(label) * res_per_char
+
+		if end - start >= label_required_width:  # approx. 5 pixels per character
+			fig.add_annotation(
+				x=(start + end) / 2,
+				y=(0.2 + 0.8) / 2,
+				text=label,
+				showarrow=False,
+				xanchor="center",
+				yanchor="middle",
+				font=dict(color="white", size=12),
+				bgcolor="rgba(0,0,0,0)",  # no background
+				borderpad=0
+			)
+
+	fig.update_layout(
+		height=155,
+		autosize=True,
+		xaxis=dict(
+			# title="Amino acid position",
+			range=[-5, protein_length + 5],
+			showgrid=False
+		),
+		yaxis=dict(
+			visible=False,
+			range=[0, 1],
+			domain=[0.10, 0.90]  # ← Padding so shapes never touch edges
+		),
+		paper_bgcolor="white",  # Color around the plot
+		plot_bgcolor="white",  # Color behind the axes
+		margin=dict(l=40, r=40, t=2, b=10),
+		showlegend=False,
+	)
+
+	# Exportar como HTML incrustable
+	return mark_safe(fig.to_html(include_plotlyjs='cdn', full_html=False))
+
+
+def get_pdb_data(sequence):
+	"""
+	Fetches PDB file from alphafold using md5 of the sequence and extracts aminoacids
+	"""
+
+	# Basic 3-letter → 1-letter AA mapping
+	AA3_TO_1 = {
+		"ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D",
+		"CYS": "C", "GLN": "Q", "GLU": "E", "GLY": "G",
+		"HIS": "H", "ILE": "I", "LEU": "L", "LYS": "K",
+		"MET": "M", "PHE": "F", "PRO": "P", "SER": "S",
+		"THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
+		# You can add more if needed
+	}
+
+	seqmd5 = md5_from_seq(sequence)
+	fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
+	fetch3d = json.loads(fetch3d)
+	pdb_url = fetch3d['structures'][0]['summary']['model_url']
+
+	if not pdb_url:
+		return {}
+
+	# Download the PDB file
+	try:
+		resp = requests.get(pdb_url)
+		resp.raise_for_status()
+	except Exception as e:
+		return {}
+
+	pdb_text = resp.text
+
+	# Very simple residue extraction from ATOM records
+	residues = []  # list of { chain, resi, aa }
+	seen = set()   # to avoid duplicates
+
+	for line in pdb_text.splitlines():
+		if not line.startswith("ATOM"):
+			continue
+
+		# Only take CA atoms as representative per residue
+		atom_name = line[12:16].strip()
+		if atom_name != "CA":
+			continue
+
+		parts = line.split()
+		if len(parts) < 19:
+			# malformed line, skip
+			continue
+
+		# mmCIF style
+		# auth_comp_id, auth_asym_id, auth_seq_id
+		resname3 = parts[17] 		# e.g. 'MET'
+		chain = parts[18] or "_"	# e.g. 'A'
+		resi = int(parts[8])		# auth_seq_id, e.g. 1
+
+		key = (chain, resi)
+		if key in seen:
+			continue
+		seen.add(key)
+
+		aa = AA3_TO_1.get(resname3, "X")
+		residues.append({
+			"chain": chain,
+			"resi": resi,
+			"aa": aa,
+		})
+
+	data = {
+		"pdb_url": pdb_url,
+		"residues": residues,
+	}
+	return data
+
 #################
 
 # Home
@@ -743,7 +1030,8 @@ def QuerySequencesDetails(request, sequence_id):
 	except urllib.error.HTTPError:
 		context["fetch3d"] = False
 
-	context["layout"] = getLayoutPlot(context['sequence'])
+	# context["layout"] = getLayoutPlot(context['sequence'])
+	context["layout"] = build_domain_plot(len(context['sequence'].sequence), context['sequence'].motifs_set.all())
 	motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id).order_by('startposition')
 
 	context["motifs"]  = {}
@@ -765,10 +1053,9 @@ def QuerySequencesDetails(request, sequence_id):
 		for x in data:
 			context["motifs"][m][x.tag] = x.text
 		context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-		# context["motifs"][m]["stopposition"] = m.startposition + len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-") - 1
-		# context["motifs"][m]["length"] = len(context["motifs"][m]["motif"].strip()) - context["motifs"][m]["motif"].strip().count("-")
-		# context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.startposition, m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
-		context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
+		# getMotifPlot_fromMotif(start, end, length, domain_label)
+		# context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
+		context["motifs"][m]["plot"] = build_domain_plot(len(context['sequence'].sequence), [m], eval=context["motifs"][m]["eValueFloat"])
 
 	# context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
 	return render(request, 'home/query-sequences-details.html', context)
@@ -859,16 +1146,6 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
 	if proteinlayout == "ALL":
 		hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
 	else:
-		# hmms = []
-		# if domainsubgroup:
-		# 	hmmToScan = domainsubgroup
-		# elif domaingroup:
-		# 	hmmToScan = "SNAP" if domaingroup == "SNAPbc" else domaingroup
-		# else:
-		# 	hmmToScan = domainname
-		# hmmNamesList = [x.domaingroupname+".hmm" for x in get_children(Domaingroups, Domaingroups.objects.filter(domaingroupname=hmmToScan), "domaingroup_id", "domaingroupparent_id", children=[])]
-		# hmmList = [x for x in os.listdir('utils/hmmModels/%s'%(domainname)) if x in hmmNamesList]
-
 		if domainsubgroup:
 			hmms = [domainsubgroup.replace("-", "")]
 		elif domaingroup:
@@ -906,7 +1183,9 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
 		if not any([d for d in h.domains if d.pvalue < evalcutoff]): continue
 		h_name = h.name.decode('UTF-8')
 		hits_d[h_name] = {}
-		hits_d[h_name]['plot'] = plot = getMotifPlot_fromPyhammer(h, sequence, evalcutoff)
+		# hits_d[h_name]['plot'] = plot = getMotifPlot_fromPyhammer(h, sequence, evalcutoff)
+		hits_d[h_name]['sequence'] = sequence
+		hits_d[h_name]['plot'] = plot = build_domain_plot_from_PyHammer(len(sequence), h, evalcutoff)
 		hits_d[h_name]['split_sequence'] = [letter for letter in sequence]
 		hits_d[h_name]['domainname'] = Domaingroups.objects.get(domaingroupname = h_name).domain.domainname
 		hits_d[h_name]['domains'] = []
@@ -1467,7 +1746,8 @@ def QueryVerifyView(request, sequence_id):
 	try:
 		seq = Sequences.objects.get(pk=sequence_id)
 		context["sequence"] = seq
-		context["layout"] = getLayoutPlot(seq)
+		# context["layout"] = getLayoutPlot(seq)
+		context["layout"] = build_domain_plot(len(seq.sequence), seq.motifs_set.all())
 	except:
 		context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
 		return render(request, 'home/query-verify.html', context)
@@ -1633,10 +1913,16 @@ def QueryVerifyView(request, sequence_id):
 			for x in data:
 				context[type][m][x.tag] = x.text
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
-			context[type][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(seq.sequence), context[type][m]["domaingroup"])
+			# context[type][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(seq.sequence), context[type][m]["domaingroup"])
+			context[type][m]["plot"] = build_domain_plot(len(seq.sequence), [m])
 
 	# Sort VerifyMotifs by evalue
 	context["verifymotifs"] = {k: v for k, v in sorted(context["verifymotifs"].items(), key=lambda x: x[1]['eValueFloat'])}
+
+	# Get data for 3D structure representation and visualization
+	data_3d = get_pdb_data(seq.sequence)
+	context['pdb_url'] = data_3d['pdb_url']
+	context['residues'] = data_3d['residues']
 
 	return render(request, 'home/query-verify.html', context)
 

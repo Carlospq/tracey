@@ -1,4 +1,68 @@
-<div style="width:100%; word-wrap: break-word; word-break: break-word;">
-	&gt;{{ sequence.sequenceshortname }}
-	{{ sequence.sequence }}
+<div id="seqFasta">
+	&gt;{{ sequence.sequenceshortname }}<br>{{ sequence.sequence }}
 </div>
+<div class="buttons">
+	<button class="btn btn-primary" onclick="downloadFasta('{{ sequence.sequenceshortname }}', '{{ sequence.sequence }}')">Download FASTA</button>
+	<button class="btn btn-primary" onclick="copyToClipboard()">Copy to Clipboard</button>
+	<button class="btn btn-secondary" onclick="window.close()">Close</button>
+</div>
+
+<script>
+	function downloadFasta(name, sequence) {
+		const fastaContent = `>${name}\n${sequence}`;
+		const blob = new Blob([fastaContent], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${name}.fasta`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+		alert('FASTA file downloaded');
+	}
+	function copyToClipboard() {
+		const text = document.getElementById('seqFasta').innerText;
+		navigator.clipboard.writeText(text).then(function() {
+			alert('Sequence copied to clipboard');
+		}, function(err) {
+			console.error('Could not copy text: ', err);
+		});
+	}
+</script>
+<style>
+	#seqFasta {
+		background-color: #f8f9fa;
+		padding: 15px;
+		width: auto;
+		border: 1px solid #dee2e6;
+		border-radius: 5px;
+		font-family: monospace;
+		word-wrap: break-word;
+		word-break: break-word;
+	}
+	.buttons {
+		justify-content: center;
+		display:flex;
+		margin-top: 15px;
+		gap: 20px;
+	}
+	.btn {
+		padding: 10px 20px;
+		font-size: 16px;
+		cursor: pointer;
+		border: none;
+		border-radius: 5px;
+	}
+	.btn-primary {
+		background-color: #007bff;
+		color: white;
+	}
+	.btn-secondary {
+		background-color: #6c757d;
+		color: white;
+	}
+	.btn:hover {
+		opacity: 0.9;
+	}
+</style>

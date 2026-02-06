@@ -186,10 +186,17 @@
                       <ul class="flex-column nav">
                           {% if user.is_authenticated %}
                           <li class="nav-item">
-                              <a class="nav-link" href="{% url 'logout' %}">
-                                  <svg class="icon icon-xs text-danger me-2" fill="none" stroke="currentColor" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                                  <span style="color: white;">Logout</span>
-                              </a>
+{#                              <a class="nav-link" href="{% url 'logout' %}">#}
+{#                                  <svg class="icon icon-xs text-danger me-2" fill="none" stroke="currentColor" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>#}
+{#                                  <span style="color: white;">Logout</span>#}
+{#                              </a>#}
+							  <form method="post" action="{% url 'logout' %}" style="display:inline;">
+								  {% csrf_token %}
+								  <button type="submit" style="background:none;border:none;padding:0;color:#007bff;cursor:pointer;">
+									  <svg class="icon icon-xs text-danger me-2" fill="none" stroke="currentColor" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+									  Logout
+								  </button>
+							  </form>
                           </li>
                           {% else %}
                           <li class="nav-item">
