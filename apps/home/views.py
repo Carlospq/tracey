@@ -455,10 +455,13 @@ def get_pdb_data(sequence):
 		# You can add more if needed
 	}
 
-	seqmd5 = md5_from_seq(sequence)
-	fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
-	fetch3d = json.loads(fetch3d)
-	pdb_url = fetch3d['structures'][0]['summary']['model_url']
+	try:
+		seqmd5 = md5_from_seq(sequence)
+		fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
+		fetch3d = json.loads(fetch3d)
+		pdb_url = fetch3d['structures'][0]['summary']['model_url']
+	except urllib.error.HTTPError:
+		pdb_url = None
 
 	if not pdb_url:
 		return {}
@@ -977,9 +980,12 @@ def QuerySequences3dViewer(request, sequence_id):
 		return render(request, 'home/query-sequences-details.html', context)
 
 	seqmd5 = md5_from_seq(context['sequence'].sequence)
-	fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
-	fetch3d = json.loads(fetch3d)
-	context["fetch3d"] = fetch3d['structures'][0]['summary']['model_url']
+	try:
+		fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
+		fetch3d = json.loads(fetch3d)
+		context["fetch3d"] = fetch3d['structures'][0]['summary']['model_url']
+	except urllib.error.HTTPError:
+		context["fetch3d"] = False
 
 	motifs = context['sequence'].motifs_set.all()
 	motif_coords = {}
@@ -1746,7 +1752,6 @@ def QueryVerifyView(request, sequence_id):
 	try:
 		seq = Sequences.objects.get(pk=sequence_id)
 		context["sequence"] = seq
-		# context["layout"] = getLayoutPlot(seq)
 		context["layout"] = build_domain_plot(len(seq.sequence), seq.motifs_set.all())
 	except:
 		context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
@@ -1921,8 +1926,9 @@ def QueryVerifyView(request, sequence_id):
 
 	# Get data for 3D structure representation and visualization
 	data_3d = get_pdb_data(seq.sequence)
-	context['pdb_url'] = data_3d['pdb_url']
-	context['residues'] = data_3d['residues']
+	if data_3d:
+		context['pdb_url'] = data_3d['pdb_url']
+		context['residues'] = data_3d['residues']
 
 	return render(request, 'home/query-verify.html', context)
 

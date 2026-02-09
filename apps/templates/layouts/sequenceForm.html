@@ -542,16 +542,8 @@
 
 	<!-- 3D visualization -->
 
+	{%  if pdb_url %}
 	<!-- toolbuttons for ·d-displayer -->
-{#	<div id="ngl-toolbar" style="padding: 6px; border-bottom: 1px solid #ccc;">#}
-{#		<button type="button" class="ngl-btn" data-action="recenter">Recenter</button>#}
-{#		<button type="button" class="ngl-btn" data-action="reset">Reset Camera</button>#}
-{#		<button type="button" class="ngl-btn" data-action="toggle-cartoon">Toggle Cartoon</button>#}
-{#		<button type="button" class="ngl-btn" data-action="toggle-surface">Toggle Surface</button>#}
-{#		<button type="button" class="ngl-btn" data-action="spin">Toggle Spin</button>#}
-{#		<button type="button" class="ngl-btn" data-action="image">Save PNG</button>#}
-{#	</div>#}
-
 	<div id="ngl-toolbar" class="ngl-toolbar">
 		<div class="btn-group">
 			<button class="ngl-btn" data-action="recenter" type="button">
@@ -600,6 +592,7 @@
 		</div>
 
 	</div>
+	{% endif %}
 
     <!-- Verifymotifs / Motifs -->
     <div class="row mb-4 mt-4">
@@ -650,6 +643,7 @@
                                             <tr>
                                                 <td class="td-header">
 
+													{%  if pdb_url %}
 													<button class="domain-btn"
 															type="button"
 															data-start="{{ m.get_real_startposition }}"
@@ -657,6 +651,7 @@
 															data-chain="">
 														Highlight in 3D
 													</button>
+													{% endif %}
 
 												</td>
                                                 <td class="td-data">
@@ -780,6 +775,7 @@
                                             <!-- Motif image -->
                                             <tr>
                                                 <td class="td-header">
+													{%  if pdb_url %}
 													<button class="domain-btn"
 															type="button"
 															data-start="{{ m.get_real_startposition }}"
@@ -787,6 +783,7 @@
 															data-chain="">
 														Highlight in 3D
 													</button>
+													{% endif %}
 												</td>
                                                 <td class="td-data">
 {#													<img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;">#}
