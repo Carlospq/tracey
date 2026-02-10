@@ -1,12 +1,12 @@
 <head>
     <style type="text/css">
-    	  .detailTable{
-            table-layout: fixed;
-            width:100%;
-            border-collapse:collapse;
-            word-wrap: break-word;
-            word-break: break-word;
-    	  }
+		.detailTable{
+			table-layout: fixed;
+			width:100%;
+			border-collapse:collapse;
+			word-wrap: break-word;
+			word-break: break-word;
+		}
         .detailTable td{
             text-align: left;
             padding-bottom: 5px;
@@ -47,16 +47,26 @@
         .ui-state-focus {
             background: lightgrey;
         }
-
 		.container-3d {
             display: flex;
-            height: 500px;
+			min-height: 150px;
+            max-height: 500px;
 			border: 1px solid #ddd;
         }
-	    #viewport-3d {
-            flex: 2;
-            min-width: 0;
-        }
+		.container-3d.active {
+			height: 500px;
+		}
+		#viewport-3d {
+			width: 60%;
+			position: relative;
+			min-height: 300px;
+		}
+		#viewport-3d canvas {
+			position: relative;
+			display: flex;
+			width: 100% !important;
+			height: 100% !important;
+		}
         #sequence-panel-3d {
             flex: 1;
             border-left: 1px solid #ddd;
@@ -81,11 +91,6 @@
 			border-radius: 5px;
 			border: 1px solid;
 		}
-		{#.ngl-btn {#}
-		{#	margin-right: 6px;#}
-		{#	padding: 4px 10px;#}
-		{#	font-size: 13px;#}
-		{# }#}
 
 		/* Toolbar container */
 		.ngl-toolbar {
@@ -149,6 +154,55 @@
 				flex-wrap: wrap;
 			}
 		}
+	    #pdb-drop-area {
+			width: auto;
+			height: auto;
+			margin: 55px 15px;
+			padding: 15px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			border: 2px dashed #ccc;
+			border-radius: 10px;
+			background-color: #f9f9f9;"
+		}
+		#pdb-drop-area.highlight {
+			border-color: #4285f4;
+			background-color: #f0f7ff;
+		}
+		#pdb-drop-area p {
+			margin: 0;
+			font-size: 18px;
+			color: #666;
+		}
+		#pdb-drop-area p a {
+			color: #4285f4;
+			text-decoration: none;
+		}
+		#pdb-upload-controls {
+			position: absolute;
+			z-index: 999;
+			padding: 5px;
+		}
+		#pdb-file-button {
+			border-radius: 5px;
+			border: 1px solid #ccc;
+			background-color: #f8f9fb;
+			padding: 6px 12px;
+			cursor: pointer;
+		}
+
+		/* Right side: sequence panel */
+		#sequence-panel-3d {
+			overflow-y: auto;
+			border-left: 1px solid #ddd;
+			padding-left: 10px;
+			box-sizing: border-box;
+		}
+
+
+
 
     </style>
 
@@ -542,7 +596,6 @@
 
 	<!-- 3D visualization -->
 
-	{%  if pdb_url %}
 	<!-- toolbuttons for ·d-displayer -->
 	<div id="ngl-toolbar" class="ngl-toolbar">
 		<div class="btn-group">
@@ -579,20 +632,35 @@
 		</div>
 	</div>
 
-	<div class="container-3d">
 
-		<div id="viewport-3d"></div>
+	<div class="container-3d" id="container-3d">
+
+		<div id="viewport-3d">
+			<div id="pdb-upload-controls">
+				<button id="pdb-file-button" type="button">Load another structure</button>
+				<input id="pdb-file-input" type="file" accept=".pdb,.cif,.mmcif,.pdb.gz,.cif.gz" style="display:none;">
+			</div>
+			{% if not pdb_url %}
+				<!-- Allow drag & drop of structure files if no structure is available -->
+				<div id="pdb-drop-area">
+					<p>No structure available</p>
+					<p>Drag & drop a structure file here (PDB/CIF)</p>
+					<p>You can use <a href="https://alphafoldserver.com/" target="_blank">alphafold</a> to predict structures</p>
+				</div>
+			{% endif %}
+		</div>
 
 		<div id="sequence-panel-3d">
 			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
 				<h3 style="margin: 0;">Sequence</h3>
-				<button id="clear-selection-btn" type="button" style="border-radius: 5px; border: 1px solid">Clear selection</button>
+				<button id="clear-selection-btn" type="button" style="border-radius: 5px; border: 1px solid">
+					Clear selection
+				</button>
 			</div>
 			<div id="sequence-3d"></div>
 		</div>
 
 	</div>
-	{% endif %}
 
     <!-- Verifymotifs / Motifs -->
     <div class="row mb-4 mt-4">
@@ -786,7 +854,6 @@
 													{% endif %}
 												</td>
                                                 <td class="td-data">
-{#													<img src="data:image/png;base64,{{ motifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;">#}
 													<div>{{ motifs|get_item:m|get_item:'plot'|safe }}</div>
 												</td>
                                             </tr>
@@ -950,188 +1017,442 @@
     })
 
 	// 3D visualizer
-	// Data from Django
-    const pdbUrl   = "{{ pdb_url|escapejs }}";
-    const residues = {{ residues|safe }};  // list of {chain, resi, aa}
-
-    // --- 1) Build the text sequence on the right ---
-    const seqDiv = document.getElementById("sequence-3d");
-
-	// Keep a map of selected residues: keys like "A:10"
-    const selectedResidues = new Set();
-
-    // For range selection (Shift+click)
-    let lastClickedIndex = null;  // index in "residues" array
-
-    function residueKey(chain, resi) {
-        return `${chain}:${resi}`;
-    }
-
-    // Create sequence spans
-    residues.forEach((r, idx) => {
-        const span = document.createElement("span");
-        span.textContent = r.aa;
-        span.className = "residue";
-        span.dataset.chain = r.chain;
-        span.dataset.resi  = r.resi;
-        span.dataset.index = idx;  // to handle ranges
-
-        span.addEventListener("click", (event) => {
-            const chain = r.chain;
-            const resi  = r.resi;
-            const index = idx;
-
-            if (event.shiftKey && lastClickedIndex !== null) {
-                // ---- Range selection: select all residues between last and current ----
-                const start = Math.min(lastClickedIndex, index);
-                const end   = Math.max(lastClickedIndex, index);
-
-                for (let i = start; i <= end; i++) {
-                    const rr = residues[i];
-                    const key = residueKey(rr.chain, rr.resi);
-                    selectedResidues.add(key);
-                }
-                // After range selection, update everything
-                updateSequenceHighlighting();
-                if (typeof window.update3DSelection === "function") {
-                    window.update3DSelection();
-                }
-            } else {
-                // ---- Normal click: toggle single residue ----
-                toggleResidueSelection(chain, resi);
-                // Remember this index for future Shift+clicks
-            }
-            lastClickedIndex = index;
-        });
-
-        seqDiv.appendChild(span);
-
-        // Optional: a line-break every 50 residues
-        if ((idx + 1) % 50 === 0) {
-            seqDiv.appendChild(document.createElement("br"));
-        }
-    });
+	// ===========================
 
 
-    // --- 2) Setup NGL Stage for 3D view ---
-    const stage = new NGL.Stage("viewport-3d");
+	// Simple 3-letter to 1-letter amino acid map
+	const THREE_TO_ONE_AA = {
+		ALA: 'A', ARG: 'R', ASN: 'N',
+		ASP: 'D', CYS: 'C', GLN: 'Q',
+		GLU: 'E', GLY: 'G', HIS: 'H',
+		ILE: 'I', LEU: 'L', LYS: 'K',
+		MET: 'M', PHE: 'F', PRO: 'P',
+		SER: 'S', THR: 'T', TRP: 'W',
+		TYR: 'Y', VAL: 'V', SEC: 'U',
+		PYL: 'O',
+		// fallbacks / unusual codes could be added here if you care
+	};
 
-	// Set background to white
-	stage.setParameters({
-		backgroundColor: "white"
+	// ---- Global-ish state for sequence & selection ----
+	let residues = [];                     // array of { aa, chain, resi }
+	let selectedResidues = new Set();      // keys like "A:123"
+	let lastClickedIndex = null;           // for Shift+click range
+	let residueIndexByKey = {};            // "A:123" -> index in residues[]
+	let viewerForSelection = null;         // set after viewer is created
+	let highlightCartoonRep = null;
+	let baseCartoonRep = null;
+	let initialOrientation = null;
+	let surfaceRep = null;
+	let sticksRep = null;
+	let isSpinning = false;
+
+	window.update3DSelection = update3DSelection;
+
+	function residueKey(chain, resi) {
+		return `${chain}:${resi}`;
+	}
+
+	// Expose Django's pdb_url to JS; will be an empty string if not provided
+    window.initialPdbUrl = "{{ pdb_url|default:''|escapejs }}";
+
+	document.addEventListener('DOMContentLoaded', () => {
+		const initialPdbUrl = (window.initialPdbUrl || '').trim() || null;
+
+		const containerEL = document.getElementById('container-3d');
+		const viewportEl = document.getElementById('viewport-3d');
+		const sequenceEl = document.getElementById('sequence-3d');
+		const clearSelectionBtn = document.getElementById('clear-selection-btn');
+
+		const dropAreaEl = document.getElementById('pdb-drop-area');
+		const fileInput = document.getElementById('pdb-file-input');
+		const fileButton = document.getElementById('pdb-file-button');
+
+		// 1) Create viewer instance (library-specific)
+		const viewer = createViewer(viewportEl);
+
+		// 2) Setup sequence / selection logic
+		setupSequencePanel(viewer, sequenceEl, clearSelectionBtn);
+
+		// 3) Setup file upload (click + input + drag & drop)
+		setupFileUpload({
+			viewer,
+			dropAreaEl,
+			fileInput,
+			fileButton,
+			sequenceEl,
+			onStructureLoaded: () => {
+				if (dropAreaEl) {
+					dropAreaEl.style.display = 'none';
+				}
+			}
+		});
+
+		// 4) If Django provided an URL, load it on page load
+		if (initialPdbUrl) {
+			loadStructureFromUrl(viewer, initialPdbUrl, sequenceEl)
+				.then(() => {
+					if (dropAreaEl) {
+						dropAreaEl.style.display = 'none';
+					}
+				})
+				.catch(err => {
+					console.error('Error loading initial structure:', err);
+				});
+			containerEL.classList.add('active');
+		}
+
+		setupNglToolbar(viewer);
+
 	});
 
-    // Handle resizing
-    window.addEventListener("resize", () => stage.handleResize(), false);
+	/* ================================
+	 * Viewer creation / loading
+	 * ================================ */
 
-	stage.loadFile(pdbUrl).then(comp => {
-        // Main representation
-        comp.addRepresentation("cartoon", {
-            colorScheme: "chainname"
-        });
+	function createViewer(containerEl) {
+		/**
+		 * Create and return your 3D viewer instance.
+		 * @param {HTMLElement} containerEl
+		*/
+		const stage = new NGL.Stage(containerEl, {backgroundColor: 'white'});
 
-		// Global ball+stick
-		ballStickRep = comp.addRepresentation("ball+stick", {
-			sele: "not water",
-			visible: false,      // start hidden
-			multipleBond: true
-		});
+		// Make the stage responsive
+		function handleResize() {
+			stage.handleResize();
+		}
+		window.addEventListener('resize', handleResize, false);
+		requestAnimationFrame(handleResize);
 
-        comp.autoView();
-
-		// Save initial camera orientation
 		initialOrientation = stage.viewerControls.getOrientation();
 
-        // Highlight representation in cartoon format
-        const highlightCartoonRep = comp.addRepresentation("cartoon", {
-            sele: "none",
-            color: "red",
-            opacity: 1.0
-        });
+		// ---- 3D -> sequence selection ----
+		stage.signals.clicked.add(pickingProxy => {
+			if (!pickingProxy || !pickingProxy.atom) return;
 
-		// Optionally also highlight with ball+stick (nice for exact residues)
-        const highlightBallRep = comp.addRepresentation("ball+stick", {
-			sele: "none",
-			color: "red",
-			scale: 2.0
+			const atom = pickingProxy.atom;
+			const chain = atom.chainname || atom.chain || '';
+			const resi = atom.resno;
+
+			const key = residueKey(chain, resi);
+			const index = residueIndexByKey[key];
+			if (index == null) {
+				// residue not present in our sequence list
+				return;
+			}
+
+			// Toggle selection from 3D click
+			if (selectedResidues.has(key)) {
+				selectedResidues.delete(key);
+			} else {
+				selectedResidues.add(key);
+			}
+			lastClickedIndex = index;
+
+			updateSequenceHighlighting();
+			update3DSelection(viewerForSelection);
 		});
 
-		// Rebuild NGL selection whenever selectedResidues changes
-        function update3DSelection() {
-            if (selectedResidues.size === 0) {
-                highlightCartoonRep.setSelection("none");
-                // highlightBallRep.setSelection("none");
-                return;
-            }
+    	return {
+			stage
+		};
 
-            // Build selection like ":A and 10 or :A and 15 or :B and 20"
-            const seleParts = [];
-            selectedResidues.forEach(key => {
-                const [chain, resiStr] = key.split(":");
-                seleParts.push(`:${chain} and ${resiStr}`);
-            });
+	}
 
-            const sele = seleParts.join(" or ");
-            highlightCartoonRep.setSelection(sele);
-            // highlightBallRep.setSelection(sele);
-        }
+	function update3DSelection() {
+		if (!highlightCartoonRep) return;
 
-        // expose for use in click handlers
-        window.update3DSelection = update3DSelection;
+		if (selectedResidues.size === 0) {
+			highlightCartoonRep.setSelection("none");
+			return;
+		}
+
+		const seleParts = [];
+		selectedResidues.forEach(key => {
+			const [chain, resi] = key.split(":");
+			seleParts.push(`:${chain} and ${resi}`);
+		});
+
+		highlightCartoonRep.setSelection(seleParts.join(" or "));
+	}
+
+	function loadStructureFromUrl(viewer, url, sequenceEl) {
+		clearViewer(viewer);
+
+		return viewer.stage.loadFile(url, { defaultRepresentation: false })
+			.then(comp => {
+				viewer.currentComponent = comp;
+
+				baseCartoonRep = comp.addRepresentation("cartoon", {
+					color: "blue"
+				});
+
+				highlightCartoonRep = comp.addRepresentation("cartoon", {
+					sele: "none",
+					color: "orange"
+				});
+
+				comp.autoView();
+				viewer.stage.handleResize();
+
+				initialOrientation = viewer.stage.viewerControls.getOrientation();
+
+				const residuesArray = extractResiduesFromComponent(comp);
+				renderSequence(sequenceEl, residuesArray);
+			});
+	}
+
+	function loadStructureFromFile(viewer, file, sequenceEl) {
+		clearViewer(viewer);
+
+		return viewer.stage.loadFile(file, { defaultRepresentation: false })
+			.then(comp => {
+				viewer.currentComponent = comp;
+
+				baseCartoonRep = comp.addRepresentation("cartoon", {
+					color: "blue"
+				});
+
+				highlightCartoonRep = comp.addRepresentation("cartoon", {
+					sele: "none",
+					color: "orange"
+				});
+
+				comp.autoView();
+				viewer.stage.handleResize();
+
+				initialOrientation = viewer.stage.viewerControls.getOrientation();
+
+				const residuesArray = extractResiduesFromComponent(comp);
+				renderSequence(sequenceEl, residuesArray);
+			});
+	}
+
+	function clearViewer(viewer) {
+		/**
+		 * Remove current structure from viewer.
+		 * @param {Object} viewer
+		*/
+		if (viewer.currentComponent) {
+			viewer.currentComponent.removeAllRepresentations();
+			viewer.currentComponent.dispose();
+			viewer.currentComponent = null;
+		}
+	}
 
 
-		// 3D click → toggle residue selection
-        stage.signals.clicked.add(pickingProxy => {
-            if (!pickingProxy || !pickingProxy.atom) return;
+	/* ================================
+	 * File upload logic
+	 * ================================ */
 
-            const atom  = pickingProxy.atom;
-            const chain = atom.chainname || atom.chainid;
-            const resi  = atom.resno;
+	function setupFileUpload({ viewer, dropAreaEl, fileInput, fileButton, onStructureLoaded, sequenceEl }) {
+		if (fileButton && fileInput) {
+			fileButton.addEventListener('click', () => fileInput.click());
 
-            toggleResidueSelection(chain, resi);
-            // When selecting from 3D, we don't really know the index in residues,
-            // so we just reset lastClickedIndex (range selection works from sequence).
-            lastClickedIndex = null;
-        });
+			fileInput.addEventListener('change', event => {
+				const file = event.target.files[0];
+				if (file) {
+					handleFileSelected(viewer, file, sequenceEl, onStructureLoaded);
+				}
+				event.target.value = '';
+			});
+		}
 
-    });
+		if (dropAreaEl) {
+			setupDragAndDrop(dropAreaEl, file => {
+				handleFileSelected(viewer, file, sequenceEl, onStructureLoaded);
+			});
+		}
+	}
 
-    // ===== 3) Selection helpers (shared between sequence and 3D) =====
+	function handleFileSelected(viewer, file, sequenceEl, onStructureLoaded) {
+		loadStructureFromFile(viewer, file, sequenceEl)
+			.then(() => {
+				if (typeof onStructureLoaded === 'function') {
+					onStructureLoaded();
+				}
+			})
+			.catch(err => {
+				console.error('Error loading structure from file:', err);
+			});
+	}
 
-    // Toggle selection of a residue in both sequence and 3D
-    function toggleResidueSelection(chain, resi) {
-        const key = residueKey(chain, resi);
+	function setupDragAndDrop(dropAreaEl, onFile) {
 
-        if (selectedResidues.has(key)) {
-            selectedResidues.delete(key);
-        } else {
-            selectedResidues.add(key);
-        }
+		['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+			dropAreaEl.addEventListener(eventName, preventDefaults, false);
+		});
 
-        updateSequenceHighlighting();
-        if (typeof window.update3DSelection === "function") {
-            window.update3DSelection();
-        }
-    }
+		function preventDefaults(e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 
-	// Clear all selections (used by button)
-    function clearSelection() {
-        selectedResidues.clear();
-        lastClickedIndex = null;
-        updateSequenceHighlighting();
-        if (typeof window.update3DSelection === "function") {
-            window.update3DSelection();
-        }
-    }
+		['dragenter', 'dragover'].forEach(eventName => {
+			dropAreaEl.addEventListener(eventName, () => {
+				dropAreaEl.classList.add('highlight');
+			}, false);
+		});
 
-	// Attach Clear button
-    const clearBtn = document.getElementById("clear-selection-btn");
-    if (clearBtn) {
-        clearBtn.addEventListener("click", clearSelection);
-    }
+		['dragleave', 'drop'].forEach(eventName => {
+			dropAreaEl.addEventListener(eventName, () => {
+				dropAreaEl.classList.remove('highlight');
+			}, false);
+		});
 
-	// Update CSS classes in sequence panel to reflect current selection
+		dropAreaEl.addEventListener('drop', e => {
+			const dt = /** @type {DragEvent} */(e).dataTransfer;
+			const files = dt.files;
+			if (files && files[0]) {
+				onFile(files[0]);
+			}
+		}, false);
+	}
+
+	function extractSequenceFromComponent(comp) {
+		/**
+		 * Extract a simple sequence per chain from an NGL Component.
+		 * Returns a string like:
+		 *   AAAAAAAAA
+		 *   BBBBBBBBB
+		 * (one line per chain)
+		 *
+		 * @param {NGL.Component} comp
+		 * @returns {string}
+		 */
+		const structure = comp.structure;
+		if (!structure) return '';
+
+		const chains = [];
+
+		structure.eachChain(chainProxy => {
+			let seq = '';
+
+			chainProxy.eachResidue(residue => {
+				const resname = residue.resname ? residue.resname.toUpperCase() : '';
+				const oneLetter = THREE_TO_ONE_AA[resname] || 'X';
+				seq += oneLetter;
+			});
+
+			chains.push(seq);
+		});
+
+		// Join chains by newline, simple and readable
+		return chains.join('\n');
+	}
+
+	function extractResiduesFromComponent(comp) {
+		const structure = comp.structure;
+		const result = [];
+		if (!structure) return result;
+
+		structure.eachResidue(residue => {
+			const resname = (residue.resname || '').toUpperCase();
+			const aa = THREE_TO_ONE_AA[resname] || 'X';
+			const chain = residue.chainname || residue.chain || '';
+			const resi = residue.resno;
+
+			result.push({ aa, chain, resi });
+		});
+
+		console.log('Extracted residues:', result.length);
+		return result;
+	}
+
+	function renderSequence(sequenceEl, residuesArray) {
+		residues = residuesArray;
+		selectedResidues.clear();
+		lastClickedIndex = null;
+		residueIndexByKey = {};
+
+		sequenceEl.innerHTML = '';
+
+		residues.forEach((r, idx) => {
+			residueIndexByKey[residueKey(r.chain, r.resi)] = idx;
+		});
+
+		createResiduesSpans(sequenceEl, residues);
+		updateSequenceHighlighting();
+	}
+
+	function updateSequenceDisplay(sequenceEl, sequenceData) {
+		/**
+		 * Update sequence panel with text.
+		 * @param {HTMLElement} sequenceEl
+		 * @param {string} sequenceData
+		 */
+		if (!sequenceEl) return;
+		sequenceEl.textContent = sequenceData || '';
+	}
+
+	function createResiduesSpans(sequenceEl, residues) {
+		residues.forEach((r, idx) => {
+			const span = document.createElement("span");
+			span.textContent = r.aa;
+			span.className = "residue";
+			span.dataset.chain = r.chain;
+			span.dataset.resi = r.resi;
+			span.dataset.index = idx;
+
+			span.addEventListener("click", (event) => {
+				const key = residueKey(r.chain, r.resi);
+
+				if (event.shiftKey && lastClickedIndex !== null) {
+					const start = Math.min(lastClickedIndex, idx);
+					const end = Math.max(lastClickedIndex, idx);
+
+					for (let i = start; i <= end; i++) {
+						const rr = residues[i];
+						selectedResidues.add(residueKey(rr.chain, rr.resi));
+					}
+				} else {
+					if (selectedResidues.has(key)) {
+						selectedResidues.delete(key);
+					} else {
+						selectedResidues.add(key);
+					}
+				}
+
+				lastClickedIndex = idx;
+				updateSequenceHighlighting();
+				update3DSelection();
+			});
+
+			sequenceEl.appendChild(span);
+
+			if ((idx + 1) % 50 === 0) {
+				sequenceEl.appendChild(document.createElement("br"));
+			}
+		});
+	}
+
+	/* ================================
+	 * Sequence panel / selection
+	 * ================================ */
+
+	function setupSequencePanel(viewer, sequenceEl, clearSelectionBtn) {
+		if (clearSelectionBtn) {
+			clearSelectionBtn.addEventListener('click', () => {
+				clearSelection(viewer, sequenceEl);
+			});
+		}
+	}
+
+	function clearSelection(viewer, sequenceEl) {
+		/**
+		 * Clear selection in the viewer and update sequence display.
+		*/
+		selectedResidues.clear();
+		lastClickedIndex = null;
+		updateSequenceHighlighting();
+		if (typeof window.update3DSelection === "function") {
+			window.update3DSelection();
+		}
+	}
+
     function updateSequenceHighlighting() {
+		/**
+		 * Update CSS classes in sequence panel to reflect current selection
+		*/
         // Remove .selected from all spans
         document.querySelectorAll("#sequence-3d .residue").forEach(el => {
             el.classList.remove("selected");
@@ -1150,158 +1471,171 @@
 
 	document.querySelectorAll(".domain-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
-			// Extract domain info
-			const start = parseInt(btn.dataset.start);
-			const end   = parseInt(btn.dataset.end);
-			let chain = btn.dataset.chain;
 
-			// if chain == ""
+			if (!residues || residues.length === 0) {
+				console.warn("No structure loaded yet");
+				return;
+			}
+
+			const start = parseInt(btn.dataset.start, 10);
+			const end   = parseInt(btn.dataset.end, 10);
+			let chain   = btn.dataset.chain;
+
+			// Infer chain if not provided
 			if (!chain) {
-				chain = "A";
+				// pick the first chain present in residues
+				chain = residues[0].chain;
 			}
 
-			// 1. Clear any previous selection
+			// 1. Clear previous selection
 			selectedResidues.clear();
-			lastClickedIndex = null;
 
-			// 2. Add each residue in the domain range
-			for (let resi = start; resi <= end; resi++) {
-				selectedResidues.add(`${chain}:${resi}`);
-			}
+			// 2️. Select residues that ACTUALLY EXIST
+			let firstIndex = null;
 
-			// 3. Update sequence + 3D highlight
+			residues.forEach((r, idx) => {
+				if (
+					r.chain === chain &&
+					r.resi >= start &&
+					r.resi <= end
+				) {
+					const key = residueKey(r.chain, r.resi);
+					selectedResidues.add(key);
+
+					if (firstIndex === null) {
+						firstIndex = idx;
+					}
+				}
+			});
+
+			// 3️. Update selection state
+			lastClickedIndex = firstIndex;
+
 			updateSequenceHighlighting();
-			if (typeof window.update3DSelection === "function") {
-				window.update3DSelection();
-			}
+			update3DSelection();
 
-			// Optional: scroll sequence to domain start
-			const span = document.querySelector(
-				`#sequence-3d .residue[data-chain="${chain}"][data-resi="${start}"]`
-			);
-			if (span) {
-				span.scrollIntoView({ block: "center", behavior: "smooth" });
+			// 4️. Scroll sequence to domain start
+			if (firstIndex !== null) {
+				const span = document.querySelector(
+					`#sequence-3d .residue[data-chain="${chain}"][data-resi="${start}"]`
+				);
+				if (span) {
+					span.scrollIntoView({
+						block: "center",
+						behavior: "smooth"
+					});
+				}
 			}
 		});
 	});
 
-	// Keep track of extra representations
-	let cartoonRep = null;
-	let ballStickRep = null;
-	let surfaceRep = null;
-	let spinning = false;
-	let initialOrientation = null;
-
-	// Add toolbar handlers once the file loads
-	stage.loadFile(pdbUrl).then(comp => {
-		// Base cartoon rep
-		cartoonRep = comp.addRepresentation("cartoon", {
-			colorScheme: "chainname"
-		});
-
-		comp.autoView();
-
-		// Now add toolbar controls
+	function setupNglToolbar(viewer) {
 		document.querySelectorAll(".ngl-btn").forEach(btn => {
 			btn.addEventListener("click", () => {
 				const action = btn.dataset.action;
 
+				if (!viewer.currentComponent) {
+					console.warn("No structure loaded");
+					return;
+				}
+
 				switch (action) {
 					case "recenter":
-						comp.autoView();
+						recenterView(viewer);
 						break;
 
 					case "reset":
-						resetAll();
+						resetOrientation(viewer);
 						break;
 
 					case "toggle-cartoon":
-						if (!cartoonRep || !ballStickRep) break;
-							const cartoonCurrentlyVisible = cartoonRep.visible;
-							cartoonRep.setVisibility(!cartoonCurrentlyVisible);
-							ballStickRep.setVisibility(cartoonCurrentlyVisible);
-							btn.classList.toggle("active", ballStickRep.visible);
-							break;
-
+						toggleSticks(viewer);
+						btn.classList.toggle("active");
+						break;
 
 					case "toggle-surface":
-						if (!surfaceRep) {
-							surfaceRep = comp.addRepresentation("surface", {
-								opacity: 0.4,
-								colorScheme: "chainname"
-							});
-						} else {
-							surfaceRep.setVisibility(!surfaceRep.visible);
-						}
-						btn.classList.toggle("active", surfaceRep.visible);
+						toggleSurface(viewer);
+						btn.classList.toggle("active");
 						break;
 
 					case "spin":
-						spinning = !spinning;
-						stage.setSpin(spinning);
-						btn.classList.toggle("active", spinning);
+						toggleSpin(viewer);
+						btn.classList.toggle("active");
 						break;
 
 					case "image":
-						stage.makeImage({
-							factor: 2,
-							antialias: true,
-							trim: true
-						}).then(img => {
-							NGL.download(img, "structure.png");
-						});
+						exportImage(viewer);
 						break;
+
+					default:
+						console.warn("Unknown action:", action);
 				}
 			});
 		});
-	});
+	}
 
-	function resetAll() {
-		// 1) Clear selections
-		selectedResidues.clear();
-		lastClickedIndex = null;
-		updateSequenceHighlighting();
-		if (typeof window.update3DSelection === "function") {
-			window.update3DSelection();
-		}
+	function recenterView(viewer) {
+		if (selectedResidues.size > 0) {
+			const sele = Array.from(selectedResidues)
+				.map(key => {
+					const [chain, resi] = key.split(":");
+					return `:${chain} and ${resi}`;
+				})
+				.join(" or ");
 
-		// 2) Stop spin and reset spin button state
-		spinning = false;
-		stage.setSpin(false);
-		document.querySelectorAll('.ngl-btn[data-action="spin"]').forEach(b => {
-			b.classList.remove("active");
-		});
+			viewer.currentComponent.autoView(sele);
+		} else {
+			viewer.currentComponent.autoView();
+		}
+	}
 
-		// 3) Reset representations:
-		//    - cartoon ON
-		//    - global ball+stick OFF
-		//    - surface OFF
-		if (cartoonRep) {
-			cartoonRep.setVisibility(true);
-		}
-		if (ballStickRep) {
-			ballStickRep.setVisibility(false);
-		}
-		if (surfaceRep) {
-			surfaceRep.setVisibility(false);
-			document.querySelectorAll('.ngl-btn[data-action="toggle-surface"]').forEach(b => {
-				b.classList.remove("active");
+	function resetOrientation(viewer) {
+		if (!initialOrientation) return;
+		viewer.stage.viewerControls.orient(initialOrientation);
+	}
+
+	function toggleSticks(viewer) {
+		if (!sticksRep) {
+			sticksRep = viewer.currentComponent.addRepresentation("ball+stick", {
+				sele: "protein",
+				color: "element"
 			});
+		} else {
+			const visible = sticksRep.getVisibility();
+			sticksRep.setVisibility(!visible);
 		}
+	}
 
-		// Cartoon toggle button: we’ll treat "active" = ball+stick mode
-		document.querySelectorAll('.ngl-btn[data-action="toggle-cartoon"]').forEach(b => {
-			b.classList.remove("active"); // back to cartoon mode
+	function toggleSurface(viewer) {
+		if (!surfaceRep) {
+			surfaceRep = viewer.currentComponent.addRepresentation("surface", {
+				sele: "protein",
+				opacity: 0.4,
+				color: "grey"
+			});
+		} else {
+			const visible = surfaceRep.getVisibility();
+			surfaceRep.setVisibility(!visible);
+		}
+	}
+
+	function toggleSpin(viewer) {
+		isSpinning = !isSpinning;
+		viewer.stage.setSpin(isSpinning);
+	}
+
+	function exportImage(viewer) {
+		viewer.stage.makeImage({
+			factor: 2,
+			antialias: true,
+			trim: true,
+			transparent: false
+		}).then(blob => {
+			const link = document.createElement("a");
+			link.href = URL.createObjectURL(blob);
+			link.download = "structure.png";
+			link.click();
+			URL.revokeObjectURL(link.href);
 		});
-
-		// 4) Reset camera orientation + zoom
-		if (initialOrientation) {
-			stage.viewerControls.orient(initialOrientation);
-		}
-		// autoView to ensure the structure is nicely framed
-		// (you can comment this out if orient() alone is enough)
-		// comp is not available here, so rely on orient only, or:
-		// - either store comp globally, or
-		// - skip comp.autoView() here.
 	}
 </script>

@@ -133,11 +133,58 @@
 			border: black solid 1px;
 			transform: translate(-50%, -50%);
 			font-size: 16px;
+			{#padding-top: 150px;#}
 			color: #555;
-			z-index: 9999;
+			z-index: 999;
 		}
 		.loadingmessage p {
 			margin: auto;
+		}
+		#upload-container {
+			position: relative;
+			z-index: 10000;
+			padding: 6px 10px;
+			margin: 5px;
+			background: #f8f9fb;
+			border: 1px solid #d0d4e0;
+			border-radius: 6px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		#upload-container label {
+			margin: 0;
+		}
+		#upload-container input[type="file"] {
+			padding: 4px;
+		}
+		#upload-container button {
+			background: #2563eb;
+			color: white;
+			border: none;
+			padding: 6px 12px;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+		#upload-container button:hover {
+			background: #1e4fc4;
+		}
+		#dropZone {
+			position: relative;
+			margin-top: 10px;
+			padding: 20px;
+			border: 2px dashed #888;
+			border-radius: 6px;
+			text-align: center;
+			font-size: 14px;
+			color: #555;
+			background: #fafafa;
+			z-index: 10000; /* above loadingmessage */
+		}
+		#dropZone.dragover {
+			border-color: #2563eb;
+			background: #e5eeff;
+			color: #2563eb;
 		}
 		.motif-aligner-displayer {
 			width: auto;
@@ -177,6 +224,10 @@
 		.motif-alignment {
 			overflow: hidden;
 			transition: max-height 0.25s ease;
+		}
+		#fetch3d {
+			display: block;
+			height: 100%;
 		}
     </style>
 </head>
@@ -257,18 +308,24 @@
 
 						<!-- 3Dmol.js Protein Viewer -->
 						<div id="protein-display">
+
 							<!-- If structure not found -->
 							{% if not fetch3d %}
-
-								<div class="loadingmessage">
-									<p>3D Structure not found...</p>
+								<div id="nofetch3d">
+									<div class="loadingmessage">
+										<p>3D Structure not found...</p>
+									</div>
 								</div>
 
-							{% else %}
+							{% endif %}
+
+							<div id="fetch3d">
 
 								<!-- 3Dmol.js Viewer Container -->
 								<div id="proteinViewerContainer">
-									{{ motif_coords|json_script:"data-motifs" }}
+									{% if fetch3d %}
+										{{ motif_coords|json_script:"data-motifs" }}
+									{% endif %}
 								</div>
 
 								<!-- If WebGL not supported -->
@@ -276,21 +333,23 @@
 									Your browser don't support WebGL. Molecule can't be visualized in 3D.
 								</div>
 
-								<!-- Spin button -->
-								<button id="toggleSpin">Stop spin</button>
+								{% if fetch3d %}
+									<!-- Spin button -->
+									<button id="toggleSpin">Stop spin</button>
 
-								<!-- Expand button -->
-								<button id="toggleSize" type="button" aria-label="Resize viewer">
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-										<path d="M14 3h7v7m0-7L10 14M10 21H3v-7m0 7L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-									</svg>
-								</button>
-								<button id="viwerExpander" onclick="window.open('/query-sequences/{{ sequence.sequence_id }}/3dviewer/')">New Window</button>
+									<!-- Expand button -->
+									<button id="toggleSize" type="button" aria-label="Resize viewer">
+										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+											<path d="M14 3h7v7m0-7L10 14M10 21H3v-7m0 7L14 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+									</button>
+									<button id="viwerExpander" onclick="window.open('/query-sequences/{{ sequence.sequence_id }}/3dviewer/')">New Window</button>
 
-								<!-- Download button -->
-								<div id="cif"><a href="{{ fetch3d }}" target="_blank">Download .cif</a></div>
+									<!-- Download button -->
+									<div id="cif"><a href="{{ fetch3d }}" target="_blank">Download .cif</a></div>
+								{% endif %}
 
-							{% endif %}
+							</div>
 
 						</div>
 
@@ -328,7 +387,6 @@
 						<tr>
 							<td class="td-header">Protein Layout</td>
 							<td class="td-data">
-{#								<img src="data:image/png;base64,{{ layout }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; margin-bottom: 20px">#}
 								<div>{{ layout|safe }}</div>
 							</td>
 						</tr>
@@ -391,7 +449,6 @@
 						</table>
 					</div>
 
-
 					<!-- Motif alignment -->
 					<div class="row toggle-header motif-aligner-displayer" id="motif-aligner-displayer" aria-expanded="false">
 						<span>Motif Alignment:</span>
@@ -452,6 +509,7 @@
 		let viewerContainer = document.getElementById('proteinViewerContainer');
 		let fallback = document.getElementById("viewerFallback");
 		let pdbUri = '{{ fetch3d }}';
+		let viewer = null;
 
 		const domainColors = {
 			"SNARE": "orange",
@@ -462,62 +520,80 @@
 
 		try {
 
-			let viewer = $3Dmol.createViewer( viewerContainer, {});
+			if (pdbUri) {
 
-			var motifsData = JSON.parse(document.getElementById('data-motifs').textContent);
-			fetch(pdbUri)
-				.then( response => response.text() )
-				.then( data => {
-					viewer.addModel( data, "cif" );
-					viewer.setStyle({}, {cartoon: {color: 'blue'}});
-					{# Color each motif #}
-					for (const [key, value] of Object.entries(motifsData)) {
-						viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
-					}
-					{#viewer.addSurface('VDW', {opacity:.3 , color: 'white'}, {});#}
-					viewer.spin("y", 0.2);
-					viewer.enableFog(false);
-					viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
-					viewer.zoomTo();
-					viewer.render();
-				})
-				.catch( error => {
-					console.error('Error loading 3D structure:', error);
-					let loadingMessage = document.querySelector('.loadingmessage');
-					if (loadingMessage) {
-						loadingMessage.textContent = 'Error loading 3D structure.';
-					}
-				});
+				viewer = $3Dmol.createViewer( viewerContainer, {});
+
+				let motifsData = {};
+				let motifsEl = document.getElementById("data-motifs");
+
+				if (motifsEl) {
+					motifsData = JSON.parse(motifsEl.textContent);
+				} else {
+					// No motifs available (no fetch3d), keep empty
+					motifsData = {};
+				}
+
+				const fetch3d = document.getElementById("fetch3d");
+				fetch3d.removeAttribute("hidden");
+				fetch(pdbUri)
+					.then( response => response.text() )
+					.then( data => {
+						viewer.addModel( data, "cif" );
+						viewer.setStyle({}, {cartoon: {color: 'blue'}});
+						{# Color each motif #}
+						for (const [key, value] of Object.entries(motifsData)) {
+							viewer.addStyle({resi: [`${value.start}-${value.end}`]}, {cartoon: {color: domainColors[value.domain] || domainColors.default }});
+						}
+						{#viewer.addSurface('VDW', {opacity:.3 , color: 'white'}, {});#}
+						viewer.spin("y", 0.2);
+						viewer.enableFog(false);
+						viewer.setCameraParameters({ fov: 40 , z: 100, far: 10000 });
+						viewer.zoomTo();
+						viewer.render();
+					})
+					.catch( error => {
+						console.error('Error loading 3D structure:', error);
+						let loadingMessage = document.querySelector('.loadingmessage');
+						if (loadingMessage) {
+							loadingMessage.textContent = 'Error loading 3D structure.';
+						}
+					});
+			}
 
 			let isSpinning = true;
-			document.getElementById("toggleSpin").addEventListener("click", () => {
-				if (isSpinning) {
-					viewer.spin(false);		// stop spinning
-					isSpinning = false;
-					toggleSpin.textContent = "Start spin";
-				} else {
-					viewer.spin("y", 0.2);	// start spinning (axis, speed)
-					isSpinning = true;
-					toggleSpin.textContent = "Stop spin";
-				}
-			});
-			document.getElementById("toggleSize").addEventListener("click", () => {
-				const container = document.getElementById("protein-display");
-				container.classList.toggle("active");
-				viewer.resize();
-				viewer.render();
-			});
+			let spinButton = document.getElementById("toggleSpin");
+			if (spinButton) {
+				document.getElementById("toggleSpin").addEventListener("click", () => {
+					if (isSpinning) {
+						viewer.spin(false);		// stop spinning
+						isSpinning = false;
+						toggleSpin.textContent = "Start spin";
+					} else {
+						viewer.spin("y", 0.2);	// start spinning (axis, speed)
+						isSpinning = true;
+						toggleSpin.textContent = "Stop spin";
+					}
+				});
+				document.getElementById("toggleSize").addEventListener("click", () => {
+					const container = document.getElementById("protein-display");
+					container.classList.toggle("active");
+					viewer.resize();
+					viewer.render();
+				});
+			}
 
 		} catch (e) {
 
 			console.error('WebGL not supported:', e);
-			fallback.style.display = "block";
+			{#fallback.style.display = "block";#}
 			viewerContainer.querySelectorAll("canvas").forEach(c => c.remove());
 
 		}
 
 	});
 
+	// Add toggle to motif-alignment sections
 	document.addEventListener("DOMContentLoaded", function () {
 	  const headers = document.querySelectorAll(".motif-aligner-displayer");
 
@@ -670,6 +746,7 @@
 			</html>`);
 		popup.document.close();
 	}
+
 	function copyTextToClipboard(text) {
 		navigator.clipboard.writeText(text.replace(/-/g, "").toUpperCase()).then(function() {
 			alert('Sequence copied to clipboard');
@@ -678,6 +755,27 @@
 		});
 	}
 
+	// Function reused for click-upload + drag-drop
+	function loadStructureFromText(text, filename) {
+		const container = document.getElementById("proteinViewerContainer");
+		const nofetch3d = document.getElementById("nofetch3d");
+		const fetch3d = document.getElementById("fetch3d");
+
+		if (container) {
+			nofetch3d.style.display = "none";
+			fetch3d.removeAttribute("hidden");
+			container.innerHTML = "";  // remove old viewer
+
+			const viewer = $3Dmol.createViewer(container, {
+				defaultcolors: $3Dmol.rasmolElementColors
+			});
+
+			viewer.addModel(text, filename.endsWith(".cif") ? "cif" : "pdb");
+			viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+			viewer.zoomTo();
+			viewer.render();
+		}
+	}
 
 	</script>
 {% endblock javascripts %}

@@ -1036,7 +1036,6 @@ def QuerySequencesDetails(request, sequence_id):
 	except urllib.error.HTTPError:
 		context["fetch3d"] = False
 
-	# context["layout"] = getLayoutPlot(context['sequence'])
 	context["layout"] = build_domain_plot(len(context['sequence'].sequence), context['sequence'].motifs_set.all())
 	motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id).order_by('startposition')
 
@@ -1059,11 +1058,8 @@ def QuerySequencesDetails(request, sequence_id):
 		for x in data:
 			context["motifs"][m][x.tag] = x.text
 		context["motifs"][m]["eValueFloat"] = float(context["motifs"][m]["eValue"])
-		# getMotifPlot_fromMotif(start, end, length, domain_label)
-		# context["motifs"][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(context['sequence'].sequence), context["motifs"][m]["domaingroup"])
 		context["motifs"][m]["plot"] = build_domain_plot(len(context['sequence'].sequence), [m], eval=context["motifs"][m]["eValueFloat"])
 
-	# context["motifs"] = OrderedDict(sorted(context["motifs"].items(), key = lambda x: getitem(x[1], 'eValue')))
 	return render(request, 'home/query-sequences-details.html', context)
 
 
@@ -1918,7 +1914,6 @@ def QueryVerifyView(request, sequence_id):
 			for x in data:
 				context[type][m][x.tag] = x.text
 			context[type][m]["eValueFloat"] = float(context[type][m]["eValue"])
-			# context[type][m]["plot"] = getMotifPlot_fromMotif(m.get_real_startposition(), m.get_real_stopposition(), len(seq.sequence), context[type][m]["domaingroup"])
 			context[type][m]["plot"] = build_domain_plot(len(seq.sequence), [m])
 
 	# Sort VerifyMotifs by evalue
@@ -1926,9 +1921,8 @@ def QueryVerifyView(request, sequence_id):
 
 	# Get data for 3D structure representation and visualization
 	data_3d = get_pdb_data(seq.sequence)
-	if data_3d:
-		context['pdb_url'] = data_3d['pdb_url']
-		context['residues'] = data_3d['residues']
+	context['pdb_url'] = data_3d['pdb_url'] if data_3d else ''
+	context['residues'] = data_3d['residues'] if data_3d else []
 
 	return render(request, 'home/query-verify.html', context)
 
