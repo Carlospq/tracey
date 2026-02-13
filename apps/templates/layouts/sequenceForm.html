@@ -201,9 +201,24 @@
 			box-sizing: border-box;
 		}
 
-
-
-
+		#res-tooltip {
+			z-index: 1000;
+			background-color: rgba(0, 0, 0, 0.8);
+			color: #fff;
+			margin-top: 10px;
+			padding: 5px 10px;
+			border-radius: 4px;
+			font-size: 12px;
+			pointer-events: none;
+			width: fit-content;
+		}
+		#res-tooltip.hidden {
+			display: none;
+			visibility: hidden;
+		}
+		.residue-hover {
+			background-color: rgba(227, 83, 83, 0.65) !important;
+		}
     </style>
 
 	<link rel="stylesheet"
@@ -258,11 +273,6 @@
            source: data
        });
    }
-   {#$(document).on('blur', '#id_taxonomy', function() {#}
-   {#function validateField(element, event) {#}
-   {#    console.log($(this));#}
-   {#    $('#motifForm').valid();#}
-   {# });#}
 </script>
 
 
@@ -636,6 +646,9 @@
 	<div class="container-3d" id="container-3d">
 
 		<div id="viewport-3d">
+			{% if motif_coords %}
+				{{ motif_coords|json_script:"data-motifs" }}
+			{% endif %}
 			<div id="pdb-upload-controls">
 				<button id="pdb-file-button" type="button">Load another structure</button>
 				<input id="pdb-file-input" type="file" accept=".pdb,.cif,.mmcif,.pdb.gz,.cif.gz" style="display:none;">
@@ -646,6 +659,7 @@
 					<p>No structure available</p>
 					<p>Drag & drop a structure file here (PDB/CIF)</p>
 					<p>You can use <a href="https://alphafoldserver.com/" target="_blank">alphafold</a> to predict structures</p>
+					<button id="copyBtn" type="button" aria-label="Copy sequence to clipboard" onclick="copyTextToClipboard('{{ sequence.sequence }}')">Copy sequence to clipboard</button>
 				</div>
 			{% endif %}
 		</div>
@@ -658,6 +672,7 @@
 				</button>
 			</div>
 			<div id="sequence-3d"></div>
+			<div class="hidden" id="res-tooltip"></div>
 		</div>
 
 	</div>
@@ -711,15 +726,14 @@
                                             <tr>
                                                 <td class="td-header">
 
-													{%  if pdb_url %}
 													<button class="domain-btn"
 															type="button"
 															data-start="{{ m.get_real_startposition }}"
 															data-end="{{ m.get_real_stopposition }}"
-															data-chain="">
+															data-chain=""
+															{% if not pdb_url %} hidden {% endif %}>
 														Highlight in 3D
 													</button>
-													{% endif %}
 
 												</td>
                                                 <td class="td-data">
@@ -843,15 +857,16 @@
                                             <!-- Motif image -->
                                             <tr>
                                                 <td class="td-header">
-													{%  if pdb_url %}
+
 													<button class="domain-btn"
 															type="button"
 															data-start="{{ m.get_real_startposition }}"
 															data-end="{{ m.get_real_stopposition }}"
-															data-chain="">
+															data-chain=""
+															{% if not pdb_url %} hidden {% endif %}>
 														Highlight in 3D
 													</button>
-													{% endif %}
+
 												</td>
                                                 <td class="td-data">
 													<div>{{ motifs|get_item:m|get_item:'plot'|safe }}</div>
@@ -1033,6 +1048,14 @@
 		// fallbacks / unusual codes could be added here if you care
 	};
 
+	// Color code for different domains; you can customize as needed
+	const domainColors = {
+		"SNARE": "orange",
+		"Habc": "purple",
+		"C2": "red",
+		"default": "green"
+	};
+
 	// ---- Global-ish state for sequence & selection ----
 	let residues = [];                     // array of { aa, chain, resi }
 	let selectedResidues = new Set();      // keys like "A:123"
@@ -1045,6 +1068,9 @@
 	let surfaceRep = null;
 	let sticksRep = null;
 	let isSpinning = false;
+	let mouseOverResidueKey = null;     // e.g. "A:42"
+	let hoverCartoonRep = null;         // NGL representation for hover
+	const residueSpanByKey = {};        // { "A:42": HTMLSpanElement, ... }
 
 	window.update3DSelection = update3DSelection;
 
@@ -1067,6 +1093,15 @@
 		const fileInput = document.getElementById('pdb-file-input');
 		const fileButton = document.getElementById('pdb-file-button');
 
+		let motifsData = {};
+		let motifsEl = document.getElementById("data-motifs");
+
+		if (motifsEl) {
+			motifsData = JSON.parse(motifsEl.textContent);
+		} else {
+			motifsData = {};
+		}
+
 		// 1) Create viewer instance (library-specific)
 		const viewer = createViewer(viewportEl);
 
@@ -1080,6 +1115,7 @@
 			fileInput,
 			fileButton,
 			sequenceEl,
+			motifsData,
 			onStructureLoaded: () => {
 				if (dropAreaEl) {
 					dropAreaEl.style.display = 'none';
@@ -1089,7 +1125,7 @@
 
 		// 4) If Django provided an URL, load it on page load
 		if (initialPdbUrl) {
-			loadStructureFromUrl(viewer, initialPdbUrl, sequenceEl)
+			loadStructureFromUrl(viewer, initialPdbUrl, sequenceEl, motifsData)
 				.then(() => {
 					if (dropAreaEl) {
 						dropAreaEl.style.display = 'none';
@@ -1127,7 +1163,20 @@
 
 		// ---- 3D -> sequence selection ----
 		stage.signals.clicked.add(pickingProxy => {
-			if (!pickingProxy || !pickingProxy.atom) return;
+
+			if (!pickingProxy || !pickingProxy.atom) {
+				// Mouse moved off atoms -> clear hover
+				if (mouseOverResidueKey !== null) {
+					mouseOverResidueKey = null;
+					updateSequenceHoverHighlight();
+					update3DHoverHighlight();
+				}
+				return;
+			}
+
+			if (!pickingProxy || !pickingProxy.atom) {
+				return;
+			}
 
 			const atom = pickingProxy.atom;
 			const chain = atom.chainname || atom.chain || '';
@@ -1149,13 +1198,68 @@
 			lastClickedIndex = index;
 
 			updateSequenceHighlighting();
-			update3DSelection(viewerForSelection);
+			update3DSelection();
+
 		});
 
-    	return {
-			stage
-		};
+		stage.signals.hovered.add(pickingProxy => {
+			if (!pickingProxy || !pickingProxy.atom) {
+				// salir de cualquier átomo → limpiar hover
+				if (mouseOverResidueKey !== null) {
+					mouseOverResidueKey = null;
+					updateSequenceHoverHighlight();
+					update3DHoverHighlight();
+				}
+				return;
+			}
 
+			const atom = pickingProxy.atom;
+			const chain = atom.chainname || atom.chain || '';
+			const resi = atom.resno;
+			const key = residueKey(chain, resi);
+
+			if (mouseOverResidueKey === key) {
+				return; // nada nuevo
+			}
+
+			mouseOverResidueKey = key;
+			updateSequenceHoverHighlight();
+			update3DHoverHighlight();
+		});
+
+
+    	return {
+			stage,
+			currentComponent: null,
+			highlightCartoonRep: null,
+			motifRepresentations: []
+		};
+	}
+
+	function colorMotifs(motifsData) {
+		if (!motifsData) return;
+
+		// For each motif, add all residues in [start, end] for the given chain
+		for (const motif of Object.values(motifsData)) {
+			if (!motif) continue;
+
+			const { start, end, domain } = motif;
+			if (start == null || end == null) continue;
+
+			const s = Number(start);
+			const e = Number(end);
+
+			if (Number.isNaN(s) || Number.isNaN(e)) continue;
+			for (let resi = s; resi <= e; resi++) {
+				const chain = residues[resi-1].chain;
+				const key = residueKey(chain, resi);
+				selectedResidues.add(key);
+			}
+		}
+
+		// Update both sequence DOM and 3D highlight rep
+		updateSequenceHighlighting();
+		update3DSelection();
 	}
 
 	function update3DSelection() {
@@ -1169,13 +1273,14 @@
 		const seleParts = [];
 		selectedResidues.forEach(key => {
 			const [chain, resi] = key.split(":");
-			seleParts.push(`:${chain} and ${resi}`);
+			// NGL: "209:A", "50:A OR 120:B", etc.
+			seleParts.push(`${resi}:${chain}`);
 		});
+		highlightCartoonRep.setSelection(seleParts.join(" OR "));
 
-		highlightCartoonRep.setSelection(seleParts.join(" or "));
 	}
 
-	function loadStructureFromUrl(viewer, url, sequenceEl) {
+	function loadStructureFromUrl(viewer, url, sequenceEl, motifsData) {
 		clearViewer(viewer);
 
 		return viewer.stage.loadFile(url, { defaultRepresentation: false })
@@ -1185,23 +1290,24 @@
 				baseCartoonRep = comp.addRepresentation("cartoon", {
 					color: "blue"
 				});
+				setupHighlightRepresentations(comp);
 
-				highlightCartoonRep = comp.addRepresentation("cartoon", {
-					sele: "none",
-					color: "orange"
-				});
+				mouseOverResidueKey = null;
+				lastClickedIndex = null;
 
 				comp.autoView();
 				viewer.stage.handleResize();
 
 				initialOrientation = viewer.stage.viewerControls.getOrientation();
 
+
 				const residuesArray = extractResiduesFromComponent(comp);
 				renderSequence(sequenceEl, residuesArray);
+				colorMotifs(motifsData, viewer)
 			});
 	}
 
-	function loadStructureFromFile(viewer, file, sequenceEl) {
+	function loadStructureFromFile(viewer, file, sequenceEl, motifsData) {
 		clearViewer(viewer);
 
 		return viewer.stage.loadFile(file, { defaultRepresentation: false })
@@ -1216,6 +1322,9 @@
 					sele: "none",
 					color: "orange"
 				});
+				setupHighlightRepresentations(comp);
+				mouseOverResidueKey = null;
+				lastClickedIndex = null;
 
 				comp.autoView();
 				viewer.stage.handleResize();
@@ -1224,19 +1333,17 @@
 
 				const residuesArray = extractResiduesFromComponent(comp);
 				renderSequence(sequenceEl, residuesArray);
+				colorMotifs(motifsData, viewer)
 			});
 	}
 
 	function clearViewer(viewer) {
-		/**
-		 * Remove current structure from viewer.
-		 * @param {Object} viewer
-		*/
 		if (viewer.currentComponent) {
 			viewer.currentComponent.removeAllRepresentations();
 			viewer.currentComponent.dispose();
 			viewer.currentComponent = null;
 		}
+		hoverCartoonRep = null;
 	}
 
 
@@ -1244,14 +1351,14 @@
 	 * File upload logic
 	 * ================================ */
 
-	function setupFileUpload({ viewer, dropAreaEl, fileInput, fileButton, onStructureLoaded, sequenceEl }) {
+	function setupFileUpload({ viewer, dropAreaEl, fileInput, fileButton, onStructureLoaded, sequenceEl, motifsData }) {
 		if (fileButton && fileInput) {
 			fileButton.addEventListener('click', () => fileInput.click());
 
 			fileInput.addEventListener('change', event => {
 				const file = event.target.files[0];
 				if (file) {
-					handleFileSelected(viewer, file, sequenceEl, onStructureLoaded);
+					handleFileSelected(viewer, file, sequenceEl, onStructureLoaded, motifsData);
 				}
 				event.target.value = '';
 			});
@@ -1259,13 +1366,14 @@
 
 		if (dropAreaEl) {
 			setupDragAndDrop(dropAreaEl, file => {
-				handleFileSelected(viewer, file, sequenceEl, onStructureLoaded);
+				handleFileSelected(viewer, file, sequenceEl, onStructureLoaded, motifsData);
 			});
 		}
+
 	}
 
-	function handleFileSelected(viewer, file, sequenceEl, onStructureLoaded) {
-		loadStructureFromFile(viewer, file, sequenceEl)
+	function handleFileSelected(viewer, file, sequenceEl, onStructureLoaded, motifsData) {
+		loadStructureFromFile(viewer, file, sequenceEl, motifsData)
 			.then(() => {
 				if (typeof onStructureLoaded === 'function') {
 					onStructureLoaded();
@@ -1274,6 +1382,13 @@
 			.catch(err => {
 				console.error('Error loading structure from file:', err);
 			});
+
+		// Also setup motif highlight buttons
+		const motifButtons = document.getElementsByClassName('domain-btn');
+		Array.from(motifButtons).forEach(button => {
+			button.removeAttribute("hidden")
+		});
+
 	}
 
 	function setupDragAndDrop(dropAreaEl, onFile) {
@@ -1364,6 +1479,7 @@
 		lastClickedIndex = null;
 		residueIndexByKey = {};
 
+		Object.keys(residueSpanByKey).forEach(k => delete residueSpanByKey[k]);
 		sequenceEl.innerHTML = '';
 
 		residues.forEach((r, idx) => {
@@ -1387,6 +1503,9 @@
 	function createResiduesSpans(sequenceEl, residues) {
 		residues.forEach((r, idx) => {
 			const span = document.createElement("span");
+			const key = residueKey(r.chain, r.resi);
+			residueSpanByKey[key] = span;
+
 			span.textContent = r.aa;
 			span.className = "residue";
 			span.dataset.chain = r.chain;
@@ -1417,11 +1536,34 @@
 				update3DSelection();
 			});
 
-			sequenceEl.appendChild(span);
+			// Add eventListener when hover to show tooltip with chain and residue number
+			span.addEventListener("mouseenter", () => {
+				const tooltip = document.getElementById("res-tooltip");
+				tooltip.classList.remove("hidden");
+				tooltip.className = "res-tooltip";
+				tooltip.textContent = `Resi: ${r.aa} Pos: ${idx + 1}`;
 
-			if ((idx + 1) % 50 === 0) {
+				mouseOverResidueKey = key;
+				updateSequenceHoverHighlight();
+				update3DHoverHighlight();
+			});
+
+			span.addEventListener("mouseleave", () => {
+				const tooltip = document.getElementById("res-tooltip");
+				tooltip.classList.add("hidden");
+
+				if (mouseOverResidueKey === key) {
+					mouseOverResidueKey = null;
+					updateSequenceHoverHighlight();
+					update3DHoverHighlight();
+				}
+			});
+
+			sequenceEl.appendChild(span);
+			if ((idx + 1) % 50 === 0) { //breakline every 50 AA
 				sequenceEl.appendChild(document.createElement("br"));
 			}
+
 		});
 	}
 
@@ -1579,9 +1721,9 @@
 			const sele = Array.from(selectedResidues)
 				.map(key => {
 					const [chain, resi] = key.split(":");
-					return `:${chain} and ${resi}`;
+					return `${resi}:${chain}`;
 				})
-				.join(" or ");
+				.join(" OR ");
 
 			viewer.currentComponent.autoView(sele);
 		} else {
@@ -1592,6 +1734,15 @@
 	function resetOrientation(viewer) {
 		if (!initialOrientation) return;
 		viewer.stage.viewerControls.orient(initialOrientation);
+
+		let motifsData = {};
+		let motifsEl = document.getElementById("data-motifs");
+		if (motifsEl) {
+			motifsData = JSON.parse(motifsEl.textContent);
+		} else {
+			motifsData = {};
+		}
+		colorMotifs(motifsData)
 	}
 
 	function toggleSticks(viewer) {
@@ -1636,6 +1787,76 @@
 			link.download = "structure.png";
 			link.click();
 			URL.revokeObjectURL(link.href);
+		});
+	}
+
+	function builtResTooltip(residue) {
+		const { aa, chain, resi } = residue;
+		return `Chain: ${chain}\nResidue: ${aa}${resi}`;
+	}
+
+	function setupHighlightRepresentations(comp) {
+		// Persistent selection rep
+		highlightCartoonRep = comp.addRepresentation("cartoon", {
+			sele: "none",      // start with nothing highlighted
+			color: "orange",   // selection color
+			opacity: 1.0
+		});
+
+		// Hover-only rep
+		hoverCartoonRep = comp.addRepresentation("cartoon", {
+			sele: "none",
+			color: "red",   // hover color (different from selection)
+			opacity: 1.0
+		});
+	}
+
+	function update3DHoverHighlight() {
+		if (!hoverCartoonRep) return;
+
+		if (!mouseOverResidueKey) {
+			hoverCartoonRep.setSelection("none");
+			return;
+		}
+
+		const [chain, resi] = mouseOverResidueKey.split(":");
+		const center = parseInt(resi, 10);
+		if (Number.isNaN(center)) {
+			console.warn("Invalid residue in mouseOverResidueKey:", mouseOverResidueKey);
+			hoverCartoonRep.setSelection("none");
+			return;
+		}
+		const start = Math.max(center - 2, 1);   // clamp to >= 1; NGL will just ignore missing resi
+		const end   = center + 2;
+
+
+
+		// NGL selection: "start-end:chain" -> e.g. "207-211:A"
+		const sele = `${start}-${end}:${chain}`;
+		{#const sele = `${resi}:${chain}`;  // <-- OJO: resi:chain#}
+
+		hoverCartoonRep.setSelection(sele);
+	}
+
+
+	function updateSequenceHoverHighlight() {
+		Object.values(residueSpanByKey).forEach(span => {
+			span.classList.remove("residue-hover");
+		});
+
+		if (!mouseOverResidueKey) return;
+
+		const span = residueSpanByKey[mouseOverResidueKey];
+		if (span) {
+			span.classList.add("residue-hover");
+		}
+	}
+
+	function copyTextToClipboard(text) {
+		navigator.clipboard.writeText(text.replace(/-/g, "").toUpperCase()).then(function() {
+			alert('Sequence copied to clipboard');
+		}, function(err) {
+			console.error('Could not copy text: ', err);
 		});
 	}
 </script>

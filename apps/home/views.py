@@ -1924,6 +1924,15 @@ def QueryVerifyView(request, sequence_id):
 	context['pdb_url'] = data_3d['pdb_url'] if data_3d else ''
 	context['residues'] = data_3d['residues'] if data_3d else []
 
+	# Get motifs coordinates to color alpha-fold structure
+	motifs = context['sequence'].motifs_set.all()
+	motif_coords = {}
+	for m in motifs:
+		motif_coords[m.domaingroup.domaingroupname] = {"start": m.get_real_startposition(),
+													   "end": m.get_real_stopposition(),
+													   "domain": m.domaingroup.domain.domainname}
+	context["motif_coords"] = motif_coords
+
 	return render(request, 'home/query-verify.html', context)
 
 

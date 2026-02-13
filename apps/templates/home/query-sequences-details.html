@@ -316,10 +316,9 @@
 										<p>3D Structure not found...</p>
 									</div>
 								</div>
-
 							{% endif %}
 
-							<div id="fetch3d">
+							<div id="fetch3d" {% if not fetch3d %} hidden {% endif %}>
 
 								<!-- 3Dmol.js Viewer Container -->
 								<div id="proteinViewerContainer">
@@ -520,9 +519,9 @@
 
 		try {
 
-			if (pdbUri) {
+			if (pdbUri && pdbUri.trim() !== "False") {
 
-				viewer = $3Dmol.createViewer( viewerContainer, {});
+				viewer = $3Dmol.createViewer(viewerContainer, {});
 
 				let motifsData = {};
 				let motifsEl = document.getElementById("data-motifs");
@@ -535,10 +534,12 @@
 				}
 
 				const fetch3d = document.getElementById("fetch3d");
+				console.log("Fetching 3D structure from:", pdbUri);
 				fetch3d.removeAttribute("hidden");
 				fetch(pdbUri)
 					.then( response => response.text() )
 					.then( data => {
+
 						viewer.addModel( data, "cif" );
 						viewer.setStyle({}, {cartoon: {color: 'blue'}});
 						{# Color each motif #}
@@ -557,7 +558,8 @@
 						let loadingMessage = document.querySelector('.loadingmessage');
 						if (loadingMessage) {
 							loadingMessage.textContent = 'Error loading 3D structure.';
-						}
+							fetch3d.setAttribute("hidden", "true");
+					 	}
 					});
 			}
 
