@@ -229,6 +229,27 @@
 			display: block;
 			height: 100%;
 		}
+		{# Unique style for staff buttons #}
+		#submitVerifySequence {
+			border-radius: 5px;
+			background: linear-gradient(135deg, #d9534f, #c9302c); /* admin red */
+			color: white;
+			border: 1.5px solid black;
+			padding: 8px 16px;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background 0.15s ease, transform 0.1s ease;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.15)
+		}
+		#submitVerifySequence:hover {
+			background: linear-gradient(135deg, #c9302c, #a8231f);
+			transform: translateY(-1px);
+		}
+		#submitVerifySequence:active {
+			transform: translateY(1px);
+		}
+
     </style>
 </head>
 
@@ -365,22 +386,12 @@
 						</tr>
 						<tr>
 							<td class="td-header"></td>
-							<td class="td-data button">
+							<td class="td-data button" style="padding-bottom: 15px;">
 								<button><a href="/fastaFormat/{{sequence.sequence_id}}/" target="popup" onclick="window.open('/details/fastaFormat/{{sequence.sequence_id}}/','popup','width=600,height=300'); return false;"> Fasta format </a></button>
 								<button id="copyBtn" type="button" aria-label="Copy sequence to clipboard" onclick="copyTextToClipboard('{{ sequence.sequence }}')">Copy to clipboard</button>
 							</td>
 						</tr>
-						{% if is_staff %}
-						<tr>
-							<td class="td-header"></td>
-							<td class="td-data">
-								<form action="/query-verify/{{ sequence.sequence_id }}">
-									<input type="submit" value="Verify Sequence" formtarget="_blank"/>
-								</form>
-							</td>
-						</tr>
-						{% endif %}
-						<tr><td><br></td></tr>
+{#						<tr><td><br></td></tr>#}
 
 						<!-- Layout -->
 						<tr>
@@ -389,6 +400,16 @@
 								<div>{{ layout|safe }}</div>
 							</td>
 						</tr>
+						{% if is_staff %}
+						<tr>
+							<td class="td-header"></td>
+							<td class="td-data">
+								<form action="/query-verify/{{ sequence.sequence_id }}">
+									<input type="submit" id="submitVerifySequence" value="Verify Sequence" formtarget="_blank"/>
+								</form>
+							</td>
+						</tr>
+						{% endif %}
 
 					</table>
 

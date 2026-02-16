@@ -245,13 +245,15 @@ def build_domain_plot(protein_length, domains, eval=None):
 	# Add domains
 	for dom in domains:
 		# dom == Motif object
-
+		domEval = None
 		if not eval:
 			tags = {}
 			data = ET.fromstring(dom.asciioutput)
 			for x in data:
 				tags[x.tag] = x.text
-			eval = float(tags["eValue"])
+			domEval = float(tags["eValue"])
+		else:
+			domEval = eval
 
 		start = dom.get_real_startposition()
 		end = dom.get_real_stopposition()
@@ -259,10 +261,8 @@ def build_domain_plot(protein_length, domains, eval=None):
 		motifColors = get_motifsColors()
 		domainname = dom.domaingroup.domain.domainname
 		color = 'rgb'+str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
-		text = (f"{label}<br>Start: {start}<br>"
-				f"End: {end}<br>"
-				f"Length: {end - start + 1} aa<br>"
-				f"E-value: {eval}") if eval else f"{label}<br>Start: {start}<br>End: {end}"
+		text = (f"{label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>E-value: {domEval}" if domEval else
+				f"{label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa")
 
 		# Domain rectangle
 		fig.add_shape(
@@ -359,15 +359,15 @@ def build_domain_plot_from_PyHammer(protein_length, hit, evalcutoff=0):
 
 		start = d.alignment.target_from - 1
 		end = d.alignment.target_to
-		label = str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else str(d.alignment).split("\n")[1].split()[0][0]
-		eval = str(format(d.pvalue, '.1E'))
-
+		# label = str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else str(d.alignment).split("\n")[1].split()[0][0]
+		label = str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else str(d.alignment).split("\n")[1].split()[0]
+		domEval = str(format(d.pvalue, '.1E'))
 		motifColors = get_motifsColors()
 		domainname = Domaingroups.objects.get(domaingroupname=label).domain.domainname
 		color = 'rgb' + str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
 
-		label += " (%s)" % (eval) if eval else ""
-		text = f"{domainname} -  {label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>E-value: {eval}" if eval else \
+		label += " (%s)" % (domEval) if domEval else ""
+		text = f"{domainname} -  {label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>E-value: {domEval}" if domEval else \
 			   f"{domainname} -  {label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>"
 
 		# Domain rectangle
@@ -1199,7 +1199,6 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
 			# motifname = str(d.alignment).split("\n")[1].split()[0]
 			dgs = Domaingroups.objects.filter(domaingroupname = motifname)
 			for dg in dgs:
-				# print(dg)
 				domain = Domains.objects.get(domain_id = dg.domain_id).domainname
 				if dg.domaingroupparent_id == None:
 					dg_parent = motifname
