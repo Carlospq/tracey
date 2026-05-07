@@ -19,6 +19,9 @@ def writeLog(logFile, traceyID, ncbiID, shortname, newshortname, comment):
 	logFile.write("%s\t%s\t%s\t%s\t%s\n" % (traceyID, ncbiID, shortname, newshortname, comment))
 
 def get_ncbi_id(seq):
+
+	if not seq.foreignannotation: return None
+
 	ncbiSources = ['gi', 'gb', 'emb', 'ref', 'dbj', 'pir', 'prf', 'sp', 'pdb', 'tpe', 'none', 'tpg']
 	fids = seq.foreignannotation.split("|")
 	if len(fids) == 1:
@@ -150,6 +153,7 @@ def getSimilarSequences(sequence, summary_output, sequencesAnalysed):
 	for seq in alignSimilarSequences(sequence):
 		# Check if sequence is already in identicalSequences
 		if seq.sequence_id in sequencesAnalysed: continue
+		# if not seq.foreignannotation: continue
 		if seq.sequence_id != sequence.sequence_id:
 			ncbi_id = get_ncbi_id(seq)
 			if not ncbi_id:
@@ -261,6 +265,11 @@ def selectMainFromIdenticalSequences(identicalSequences):
 					uniqueSequences.append(mainSequences[idx]['sequence'].sequence)
 			for idx in removeIdxs:
 				del mainSequences[idx]
+
+		# If 1 > mainsequences, choose first sequence:
+		while len(mainSequences) > 1:
+			mainIdxs = [idx for idx in mainSequences]
+			del mainSequences[mainIdxs[-1]]
 
 		if mainSequences:
 			return mainSequences
@@ -799,8 +808,11 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 		seq = Sequences.objects.get(sequence_id=seqId)
 		# Check for shortname in last "live" sequence
 		# if not seq.sequenceshortname or seq.sequenceshortname.count("_") >= 2:
+		print(seqId)
 		if not seq.sequenceshortname or re.search('_.+old$', seq.sequenceshortname):
-			if any([sId for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog]):
+			if any(sId for sId in identicalSequences
+				   if identicalSequences[sId]['sequence'].changelog
+				   and "from live to" in identicalSequences[sId]['sequence'].changelog):
 				previousLiveShortname = [identicalSequences[sId]['sequence'].sequenceshortname for sId in identicalSequences if "from live to" in identicalSequences[sId]['sequence'].changelog][0]
 				seq.sequenceshortname = previousLiveShortname
 				updateLog[seqId]['comment'] += 'Shortname updated from %s to %s; ' % (seq.sequenceshortname, previousLiveShortname)

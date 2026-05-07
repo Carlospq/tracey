@@ -65,6 +65,8 @@ if __name__ == "django.core.management.commands.shell":
 			continue
 		else:
 			dg_parent = ".".join(hmm.split(".")[:-1])
+			if dg_parent == "SNAP":
+				dg_parent = "SNAPbc"
 			if not dg_parent in new_domaingroups[domain]:
 				new_domaingroups[domain][dg_parent] = []
 			new_domaingroups[domain][dg_parent].append(hmm)
@@ -82,6 +84,20 @@ if __name__ == "django.core.management.commands.shell":
 			if len(sub_dg_list) > 0:
 				dictionary[dg_name] = generate_dictionary(sub_dg_list, dictionary=dictionary[dg_name], level=level + 1)
 
+		# Handle manually SNAPb and SNAPc cases
+		if 'SNAPbc' in dg_names:
+			dictionary['SNAPbc'] = {
+				'SNAP.b': {
+					'SNAP.b.Sec9': {},
+					'SNAP.b.SN25': {},
+					'SNAP.b.SN29': {}
+				},
+				'SNAP.c': {
+					'SNAP.c.Sec9':{},
+					'SNAP.c.SN25': {},
+					'SNAP.c.SN29': {}
+				}
+			}
 		return dictionary
 
 
@@ -95,7 +111,10 @@ if __name__ == "django.core.management.commands.shell":
 		domain = Domains.objects.get(domainname='Habc' if dg_parent_name.startswith('H') else 'SNARE')
 
 		for dg_name in dict_obj:
-			dg_parent = Domaingroups.objects.get(domaingroupname=dg_parent_name)
+			if domain.domainname == "SNARE" and dg_parent_name == "SNAP":
+				dg_parent = Domaingroups.objects.get(domaingroup_id=135)
+			else:
+				dg_parent = Domaingroups.objects.get(domaingroupname=dg_parent_name)
 
 			# Create domaingroup if it doesn't exist
 			if not any(Domaingroups.objects.filter(domaingroupname=dg_name)):

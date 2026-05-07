@@ -486,7 +486,7 @@ menu = {
 					'R.Reg.Viridiplantae': {}
 				}
 			},
-			'SNAP': {
+			'SNAPbc': {
 				'SNAP.b': {
 					'SNAP.b.Sec9': {},
 					'SNAP.b.SN25': {},
