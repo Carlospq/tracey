@@ -38,7 +38,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Assets Management
 ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')
 
-ALLOWED_HOSTS        = ['dcsrs-tracey.ad.unil.ch', 'tracey.ad.unil.ch', 'localhost', 'localhost:85', '127.0.0.1', env('SERVER', default='127.0.0.1') ]
+ALLOWED_HOSTS        = ['dcsrs-tracey.ad.unil.ch', 'tracey.unil.ch', 'localhost', 'localhost:85', '127.0.0.1', env('SERVER', default='127.0.0.1') ]
 CSRF_TRUSTED_ORIGINS = ['http://localhost:85', 'http://127.0.0.1', 'https://' + env('SERVER', default='127.0.0.1') ]
 
 # Captcha options
