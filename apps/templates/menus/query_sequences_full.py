@@ -1,4 +1,94 @@
 menu = {
+	"SM": {
+		"Vps33": {
+			"Vps33a": {
+				'Vps33a.d1': {},
+				'Vps33a.d2a': {},
+				'Vps33.d2b': {},
+				'Vps33.d3': {}
+			},
+			"Vps33b": {
+				'Vps33b.d1': {},
+				'Vps33b.d2a': {},
+				'Vps33.d2b': {},
+				'Vps33.d3': {}
+			}
+		},
+		"Sec1": {
+			"Sec1.d1": {},
+			"Sec1.d2a": {},
+			"Sec1.d2b": {},
+			"Sec1.d3": {}
+		},
+		"Vps45": {
+			"Vps45.d1": {},
+			"Vps45.d2a": {},
+			"Vps45.d2b": {},
+			"Vps45.d3": {}
+		},
+		"Sly1": {
+			"Sly1.d1": {},
+			"Sly1.d2a": {},
+			"Sly1.d2b": {},
+			"Sly1.d3": {}
+		},
+		"Scfd2": {
+			"Scfd2.d1": {},
+			"Scfd2.d2a": {},
+			"Scfd2.d2b": {},
+			"Scfd2.d3": {}
+		}
+	},
+	"C2": {
+		"C2 classical": {
+			"t1": {
+				'syt_sytla_rp3_doc2': {
+					'syt_b': {},
+					'syt_a': {},
+					'sytl_btsz_a': {},
+					'rp3_doc2_a': {},
+					'rp3_doc2_b': {}
+				},
+				'cop_unc13abc_b': {
+					'cop_b': {},
+					'cop_a': {},
+					'unc13abc_c': {}
+				},
+				'pkcabg_fam62c_sytlb': {
+					'sytl_btsz_b': {},
+					'pkcabg': {},
+					'fam62_c': {}
+				}
+			},
+			"t2": {
+				'plc_unc13abc_b': {
+					'plc_1': {},
+					'plc_3': {},
+					'plc_4': {},
+					'plc_5': {},
+					'unc13abc_b': {}
+				},
+				'tcb_plc2': {
+					'plc_2': {},
+					'tcb_a': {},
+					'tcb_d': {},
+					'tcb_c': {}
+				},
+				'pkcdeht_func13_fam62ab_pkcn_unc13d_a': {
+					'pkcdeht_func13_fam62ab': {
+						'pkcdeht': {},
+						'fam62_a': {},
+						'fam62_b': {},
+						'func13': {}
+					},
+					'pkcn_unc13d_a': {
+						'unc13d_a': {},
+						'pkcn': {}
+					}
+				}
+			}
+		}
+	},
 	"AAA": {
 		"AAA.prs": {
 			"AAA.prse": {
@@ -207,6 +297,94 @@ menu = {
 		'Nfkb': {},
 		'Spg1': {}
 	},
+	"MUN": {
+		"caps": {
+			"caps.d1": {},
+			"caps.d2": {}
+		},
+		"fungi": {
+			"fungi.d1": {},
+			"fungi.d2": {}
+		},
+		"munc13abc": {
+			"munc13abc.d1": {},
+			"munc13abc.d2": {}
+		},
+		"plants": {
+			"plants.d1": {},
+			"plants.d2": {}
+		},
+		"munc13d": {
+			"munc13d.d1": {},
+			"munc13d.d2": {}
+		}
+	},
+	"NSR": {
+		"NSR.nag": {
+			"NSR.md.nag.sec39": {
+				"NSR.md.nag": {},
+				"NSR.md.sec39": {}
+			},
+			"NSR.nd.nag": {},
+			"NSR.cd.nag": {}
+		},
+		"NSR.rod": {
+			"NSR.md.rod": {},
+			"NSR.nd.rod": {},
+			"NSR.cd.rod": {}
+		}
+	},
+	'Proppin': {
+		'Proppin.prop1': {
+			'Proppin.atg18': {},
+			'Proppin.wipi12': {},
+			'Proppin.atg21': {}
+		},
+		'Proppin.prop2': {
+			'Proppin.hsv2': {},
+			'Proppin.wipi34': {}
+		}
+	},
+	"Rhomboid": {
+		'aRhom': {
+			'RhomE1': {},
+			'RhomE2': {},
+			'RhomE3_4': {
+				'RhomE3': {},
+				'RhomE4': {}
+			},
+			'RhomP1': {},
+			'RhomP3': {},
+			'RhomB01_4': {
+				'RhomB01': {},
+				'RhomB02': {},
+				'RhomB03': {},
+				'RhomB04': {}
+			},
+			'RhomB05': {},
+			'RhomB06': {},
+			'RhomB07': {},
+			'RhomB08': {},
+			'RhomB09': {}
+		},
+		'RhomE5': {},
+		'RhomE6_7': {
+			'RhomE6': {},
+			'RhomE7': {}
+		},
+		'RhomE8': {},
+		'RhomV1': {},
+		'RhomV2': {},
+		'RhomP2': {},
+		'RhomK1': {},
+		'RhomB10': {},
+		'RhomB11': {}
+	},
+	"Rint": {},
+	"SNAP": {
+		"aSNAP": {},
+		"cSNAP": {},
+	},
 	'SNARE': {
 		'SNARE': {
 			'Qa': {
@@ -393,7 +571,9 @@ menu = {
 			}
 		},
 		'LGL': {}
-	}
+	},
+	"TMR": {},
+	"Zw10": {}
 	}
 
 
