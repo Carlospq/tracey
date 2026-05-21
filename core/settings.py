@@ -34,6 +34,7 @@ SECRET_KEY = env('SECRET_KEY', default='S#perS3crEt_007')
 DEBUG = env('DEBUG')
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Assets Management
 ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')
@@ -197,7 +198,7 @@ CSP_DEFAULT_SRC = ("'self'",)
 
 CSP_SCRIPT_SRC = (
     "'self'",
-    "'unsafe-inline'",              # Required: <script> blocks in templates have no nonces
+    "'unsafe-inline'",              # Required: inline scripts and event handlers
     "https://3dmol.org",
     "https://unpkg.com",            # NGL.js 3D viewer in sequenceForm.html
     "https://cdn.plot.ly",          # Plotly.js charts in details view
