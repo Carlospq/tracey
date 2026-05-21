@@ -24,3 +24,5 @@ django-tables2==2.7.0
 mysqlclient==2.2.4
 pyhmmer==0.10.13
 xmltodict==0.13.0
+django-csp==3.8
+django-permissions-policy==4.22.0

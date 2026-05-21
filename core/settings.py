@@ -82,6 +82,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'csp.middleware.CSPMiddleware',
+    'django_permissions_policy.PermissionsPolicyMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -184,3 +186,63 @@ STATICFILES_DIRS = (
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+#############################################################
+
+# Content Security Policy (django-csp 3.8)
+CSP_REPORT_ONLY = False  # Enforced — set to True only for debugging
+
+CSP_DEFAULT_SRC = ("'self'",)
+
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",              # Required: <script> blocks in templates have no nonces
+    "https://3dmol.org",
+    "https://unpkg.com",            # NGL.js 3D viewer in sequenceForm.html
+    "https://cdn.plot.ly",          # Plotly.js charts in details view
+    "https://kit.fontawesome.com",  # Font Awesome Kit loader
+)
+
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",              # Required: inline style= attributes throughout templates
+    "https://cdnjs.cloudflare.com", # Font Awesome in sequenceForm.html + base-fullscreen.html
+    "https://fonts.googleapis.com", # Google Fonts CSS (Inter font)
+    "https://ka-f.fontawesome.com", # Font Awesome Kit dynamic CSS
+)
+
+CSP_FONT_SRC = (
+    "'self'",
+    "https://cdnjs.cloudflare.com", # Font Awesome webfonts (.woff2)
+    "https://fonts.gstatic.com",    # Google Fonts woff2 files (Inter font)
+    "https://ka-f.fontawesome.com", # Font Awesome Kit webfonts
+)
+
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",                        # SVG/PNG plots served as data URIs in detail views
+)
+
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://ka-f.fontawesome.com", # Font Awesome Kit fetch
+    "https://alphafold.ebi.ac.uk",  # AlphaFold CIF structure files for 3D viewer
+)
+
+CSP_FRAME_ANCESTORS = ("'none'",)   # No page embeds this site via <iframe>
+
+CSP_OBJECT_SRC = ("'none'",)        # No Flash/plugins
+
+CSP_BASE_URI = ("'self'",)          # Prevents base-tag injection attacks
+
+# Permissions Policy (django-permissions-policy 4.x)
+PERMISSIONS_POLICY = {
+    "camera": [],
+    "microphone": [],
+    "geolocation": [],
+    "payment": [],
+    "usb": [],
+    "fullscreen": ("self",),        # NGL 3D viewer uses the Fullscreen API
+    "clipboard-write": ("self",),   # sequenceForm uses navigator.clipboard.writeText()
+}
