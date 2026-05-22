@@ -397,6 +397,7 @@
 						<tr>
 							<td class="td-header">Protein Layout</td>
 							<td class="td-data">
+								{# safe: Plotly HTML generated server-side by mark_safe(fig.to_html()); no user input in plot labels #}
 								<div>{{ layout|safe }}</div>
 							</td>
 						</tr>

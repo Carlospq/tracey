@@ -20,6 +20,7 @@
                                 <br />
                                 <p>
                                     {% if msg %}
+                                        {# safe: msg is a hardcoded string from views.py (e.g. includes an <a> link); never user input #}
                                         {{ msg | safe }}
                                     {% else %}
                                         Add your credentials

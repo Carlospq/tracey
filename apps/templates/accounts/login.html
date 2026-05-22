@@ -19,6 +19,7 @@
                                 </h1>
                                 <br />
                                     {% if msg %}
+                                        {# safe: msg is a hardcoded string from views.py; never user input #}
                                         <p style="color: red">{{ msg | safe }}</p>
                                     {% else %}
                                         <p>Add your credentials</p>

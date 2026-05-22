@@ -3,6 +3,7 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 import os
+import re
 import time, datetime
 import subprocess, requests
 import mimetypes
@@ -25,7 +26,7 @@ from Bio.Blast.Applications import NcbiblastpCommandline
 
 from django import template
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
 from django.views import generic
@@ -71,26 +72,6 @@ def get_children(model, parent, parent_id, child_parent_id, children=[], search_
 			get_children(model, model.objects.filter(pk=c.pk), parent_id, child_parent_id, children=children)
 	return(children)
 
-
-def get_children_raw(model, modelname, parent, query_id, parent_id, child_parent_id):
-	variable_column = child_parent_id
-	filter = variable_column + '__iexact'
-
-	if len(model.objects.filter( **{ filter: getattr(parent, parent_id) } ) ) == 0:
-		childs = [model.objects.get( **{ parent_id: getattr(parent, parent_id) })]
-	else:
-		childs = []
-		query= "select  *\
-				from    (select * from model\
-						 order by parent_id, child_id) model,\
-						(select @pv := 'parent_query_id') initialisation\
-				where   any_in_set(parent_id, @pv) > 0\
-				and     @pv := concat(@pv, ',', child_id)\
-				order by parent_id;".replace("model", modelname).replace("parent_id", child_parent_id).replace("child_id", parent_id).replace("parent_query_id", str(getattr(parent, query_id)))
-		for entity in model.objects.raw(query):
-			childs.append(entity)
-
-	return childs
 
 
 def get_sequences(query, verify=False):
@@ -457,10 +438,13 @@ def get_pdb_data(sequence):
 
 	try:
 		seqmd5 = md5_from_seq(sequence)
-		fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
+		fetch3d = urllib.request.urlopen(
+			f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5',
+			timeout=10
+		).read().decode('utf8')
 		fetch3d = json.loads(fetch3d)
 		pdb_url = fetch3d['structures'][0]['summary']['model_url']
-	except urllib.error.HTTPError:
+	except (urllib.error.HTTPError, urllib.error.URLError):
 		pdb_url = None
 
 	if not pdb_url:
@@ -468,7 +452,7 @@ def get_pdb_data(sequence):
 
 	# Download the PDB file
 	try:
-		resp = requests.get(pdb_url)
+		resp = requests.get(pdb_url, timeout=10)
 		resp.raise_for_status()
 	except Exception as e:
 		return {}
@@ -1936,15 +1920,15 @@ def QueryVerifyView(request, sequence_id):
 
 
 def autocompleteModel(request):
-	search_qs = Taxonomies.objects.filter(scientificname__istartswith=request.GET['search']).filter(taxonomyrank__in=["species", "strain"])
-	results = []
-	if len(request.GET['search']) >= 3 or len(search_qs) < 150:
-		for r in search_qs:
-			results.append(r.scientificname)
+	search = request.GET.get('search', '')
+	search_qs = Taxonomies.objects.filter(
+		scientificname__istartswith=search
+	).filter(taxonomyrank__in=["species", "strain"])
+	if len(search) >= 3 or len(search_qs) < 150:
+		results = list(search_qs.values_list('scientificname', flat=True))
 	else:
-		results.append('No results found')
-	resp = request.GET['callback'] + '(' + simplejson.dumps(results) + ');'
-	return HttpResponse(resp, content_type='home/search.json')
+		results = []
+	return JsonResponse(results, safe=False)
 
 
 # TRACEY Features
@@ -2039,13 +2023,28 @@ def update_taxonomy(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_sequences(request):
-	cmd = ['python3', 'manage.py', 'UpdateTraceySequences', "--%s"%(request.GET['continueVal']), "--domain",  "%s"%(request.GET['domain'])]
-	if request.GET["onlyActive"] == "true":
-		cmd.append("--onlyActive")
-	if request.GET['shortName'] != "All":
-		cmd.append("--species")
-		cmd.append(request.GET['shortName'])
-	outcome = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+	VALID_CONTINUE_VALS = {'continue', 'force'}
+	VALID_SHORT_NAMES = {'All', 'HoSa', 'MuMu', 'RaNo', 'DaRe', 'SaCe'}
+
+	continueVal = request.GET.get('continueVal', '')
+	domain = request.GET.get('domain', '')
+	onlyActive = request.GET.get('onlyActive', 'false')
+	shortName = request.GET.get('shortName', 'All')
+
+	if continueVal not in VALID_CONTINUE_VALS:
+		return HttpResponse('Invalid continueVal parameter.', status=400)
+	if shortName not in VALID_SHORT_NAMES:
+		return HttpResponse('Invalid shortName parameter.', status=400)
+	if not Domains.objects.filter(domainname=domain).exists() and domain != '':
+		return HttpResponse('Invalid domain parameter.', status=400)
+
+	cmd = ['python3', 'manage.py', 'UpdateTraceySequences',
+	       '--%s' % continueVal, '--domain', domain]
+	if onlyActive == 'true':
+		cmd.append('--onlyActive')
+	if shortName != 'All':
+		cmd.extend(['--species', shortName])
+	outcome = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	return HttpResponse(outcome)
 
 @login_required(login_url="/noPermits.html")
@@ -2082,29 +2081,37 @@ def read_update_sequences_results(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def download_file(request, filename=''):
-	if filename != '':
-		# Define Django project base directory
-		BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-		# Define the full file path
-		if 'Tree' in filename:
-			filepath = 'utils/ncbi_taxonomy/' + filename
-		elif "newick" in filename:
-			filepath = 'apps/static/assets/img/tmpTrees/' + filename
-		else:
-			filepath = BASE_DIR + ''
-		# Open the file for reading content
-		try:
-			path = open(filepath, 'rb')
-		except FileNotFoundError:
-			return HttpResponse('<br>File not found')
-		# Set the mime type
-		mime_type, _ = mimetypes.guess_type(filepath)
-		# Set the return value of the HttpResponse
-		response = HttpResponse(path, content_type=mime_type)
-		# Set the HTTP header for sending to browser
-		response['Content-Disposition'] = "attachment; filename=%s" % filename
-		# Return the response value
-		return response
-	else:
-		# Load the template
+	if not filename:
 		return HttpResponse()
+
+	# Strip all path components — only the bare filename is allowed
+	filename = os.path.basename(filename)
+
+	# Reject names containing suspicious characters
+	if not re.match(r'^[\w\-\.]+$', filename) or filename.startswith('.'):
+		return HttpResponse(status=400)
+
+	PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+	if 'Tree' in filename:
+		allowed_dir = os.path.realpath(os.path.join(PROJECT_ROOT, 'utils/ncbi_taxonomy'))
+	elif 'newick' in filename:
+		allowed_dir = os.path.realpath(os.path.join(PROJECT_ROOT, 'apps/static/assets/img/tmpTrees'))
+	else:
+		return HttpResponse(status=400)
+
+	filepath = os.path.realpath(os.path.join(allowed_dir, filename))
+
+	# Ensure the resolved path stays inside the allowed directory
+	if not filepath.startswith(allowed_dir + os.sep):
+		return HttpResponse(status=403)
+
+	try:
+		path = open(filepath, 'rb')
+	except FileNotFoundError:
+		return HttpResponse('<br>File not found')
+
+	mime_type, _ = mimetypes.guess_type(filepath)
+	response = HttpResponse(path, content_type=mime_type)
+	response['Content-Disposition'] = "attachment; filename=%s" % filename
+	return response

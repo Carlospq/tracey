@@ -1,5 +1,10 @@
 # Claude Code local settings (machine-specific, not for sharing)
 .claude/settings.local.json
+CLAUDE.md
+run_server.bat
+
+# Environment variables — contains secrets, never commit
+.env
 
 # Caches
 *pycache*

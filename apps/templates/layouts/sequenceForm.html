@@ -256,21 +256,14 @@
 		}
    }
    function searchOpen() {
-       var search = $('#id_taxonomy').val()
-       var data = {
-           search: search
-       };
+       var search = $('#id_taxonomy').val();
        $.ajax({
            url: '/search.json',
-           data: data,
-           dataType: 'jsonp',
-           jsonp: 'callback',
-           jsonpCallback: 'searchResult'
-       });
-   }
-   function searchResult(data) {
-       $( "#id_taxonomy" ).autocomplete ({
-           source: data
+           data: { search: search },
+           dataType: 'json',
+           success: function(data) {
+               $('#id_taxonomy').autocomplete({ source: data });
+           }
        });
    }
 </script>
@@ -498,6 +491,7 @@
 								<td class="tdquestion"> </td>
 								<td class="tdfield" style="word-wrap: break-word; word-break: break-word;">
 {#									<img src="data:image/png;base64,{{ layout }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; margin-bottom: 10px">#}
+									{# safe: Plotly HTML generated server-side by mark_safe(fig.to_html()); no user input in plot labels #}
 									<div>{{ layout|safe }}</div>
 								</td>
 							</tr>
@@ -741,6 +735,7 @@
 												</td>
                                                 <td class="td-data">
 {#													<img src="data:image/png;base64,{{ verifymotifs|get_item:m|get_item:'plot' }}" alt="" style="width: 100%; display: block; margin-left: auto; margin-right: auto; padding-bottom: 20px;">#}
+													{# safe: Plotly HTML from mark_safe(fig.to_html()); labels are HMM profile names from DB, not user input #}
 													<div>{{ verifymotifs|get_item:m|get_item:'plot'|safe }}</div>
 												</td>
                                             </tr>
@@ -872,6 +867,7 @@
 
 												</td>
                                                 <td class="td-data">
+													{# safe: Plotly HTML from mark_safe(fig.to_html()); labels are domain/motif names from DB, not user input #}
 													<div>{{ motifs|get_item:m|get_item:'plot'|safe }}</div>
 												</td>
                                             </tr>
