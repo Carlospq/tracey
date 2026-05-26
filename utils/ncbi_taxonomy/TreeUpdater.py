@@ -1,3 +1,4 @@
+import os
 import requests, io, subprocess, sys, re
 from bs4 import BeautifulSoup
 
@@ -100,7 +101,8 @@ def update_tracey_tree(taxa = taxa):
 
     # Plotting Tree with R script
     print('Plotting Tree...')
-    bashCommand = ['Rscript', 'utils/ncbi_taxonomy/plotPhyloTree.R']
+    rscript = os.getenv('RSCRIPT_PATH', 'Rscript')
+    bashCommand = [rscript, 'utils/ncbi_taxonomy/plotPhyloTree.R']
     subprocess.run(bashCommand)
 
     return "\nUpdate completed."

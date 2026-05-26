@@ -1482,7 +1482,8 @@ def plotTrees(request):
 		fo.write(str(tree))
 
 	# Plotting Tree with R script
-	bashCommand = ['Rscript', 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + values
+	rscript = os.getenv('RSCRIPT_PATH', 'Rscript')
+	bashCommand = [rscript, 'utils/phylogeneticTrees/plotTree.R', treeFileName, colname] + values
 	subprocess.run(bashCommand)
 
 	return render(request, 'home/treeplot.html', {'treeplot': treeFileName+'.png', 'treeNewick': treeFileName})
