@@ -46,7 +46,9 @@ from utils.traceySequenceUpdater import traceySequencesUpdater
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
 from utils.motifPredictor.predictor import *
 
-from apps.templates.menus.query_sequences import *
+from apps.templates.menus.query_sequences import menu as menu_public, get_keys_recursively, get_keys_level_recursively, get_dict
+from apps.templates.menus.query_sequences_full import menu as menu_full
+from django.core.cache import cache
 
 from django import template
 
@@ -55,7 +57,36 @@ matplotlib.use('agg')
 
 import hashlib
 
+_taxonomy_df = None
+
+def get_taxonomy_df():
+    global _taxonomy_df
+    if _taxonomy_df is None:
+        _taxonomy_df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+    return _taxonomy_df
+
+
+def get_alphafold_url(sequence):
+    seq_md5 = md5_from_seq(sequence)
+    cache_key = f'alphafold_{seq_md5}'
+    result = cache.get(cache_key)
+    if result is None:
+        try:
+            fetch3d = urllib.request.urlopen(
+                f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seq_md5}&type=md5',
+                timeout=10
+            ).read().decode('utf8')
+            result = json.loads(fetch3d)['structures'][0]['summary']['model_url']
+        except (urllib.error.HTTPError, urllib.error.URLError, KeyError, IndexError):
+            result = False
+        cache.set(cache_key, result, timeout=86400)
+    return result
+
 ### FUNCTIONS ###
+def get_menu(request):
+	return menu_full if request.user.is_staff else menu_public
+
+
 def get_children(model, parent, parent_id, child_parent_id, children=[], search_type='iexact'):
 	variable_column = child_parent_id
 	filter = variable_column + '__' + search_type
@@ -74,7 +105,9 @@ def get_children(model, parent, parent_id, child_parent_id, children=[], search_
 
 
 
-def get_sequences(query, verify=False):
+def get_sequences(query, verify=False, menu=None):
+	if menu is None:
+		menu = menu_public
 
 	print(query)
 	# Check if at least Domain or ProteinLayout are provided
@@ -158,7 +191,7 @@ def get_sequences(query, verify=False):
 		query['taxonomy'] = list(filter(None, query['taxonomy'])) #remove empty values in list
 		taxonomy_name = [query['taxonomy'][-1]]
 
-		df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+		df = get_taxonomy_df()
 		reducedTaxonomyIDs = reducedTRACEYtaxonomies_ncbiIDs[taxonomy_name[0]]
 		taxonomy_names = [ x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyIDs)]
 		ncbi_taxonomy_ids = []
@@ -436,17 +469,7 @@ def get_pdb_data(sequence):
 		# You can add more if needed
 	}
 
-	try:
-		seqmd5 = md5_from_seq(sequence)
-		fetch3d = urllib.request.urlopen(
-			f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5',
-			timeout=10
-		).read().decode('utf8')
-		fetch3d = json.loads(fetch3d)
-		pdb_url = fetch3d['structures'][0]['summary']['model_url']
-	except (urllib.error.HTTPError, urllib.error.URLError):
-		pdb_url = None
-
+	pdb_url = get_alphafold_url(sequence)
 	if not pdb_url:
 		return {}
 
@@ -563,12 +586,16 @@ def load_taxonomy_rank(request):
 		# taxonomy_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(taxonomyparent_id=parentrank_id)] )))
 		taxonomy_list = getInnerDict(rank)
 	else:
-		taxonomy_list = sorted(list(set( [ x.scientificname for x in Taxonomies.objects.filter(taxonomyrank=rank)] )))
+		cache_key = f'taxonomy_rank_{rank}'
+		taxonomy_list = cache.get(cache_key)
+		if taxonomy_list is None:
+			taxonomy_list = sorted(list(set([x.scientificname for x in Taxonomies.objects.filter(taxonomyrank=rank)])))
+			cache.set(cache_key, taxonomy_list, timeout=21600)
 	return render(request, 'home/query-sequences-family-taxonomyRank.html', {'taxonomy_list': taxonomy_list})
 
 
 def load_species(request):
-	df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+	df = get_taxonomy_df()
 	ranks = [x for x in request.GET.getlist('taxonomy_list[]') if x != ''][-1]
 
 	reducedTaxonomyID = reducedTRACEYtaxonomies_ncbiIDs[ranks]
@@ -598,7 +625,7 @@ def load_domains(request):
 		if request.GET.get('proteinlayout').upper() == "ALL":
 			domains = ['']
 		else:
-			domains = [d for d in menu[request.GET.get('proteinlayout')]]
+			domains = [d for d in get_menu(request)[request.GET.get('proteinlayout')]]
 	else:
 		domains = [x.domainname for x in Domains.objects.all()]
 	return render(request, 'home/query-sequences-family-domains.html', {'domains': domains})
@@ -607,9 +634,9 @@ def load_domaingroups_rank1(request):
 	proteinlayout = request.GET.get('proteinlayout')
 	domainname = request.GET.get('domainname')
 	if proteinlayout and domainname:
-		domaingroups_rank_list = [dg_name for dg_name in menu[proteinlayout][domainname]]
+		domaingroups_rank_list = [dg_name for dg_name in get_menu(request)[proteinlayout][domainname]]
 	elif domainname:
-		domaingroups_rank_list = [dg_name for dg_name in menu[proteinlayout][domainname]]
+		domaingroups_rank_list = [dg_name for dg_name in get_menu(request)[proteinlayout][domainname]]
 	else:
 		domaingroups_rank_list = []
 
@@ -646,7 +673,10 @@ def load_sequenceshortnames(request):
 	#
 	# sequences = Sequences.objects.filter(sequence_id__in=sequence_ids)
 	# shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomy_id__in=sequences.values('taxonomy_id')) ]) ))
-	shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomyrank='species')])))
+	shortnames = cache.get('taxonomy_species_shortnames')
+	if shortnames is None:
+		shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomyrank='species')])))
+		cache.set('taxonomy_species_shortnames', shortnames, timeout=21600)
 	return render(request, 'home/query-sequences-family-sequenceshortnames.html', {'shortnames': shortnames})
 
 
@@ -658,12 +688,12 @@ def load_domaingroups_rank2(request):
 		proteinlayout = request.GET.get('proteinlayout')
 		domainname = request.GET.get('domainname')
 		domaingroup_rank = request.GET.get('domaingroup_rank')
-		children_list = get_keys_level_recursively(menu[proteinlayout][domainname][domaingroup_rank])
+		children_list = get_keys_level_recursively(get_menu(request)[proteinlayout][domainname][domaingroup_rank])
 	return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
 
 def load_queryverifysequences(request):
-	sequences = get_sequences(dict(request.POST), verify = True)
+	sequences = get_sequences(dict(request.POST), verify=True, menu=get_menu(request))
 	if 'error' in sequences:
 		context = {'sequences': '',
 				   'error': sequences['error']}
@@ -672,12 +702,21 @@ def load_queryverifysequences(request):
 		context['status_values'] = ['crystal structure', 'dead', 'ignore', 'live', 'replaced', 'replaced NCBI', 'suppressed', 'unknown']
 
 	if len(context['sequences']) > 0:
-		speciesname = {}
-		motifs = {}
+		seqs = context['sequences']
+		sequence_ids = seqs.values_list('sequence_id', flat=True)
 
-		for seq in context['sequences']:
-			speciesname[seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
-			motifs[seq.sequence_id] = ", ".join( set([x.motifname for x in Motifs.objects.filter(sequence_id=seq.sequence_id)] + [x.motifname for x in Verifymotifs.objects.filter(sequence_id=seq.sequence_id)]) )
+		# 1 query for all species names
+		taxonomy_ids = seqs.values_list('taxonomy_id', flat=True)
+		taxonomy_names = {t.taxonomy_id: t.scientificname for t in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids)}
+		speciesname = {seq.sequence_id: taxonomy_names.get(seq.taxonomy_id, '') for seq in seqs}
+
+		# 2 queries for all motif names (Motifs + Verifymotifs)
+		motif_map = {}
+		for m in Motifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'motifname'):
+			motif_map.setdefault(m['sequence_id'], set()).add(m['motifname'])
+		for m in Verifymotifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'motifname'):
+			motif_map.setdefault(m['sequence_id'], set()).add(m['motifname'])
+		motifs = {sid: ", ".join(names) for sid, names in motif_map.items()}
 
 		context['speciesname'] = speciesname
 		context['motifs'] = motifs
@@ -700,7 +739,7 @@ def QuerySequences(request):
 
 	## GET QUERIES ##
 	# proteinLayoutsList = sorted([x.proteinlayoutname for x in Proteinlayouts.objects.all()])
-	proteinLayoutsList = sorted([pfam for pfam in menu])
+	proteinLayoutsList = sorted([pfam for pfam in get_menu(request)])
 	domainsList = sorted([x.domainname for x in Domains.objects.filter(domainname__in=["SNARE", "Habc", "LGL"])])
 
 	SNAREdomainID = Domains.objects.get(domainname = "SNARE").domain_id
@@ -754,7 +793,7 @@ def QuerySequences(request):
 def QuerySequencesResults(request):
 	segment = request.path.split("?")[0].split('/')[-1]
 	context = dict(request.GET)
-	sequences = get_sequences(context)
+	sequences = get_sequences(context, menu=get_menu(request))
 
 	if len(sequences) == 0 or 'error' in sequences:
 		if 'error' in sequences:
@@ -764,13 +803,21 @@ def QuerySequencesResults(request):
 			request.session['error'] = 'This query returns 0 sequences. Please select different options.'
 			return redirect('query-sequences')
 
-	speciesname = {}
-	for seq in sequences:
-		speciesname[seq.sequence_id] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id = seq.taxonomy_id)][0]
+	# 1 query for all species names instead of 1 per sequence
+	taxonomy_ids = sequences.values_list('taxonomy_id', flat=True)
+	speciesname = {t.taxonomy_id: t.scientificname for t in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids)}
+	speciesname = {seq.sequence_id: speciesname.get(seq.taxonomy_id, '') for seq in sequences}
 
+	# 2 queries for all motif names instead of N*(1+M) queries
+	sequence_ids = sequences.values_list('sequence_id', flat=True)
+	all_motifs = Motifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'domaingroup_id')
+	domaingroup_ids = set(m['domaingroup_id'] for m in all_motifs)
+	domaingroup_names = {d.domaingroup_id: d.domaingroupname for d in Domaingroups.objects.filter(domaingroup_id__in=domaingroup_ids)}
 	motifnames = {}
-	for seq in sequences:
-		motifnames[seq.sequence_id] = ", ".join(sorted(list(set([Domaingroups.objects.get(domaingroup_id=x.domaingroup_id).domaingroupname for x in seq.motifs_set.all()]))))
+	for m in all_motifs:
+		motifnames.setdefault(m['sequence_id'], set()).add(domaingroup_names.get(m['domaingroup_id'], ''))
+	motifnames = {sid: ", ".join(sorted(names)) for sid, names in motifnames.items()}
+	motifnames = {seq.sequence_id: motifnames.get(seq.sequence_id, '') for seq in sequences}
 
 	context["sequences"] = sequences
 	context["speciesname"] = speciesname
@@ -963,13 +1010,7 @@ def QuerySequences3dViewer(request, sequence_id):
 		context['log'] = 'Seqence ID %s not found in TRACEY'%(sequence_id)
 		return render(request, 'home/query-sequences-details.html', context)
 
-	seqmd5 = md5_from_seq(context['sequence'].sequence)
-	try:
-		fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
-		fetch3d = json.loads(fetch3d)
-		context["fetch3d"] = fetch3d['structures'][0]['summary']['model_url']
-	except urllib.error.HTTPError:
-		context["fetch3d"] = False
+	context["fetch3d"] = get_alphafold_url(context['sequence'].sequence)
 
 	motifs = context['sequence'].motifs_set.all()
 	motif_coords = {}
@@ -1000,15 +1041,8 @@ def QuerySequencesDetails(request, sequence_id):
 		context["pdb"] = m.group(1)
 		context["pdb_name"] = m.group(2)
 
-	# md5sum of sequence to fetch alpha-fold pdb
-	seqmd5 = md5_from_seq(context['sequence'].sequence)
-	try:
-		# fetch url to alphaFold .cif
-		fetch3d = urllib.request.urlopen(f'https://alphafold.ebi.ac.uk/api/sequence/summary?id={seqmd5}&type=md5').read().decode('utf8')
-		fetch3d = json.loads(fetch3d)
-		context["fetch3d"] = fetch3d['structures'][0]['summary']['model_url']
-
-		# Get motifs coordinates to color alpha-fold structure
+	context["fetch3d"] = get_alphafold_url(context['sequence'].sequence)
+	if context["fetch3d"]:
 		motifs = context['sequence'].motifs_set.all()
 		motif_coords = {}
 		for m in motifs:
@@ -1016,9 +1050,6 @@ def QuerySequencesDetails(request, sequence_id):
 														   "end": m.get_real_stopposition(),
 														   "domain": m.domaingroup.domain.domainname}
 		context["motif_coords"] = motif_coords
-
-	except urllib.error.HTTPError:
-		context["fetch3d"] = False
 
 	context["layout"] = build_domain_plot(len(context['sequence'].sequence), context['sequence'].motifs_set.all())
 	motifs  = Motifs.objects.filter(sequence_id = context['sequence'].sequence_id).order_by('startposition')
@@ -1060,7 +1091,7 @@ def DetailsSequencesFastaFormat(request, sequence_id):
 def QueryMotifsView(request):
 	segment = request.path.split('/')[-1]
 	context = {"segment": segment,
-			   "proteinLayoutsList": sorted([pfam for pfam in menu]),
+			   "proteinLayoutsList": sorted([pfam for pfam in get_menu(request)]),
 			   "domainList": [],
 			  }
 
@@ -1109,7 +1140,9 @@ def getMotifPlot_fromPyhammer(hit, sequence, evalcutoff=1e-10):
 	return uri
 
 
-def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgroup="", evalcutoff=1e-10):
+def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgroup="", evalcutoff=1e-10, menu=None):
+	if menu is None:
+		menu = menu_public
 
 	hits_d = {}
 
@@ -1222,7 +1255,7 @@ def QueryMotifsResultsView(request):
 	segment = request.path.split('/')[-1]
 	context["segment"] = segment
 
-	context["proteinLayoutsList"] = sorted([pfam for pfam in menu])
+	context["proteinLayoutsList"] = sorted([pfam for pfam in get_menu(request)])
 	context["domainList"] = []
 	context["domaingroupList"] = []
 	context["domainsubgroupList"] = []
@@ -1254,7 +1287,8 @@ def QueryMotifsResultsView(request):
 										  domain=context['domain'][0],
 										  domaingroup=context['domaingroup'][0],
 										  domainsubgroup=context['domainsubgroup'][0].replace("-", ""),
-										  evalcutoff=float('1e-' + context['evalcutoff'][0] if 'evalcutoff' in context else '1e-10'))
+										  evalcutoff=float('1e-' + context['evalcutoff'][0] if 'evalcutoff' in context else '1e-10'),
+										  menu=get_menu(request))
 	else:
 		context['error_seq'] = ''
 
@@ -1414,7 +1448,7 @@ def plotTrees(request):
 
 
 	# Start new plot
-	df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+	df = get_taxonomy_df()
 	data = dict(request.GET)
 	if not data:
 		return render(request, 'home/treeplot.html', {'error': 'At least one taxonomy must be selected to plot a tree.'})
@@ -1515,7 +1549,7 @@ def QueryInsertView(request):
 				new_form = form.save(commit=False)
 				new_form.changelog = form.cleaned_data['changelog']
 				new_form.save()
-				hits = motifScan(form.cleaned_data['sequence'], ["ALL"])
+				hits = motifScan(form.cleaned_data['sequence'], ["ALL"], menu=get_menu(request))
 				saveVerifyMotifs(new_form.pk, hits)
 				return HttpResponseRedirect(reverse('query-verify', args=(new_form.pk,)))
 			except:
@@ -1727,7 +1761,7 @@ def QueryVerifyView(request, sequence_id):
 	segment = request.path.split('/')[-2]
 	context = {'segment': segment}
 	context['sequence_id'] = sequence_id
-	context['proteinLayoutsList'] = sorted([pfam for pfam in menu])
+	context['proteinLayoutsList'] = sorted([pfam for pfam in get_menu(request)])
 
 	try:
 		seq = Sequences.objects.get(pk=sequence_id)
@@ -1836,7 +1870,7 @@ def QueryVerifyView(request, sequence_id):
 				form.data['domainsubgroup'] = form.data['domainsubgroup'] if 'domainsubgroup' in form.data else ''
 				form.data._mutable = mutable_
 
-				hits_d = motifScan(form.data['sequence'], proteinlayout = form.data['proteinlayout'], domain = form.data['domain'], domaingroup=form.data['domaingroups'], domainsubgroup = form.data['domainsubgroups'], evalcutoff=evalcutoff)
+				hits_d = motifScan(form.data['sequence'], proteinlayout=form.data['proteinlayout'], domain=form.data['domain'], domaingroup=form.data['domaingroups'], domainsubgroup=form.data['domainsubgroups'], evalcutoff=evalcutoff, menu=get_menu(request))
 				if 'error' in hits_d:
 					context['scanerror'] = hits_d['error']
 				else:

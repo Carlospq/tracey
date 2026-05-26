@@ -238,6 +238,12 @@ CSP_OBJECT_SRC = ("'none'",)        # No Flash/plugins
 CSP_BASE_URI = ("'self'",)          # Prevents base-tag injection attacks
 
 # Permissions Policy (django-permissions-policy 4.x)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
 PERMISSIONS_POLICY = {
     "camera": [],
     "microphone": [],
