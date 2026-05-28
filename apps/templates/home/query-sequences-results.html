@@ -131,105 +131,42 @@
         {#        wrapper.style.height = height + "px";#}
         {#    }#}
         {# }#}
-        function sortTable(coln, el) {
-            var elementsUp = document.getElementsByClassName("sortbtnUp")
-            var elementsDown = document.getElementsByClassName("sortbtnDown")
-            elementsUp.forEach(function(element) {
-                $(element).removeClass('selected')
+        function sortByColumn(coln, el, ascending) {
+            document.querySelectorAll('.sortbtnUp, .sortbtnDown').forEach(function(btn) {
+                btn.classList.remove('selected');
             });
-            elementsDown.forEach(function(element) {
-                $(element).removeClass('selected')
-             });
-            $(el).addClass('selected')
+            el.classList.add('selected');
 
-            var table, rows, switching, i, x, y, shouldSwitch;
-            table = document.getElementById("myTable");
-            button = document.getElementById("myTable");
-            switching = true;
-            /*Make a loop that will continue until
-            no switching has been done:*/
-            while (switching) {
-                //start by saying: no switching is done:
-                switching = false;
-                rows = table.rows;
-                /*Loop through all table rows (except the
-                first, which contains table headers):*/
-                for (i = 0; i < (rows.length - 1); i++) {
-                    //start by saying there should be no switching:
-                    shouldSwitch = false;
-                    /*Get the two elements you want to compare,
-                    one from current row and one from the next:*/
-                    if (coln == 1) {
-                        x = rows[i].getElementsByTagName("TD")[coln].firstChild;
-                        y = rows[i + 1].getElementsByTagName("TD")[coln].firstChild;
-                    } else {
-                        x = rows[i].getElementsByTagName("TD")[coln];
-                        y = rows[i + 1].getElementsByTagName("TD")[coln];
-                    }
-                    //check if the two rows should switch place:
-                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                        //if so, mark as a switch and break the loop:
-                        shouldSwitch = true;
-                        break;
-                    }
+            var table = document.getElementById('myTable');
+            var tbody = table.tBodies[0];
+            var rows = Array.from(tbody.rows);
+
+            rows.sort(function(a, b) {
+                var tdA = a.getElementsByTagName('TD')[coln];
+                var tdB = b.getElementsByTagName('TD')[coln];
+                var keyA, keyB;
+                if (coln === 1) {
+                    keyA = tdA.firstChild ? (tdA.firstChild.innerHTML || '') : '';
+                    keyB = tdB.firstChild ? (tdB.firstChild.innerHTML || '') : '';
+                } else {
+                    keyA = tdA.innerHTML || '';
+                    keyB = tdB.innerHTML || '';
                 }
-                if (shouldSwitch) {
-                    /*If a switch has been marked, make the switch
-                    and mark that a switch has been done:*/
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                }
-            }
-        }
-        function sortDown(coln, el) {
-            var elementsUp = document.getElementsByClassName("sortbtnUp")
-            var elementsDown = document.getElementsByClassName("sortbtnDown")
-            elementsUp.forEach(function(element) {
-                $(element).removeClass('selected')
+                keyA = keyA.toLowerCase().trim();
+                keyB = keyB.toLowerCase().trim();
+                if (ascending) return keyA > keyB ? 1 : keyA < keyB ? -1 : 0;
+                else           return keyA < keyB ? 1 : keyA > keyB ? -1 : 0;
             });
-            elementsDown.forEach(function(element) {
-                $(element).removeClass('selected')
-             });
-            $(el).addClass('selected')
 
-            var table, rows, switching, i, x, y, shouldSwitch;
-            table = document.getElementById("myTable");
-            button = document.getElementById("myTable");
-            switching = true;
-            /*Make a loop that will continue until
-            no switching has been done:*/
-            while (switching) {
-                //start by saying: no switching is done:
-                switching = false;
-                rows = table.rows;
-                /*Loop through all table rows (except the
-                first, which contains table headers):*/
-                for (i = 0; i < (rows.length - 1); i++) {
-                    //start by saying there should be no switching:
-                    shouldSwitch = false;
-                    /*Get the two elements you want to compare,
-                    one from current row and one from the next:*/
-                    if (coln == 1) {
-                        x = rows[i].getElementsByTagName("TD")[coln].firstChild;
-                        y = rows[i + 1].getElementsByTagName("TD")[coln].firstChild;
-                    } else {
-                        x = rows[i].getElementsByTagName("TD")[coln];
-                        y = rows[i + 1].getElementsByTagName("TD")[coln];
-                    }
-                    //check if the two rows should switch place:
-                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                        //if so, mark as a switch and break the loop:
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-                if (shouldSwitch) {
-                    /*If a switch has been marked, make the switch
-                    and mark that a switch has been done:*/
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                }
-            }
+            var fragment = document.createDocumentFragment();
+            rows.forEach(function(row) {
+                row.style.display = '';
+                fragment.appendChild(row);
+            });
+            tbody.appendChild(fragment);
+
+            var lengthSelect = document.getElementById('dt-length-0');
+            if (lengthSelect) changeLength(lengthSelect.value);
         }
         function toggle(source) {
             checkboxes = document.getElementsByName('checkbox');
@@ -291,12 +228,11 @@
 					pager.empty();
 					$('<p style="margin-bottom: auto; margin-top: auto; padding-left: 10px">Page: </p>').appendTo(pager);
 					for (var page = 0; page < numPages; page++) {
-						$('<span class="page-number"></span>').text(page + 1).bind('click', {
+						$('<span class="page-number"></span>').text(page + 1).on('click', {
 							newPage: page
 						}, function(event) {
 							currentPage = event.data['newPage'];
 							$table.trigger('repaginate');
-							$(this).addClass('active').siblings().removeClass('active');
 
                             // Remove class 'active' from both pagers
 							$topPager.find('.page-number').removeClass('active');
@@ -310,6 +246,10 @@
 					}
 
                 }
+
+				// Mark page 1 as active after building pagers
+				$topPager.find('.page-number').first().addClass('active');
+				$bottomPager.find('.page-number').first().addClass('active');
 
 			});
         }
@@ -338,36 +278,36 @@
                         <th class="border-bottom" scope="col" name="1" style="width:9%; text-align: center; position: relative">
                             <div class="dt-column-title" role="button">Short Name</div>
                             <div class="dt-column-order">
-                                <span class="sortbtnUp" onclick="sortTable(1, this)"></span>
-                                <span class="sortbtnDown" onclick="sortDown(1, this)"></span>
+                                <span class="sortbtnUp" onclick="sortByColumn(1, this, true)"></span>
+                                <span class="sortbtnDown" onclick="sortByColumn(1, this, false)"></span>
                             </div>
                         </th>
 						<th class="border-bottom" scope="col" style="width:5%; text-align: center; position: relative" id="2" >
                             <div class="dt-column-title" role="button">Aliases</div>
                             <div class="dt-column-order">
-                                <span class="sortbtnUp" onclick="sortTable(2, this)"></span>
-                                <span class="sortbtnDown" onclick="sortDown(2, this)"></span>
+                                <span class="sortbtnUp" onclick="sortByColumn(2, this, true)"></span>
+                                <span class="sortbtnDown" onclick="sortByColumn(2, this, false)"></span>
                             </div>
                         </th>
                         <th class="border-bottom" scope="col" style="width:9%; text-align: center; position: relative" id="3" >
                             <div class="dt-column-title" role="button">Species</div>
                             <div class="dt-column-order">
-                                <span class="sortbtnUp" onclick="sortTable(3, this)"></span>
-                                <span class="sortbtnDown" onclick="sortDown(3, this)"></span>
+                                <span class="sortbtnUp" onclick="sortByColumn(3, this, true)"></span>
+                                <span class="sortbtnDown" onclick="sortByColumn(3, this, false)"></span>
                             </div>
                          </th>
                         <th class="border-bottom" scope="col" style="width:7%; text-align: center; position: relative" id="4">
                             <div class="dt-column-title" role="button">Motifs</div>
                             <div class="dt-column-order">
-                                <span class="sortbtnUp" onclick="sortTable(4, this)"></span>
-                                <span class="sortbtnDown" onclick="sortDown(4, this)"></span>
+                                <span class="sortbtnUp" onclick="sortByColumn(4, this, true)"></span>
+                                <span class="sortbtnDown" onclick="sortByColumn(4, this, false)"></span>
                             </div>
                         </th>
                         <th class="border-bottom" scope="col" style="width:8%; text-align: center; position: relative" id="5">
                             <div class="dt-column-title" role="button">Source database</div>
                             <div class="dt-column-order">
-                                <span class="sortbtnUp" onclick="sortTable(5, this)"></span>
-                                <span class="sortbtnDown" onclick="sortDown(5, this)"></span>
+                                <span class="sortbtnUp" onclick="sortByColumn(5, this, true)"></span>
+                                <span class="sortbtnDown" onclick="sortByColumn(5, this, false)"></span>
                             </div>
                         </th>
                         <th class="border-bottom" scope="col" style="width:30%; text-align: center;" id="5">Foreign Annotation</th>

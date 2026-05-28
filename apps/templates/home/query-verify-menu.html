@@ -103,6 +103,36 @@
           0% { transform: rotate(0deg); }
           100% { transform: rotate(720deg); }
         }
+        .dt-column-title {
+            display: inline-block;
+        }
+        .dt-column-order {
+            display: inline-block;
+            color: white;
+            width: 12px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .sortbtnUp:before {
+            content: "▲";
+            color: white;
+            opacity: 0.6;
+            line-height: 9px;
+            font-size: 0.8em;
+            bottom: 55%;
+            position: absolute;
+        }
+        .sortbtnDown:after {
+            content: "▼";
+            color: white;
+            opacity: 0.6;
+            line-height: 9px;
+            font-size: 0.8em;
+            top: 55%;
+            position: absolute;
+        }
+        .sortbtnUp:hover:before, .sortbtnDown:hover:after { opacity: 1; }
+        .sortbtnUp.selected:before, .sortbtnDown.selected:after { opacity: 1; }
     </style>
     <script type="text/javascript">
         function makeTableScroll() {
@@ -195,14 +225,14 @@
 
 									<!-- Shortname -->
 									<div class="formrow">
-										<div class="formcell1"><label for="{{ form.shortname.id_for_label }}">Shortname</label></div>
+										<div class="formcell1"><label for="shortname">Shortname</label></div>
 										<div class="formcell2">
-											<select name="shortname" id="shortname">
-												<option value=""> </option>
+											<input type="text" name="shortname" id="shortname" list="shortname-datalist" style="width: 100%" placeholder="Type to search..." autocomplete="off">
+											<datalist id="shortname-datalist">
 												{% for val in shortnames %}
-													<option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val }} </option>
+													<option value="{{ val }}">
 												{% endfor %}
-											</select>
+											</datalist>
 										</div>
 									</div>
 
@@ -283,58 +313,67 @@
                             <table class="tableHeader border-0 table-flush" style="width:100%; height: 45px; border-radius: 10px 10px 0px 0px; background-color: #1F2937; color: white; table-layout: fixed; border-collapse: collapse; word-wrap: break-word; word-break: break-word;">
                                 <thead class="thead-dark" style="width:100%">
                                 <tr>
-                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Short Name
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(0)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(0)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">Short Name</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(0, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(0, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Species name
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(1)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(1)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">Species name</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(1, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(1, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Motifs
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(2)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">Motifs</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(2, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(2, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center;"> Status
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(3)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 9%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">Status</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(3, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(3, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 7%; text-align: center;"> #VerifyMotifs
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(4)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 7%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">#VerifyMotifs</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(4, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(4, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 7%; text-align: center;"> #Motifs
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(5)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(5)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 7%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">#Motifs</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(5, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(5, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 5%; text-align: center; white-space: nowrap;" id="2"> Private
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(6)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(6)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 5%; text-align: center; position: relative; white-space: nowrap;">
+                                        <div class="dt-column-title">Private</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(6, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(6, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center;" id="3"> dbxRef
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(7)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(7)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 10%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">dbxRef</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(7, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(7, this, false)"></span>
                                         </div>
                                     </th>
-                                    <th class="border-bottom" scope="col" style="width: 15%; text-align: center;" id="4"> Source database
-                                        <div style="display: block">
-                                        <button type="button" name="button" onclick="sortTable(8)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-up' style='font-size:10px; vertical-align: top;'></i> </button>
-                                        <button type="button" name="button" onclick="sortDown(8)" style="height: 15px; vertical-align: middle;"> <i class='fas fa-angle-down' style='font-size:10px; vertical-align: top;'></i> </button>
+                                    <th class="border-bottom" scope="col" style="width: 15%; text-align: center; position: relative;">
+                                        <div class="dt-column-title">Source database</div>
+                                        <div class="dt-column-order">
+                                            <span class="sortbtnUp" onclick="sortByColumn(8, this, true)"></span>
+                                            <span class="sortbtnDown" onclick="sortByColumn(8, this, false)"></span>
                                         </div>
                                     </th>
                                     <th class="border-bottom" scope="col" style="width: 20%; text-align: center;" id="5"> Foreign Annotation</th>
@@ -343,10 +382,7 @@
                             </table>
                         </div>
                         <!-- List of matching sequences | body -->
-                        <div class="scrollingTable mb-3" style="border: 1px solid lightgrey;">
-                            <table class="hoverTable sortable" id="resultsTable">
-                            </table>
-                        </div>
+                        <div id="resultsContainer"></div>
                     </div>
 
                 </div>
@@ -359,6 +395,16 @@
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-4.0.0.min.js"></script>
 <script>
+
+    function updateShortnameDatalist(optionsHtml) {
+        var temp = document.createElement('select');
+        temp.innerHTML = optionsHtml;
+        var datalist = document.getElementById('shortname-datalist');
+        datalist.innerHTML = Array.from(temp.options)
+            .filter(function(o) { return o.value; })
+            .map(function(o) { return '<option value="' + o.value + '">'; })
+            .join('');
+    }
 
     // Pues a verlas venir...
     $(document).ready(function() {
@@ -472,7 +518,7 @@
 				action: 'post'
 			},
 			success: function(data){
-			  $("#resultsTable").html(data);
+			  $("#resultsContainer").html(data);
 			}
 		});
 
@@ -611,7 +657,7 @@
 				'verifymotifs': 'true'
             },
             success: function (data) {
-                $("#shortname").html(data);
+                updateShortnameDatalist(data);
             }
         });
     });

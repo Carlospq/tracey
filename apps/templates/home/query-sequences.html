@@ -125,15 +125,15 @@
 
 								<!-- Shortname -->
 								<div class="mb-3 formrow">
-									<div class="formcell1"><label for="{{ form.shortname.id_for_label }}">Shortname</label></div>
+									<div class="formcell1"><label for="shortname">Shortname</label></div>
 									<div class="formcell2"><a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup"> ?</a></div>
 									<div class="formcell3">
-										<select style="width: 100%" name="shortname" id="shortname" >
-											<option value=""> </option>
+										<input type="text" name="shortname" id="shortname" list="shortname-datalist" style="width: 100%" placeholder="Type to search..." autocomplete="off">
+										<datalist id="shortname-datalist">
 											{% for val in shortnames %}
-												<option value= "{{ val }}"> {{ val }} </option>
+												<option value="{{ val }}">
 											{% endfor %}
-										</select>
+										</datalist>
 									</div>
 								</div>
 
@@ -288,6 +288,16 @@
         });
     }
 
+    function updateShortnameDatalist(optionsHtml) {
+        var temp = document.createElement('select');
+        temp.innerHTML = optionsHtml;
+        var datalist = document.getElementById('shortname-datalist');
+        datalist.innerHTML = Array.from(temp.options)
+            .filter(function(o) { return o.value; })
+            .map(function(o) { return '<option value="' + o.value + '">'; })
+            .join('');
+    }
+
 	// Change in Protein Layout
 	$("#proteinlayout").change(function () {
         var urldomains = $("#FamilyForm").attr("data-load-domains-url");
@@ -327,7 +337,7 @@
 				'proteinlayout': proteinlayout
 			},
 			success: function (data) {
-				$("#shortname").html(data);
+				updateShortnameDatalist(data);
 			}
 		});
     })
@@ -360,7 +370,7 @@
                 'domainname': domainname
 			},
 			success: function (data) {
-                $("#shortname").html(data);
+                updateShortnameDatalist(data);
             }
         });
     });
@@ -394,7 +404,7 @@
 				'domaingroup_rank': domaingroup_rank
 			},
 			success: function (data) {
-                $("#shortname").html(data);
+                updateShortnameDatalist(data);
             }
         });
     });
@@ -427,7 +437,7 @@
 				'domaingroup': result
 			},
 			success: function (data) {
-                $("#shortname").html(data);
+                updateShortnameDatalist(data);
             }
         });
     }

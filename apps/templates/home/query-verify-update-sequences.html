@@ -6,7 +6,8 @@
 		{% endif %}
 </div>
 {% csrf_token %}
-<table class="hoverTable sortable scrolling" id="resultsTable"  style="height: 100%;" >
+<div class="scrollingTable mb-3" style="border: 1px solid lightgrey;">
+<table class="hoverTable sortable" id="resultsTable">
 		{% for seq in sequences %}
 		<tr class='clickable-row' data-href='/query-verify/{{ seq.sequence_id }}'>
 				<td style="width: 9%;"><a style="color: blue" href="/query-verify/{{ seq.sequence_id }}">{{ seq.sequenceshortname }}</a></td>
@@ -32,6 +33,7 @@
 		</tr>
 		{% endfor %}
 </table>
+</div>
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-4.0.0.min.js"></script>
 <script>
@@ -49,83 +51,41 @@
     {# });#}
 
 		// Sort table
-		function sortTable(coln) {
-				var table, rows, switching, i, x, y, shouldSwitch;
-				table = document.getElementById("resultsTable");
-				switching = true;
+		function sortByColumn(coln, el, ascending) {
+            document.querySelectorAll('.sortbtnUp, .sortbtnDown').forEach(function(btn) {
+                btn.classList.remove('selected');
+            });
+            el.classList.add('selected');
 
-				/*Make a loop that will continue until
-				no switching has been done:*/
-				while (switching) {
-						//start by saying: no switching is done:
-						switching = false;
-						rows = $("#resultsTable tr");
-						/*Loop through all table rows:*/
-						for (i = 0; i < (rows.length - 1); i++) {
-								//start by saying there should be no switching:
-								shouldSwitch = false;
-								/*Get the two elements you want to compare,
-								one from current row and one from the next:*/
-								if (coln == 3) {
-									x = rows[i].getElementsByTagName("SELECT")[0];
-									y = rows[i + 1].getElementsByTagName("SELECT")[0];
-								} else {
-									x = rows[i].getElementsByTagName("TD")[coln];
-									y = rows[i + 1].getElementsByTagName("TD")[coln];
-								}
-								//check if the two rows should switch place:
-								if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-										//if so, mark as a switch and break the loop:
-										shouldSwitch = true;
-										break;
-								}
-						}
-						if (shouldSwitch) {
-								/*If a switch has been marked, make the switch
-								and mark that a switch has been done:*/
-								rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-								switching = true;
-						}
-				}
-		}
-		function sortDown(coln) {
-            var table, rows, switching, i, x, y, shouldSwitch;
-            table = document.getElementById("resultsTable");
-            switching = true;
+            var table = document.getElementById('resultsTable');
+            var tbody = table.tBodies[0];
+            var rows = Array.from(tbody.rows);
 
-            /*Make a loop that will continue until
-            no switching has been done:*/
-            while (switching) {
-                //start by saying: no switching is done:
-                switching = false;
-                rows = $("#resultsTable tr");
-                /*Loop through all table rows:*/
-                for (i = 0; i < (rows.length - 1); i++) {
-                    //start by saying there should be no switching:
-                    shouldSwitch = false;
-                    /*Get the two elements you want to compare,
-                    one from current row and one from the next:*/
-                    if (coln == 3) {
-                        x = rows[i].getElementsByTagName("SELECT")[0];
-                        y = rows[i + 1].getElementsByTagName("SELECT")[0];
-                    } else {
-                        x = rows[i].getElementsByTagName("TD")[coln];
-                        y = rows[i + 1].getElementsByTagName("TD")[coln];
-                    }
-                    //check if the two rows should switch place:
-                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                        //if so, mark as a switch and break the loop:
-                        shouldSwitch = true;
-                        break;
-                    }
+            rows.sort(function(a, b) {
+                var tdA = a.getElementsByTagName('TD')[coln];
+                var tdB = b.getElementsByTagName('TD')[coln];
+                var keyA, keyB;
+                if (coln === 3) {
+                    keyA = tdA.querySelector('select').value || '';
+                    keyB = tdB.querySelector('select').value || '';
+                } else if (coln === 0) {
+                    var aA = tdA.querySelector('a');
+                    var aB = tdB.querySelector('a');
+                    keyA = aA ? aA.innerHTML : (tdA.innerHTML || '');
+                    keyB = aB ? aB.innerHTML : (tdB.innerHTML || '');
+                } else {
+                    keyA = tdA.innerHTML || '';
+                    keyB = tdB.innerHTML || '';
                 }
-                if (shouldSwitch) {
-                    /*If a switch has been marked, make the switch
-                    and mark that a switch has been done:*/
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                }
-            }
+                keyA = keyA.toLowerCase().trim();
+                keyB = keyB.toLowerCase().trim();
+                if (ascending) return keyA > keyB ? 1 : keyA < keyB ? -1 : 0;
+                else           return keyA < keyB ? 1 : keyA > keyB ? -1 : 0;
+            });
+
+            var fragment = document.createDocumentFragment();
+            rows.forEach(function(row) { fragment.appendChild(row); });
+            tbody.appendChild(fragment);
         }
 
 		/*Update sequence status*/
