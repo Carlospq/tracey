@@ -244,7 +244,7 @@ class InsertSequence(ModelForm):
         else:
             try:
                 return Genes.objects.get(ncbigene_id=ncbigene_id)
-            except:
+            except Genes.DoesNotExist:
                 raise ValidationError("NCBI gene ID %s does not exist"%(ncbigene_id))
 
     def clean_replacedby(self):
@@ -263,11 +263,11 @@ class InsertSequence(ModelForm):
     def clean_dbxref(self):
         try:
             dbxref = self.cleaned_data['dbxref']
-        except:
+        except KeyError:
             dbxref = ''
         try:
             sourceDB = self.data['sourcedatabase'][0]
-        except:
+        except (KeyError, IndexError):
             sourceDB = ''
 
         if dbxref == None or dbxref=="":
@@ -291,7 +291,7 @@ class InsertSequence(ModelForm):
         try:
             taxonomy = Taxonomies.objects.get(scientificname=scientificname)
             return taxonomy
-        except:
+        except Taxonomies.DoesNotExist:
             raise ValidationError("Taxonomy '%s' does not exist. Please enter a valid Taxonomy name."%(scientificname))
 
 

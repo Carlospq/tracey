@@ -26,7 +26,15 @@ function searchOpen() {
         data: { search: search },
         dataType: 'json',
         success: function(data) {
-            $('#id_taxonomy').autocomplete({ source: data });
+            var datalist = document.getElementById('id_taxonomy_suggestions');
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = 'id_taxonomy_suggestions';
+                $('#id_taxonomy').attr('list', 'id_taxonomy_suggestions').after(datalist);
+            }
+            datalist.innerHTML = data.map(function(item) {
+                return '<option value="' + item + '">';
+            }).join('');
         }
     });
 }

@@ -123,7 +123,7 @@
                                     <div class="feature-body-main">
                                         <p style="margin-bottom: 15px;">TRACEY taxonomies will be updated with current NCBI information.</p>
                                         <p style="margin-bottom: 15px;">The most recent NCBI taxonomy data will be downloaded and compared against Tracey Taxonomies. New NCBI taxonomies will be created in TRACEY if neceessary.</p>
-                                        <img src="{{ASSETS_ROOT}}/img/images/UpdateTaxonomy.png" style="margin: auto; margin-top: 10px; width: 300px; height: 150px; border-radius: 10px 10px 10px 10px;">
+                                        <img src="{{ASSETS_ROOT}}/img/images/UpdateTaxonomy.png" alt="Update Taxonomy" style="margin: auto; margin-top: 10px; width: 300px; height: 150px; border-radius: 10px 10px 10px 10px;">
                                         <p style="font-size: 13px;"> Check last update results <a href="update_taxonomy_results" target="_blank">here</a></p>
                                     </div>
                                     <div class="feature-body-footer">
@@ -150,7 +150,7 @@
                                     {% csrf_token %}
                                     <div class="feature-body-main">
                                         <p style="margin-bottom: 15px;">Reconstructs tree of life using all taxonomies in TRACEY. This tree will follow the current NCBI phylogeny. It is recomended to update TRACEY taxonomies before running this feature.</p>
-                                        <img src="{{ASSETS_ROOT}}/img/images/treeoflife.png" style="margin: auto; margin-top: 10px; width: 200px; height: 200px; border-radius: 10px 10px 10px 10px;">
+                                        <img src="{{ASSETS_ROOT}}/img/images/treeoflife.png" alt="Tree of life" style="margin: auto; margin-top: 10px; width: 200px; height: 200px; border-radius: 10px 10px 10px 10px;">
                                         <p style="font-size: 13px;"> Download current tree (<a href="{% url 'download_file' 'TRACEY_phylogeneticTree.newick' %}">newick</a>/
                                                                                             <a href="{% url 'download_file' 'TRACEY_phylogeneticTree.pdf' %}">PDF</a>)
                                         </p>
@@ -186,7 +186,7 @@
 										<div class="feature-body-main">
 											<p style="margin-bottom: 15px;">Sequences from TRACEY containing NCBI Id will be updated according to NCBI data.</p>
 											<p style="margin-bottom: 15px;">'Live' sequences without NCBI Id will remain as they are.</p>
-											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
+											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" alt="Update Sequences" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
 											{% if last_sequences_update_end != "Update in progress" %}
 												<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
 											{% endif %}
@@ -250,7 +250,7 @@
 
 <!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
-<script src="{{ ASSETS_ROOT }}/js/jquery-3.3.1.min.js"></script>
+<script src="{{ ASSETS_ROOT }}/js/jquery-4.0.0.min.js"></script>
 <script>
 
     $(document).on('submit','#UpdateTaxonomyForm', function(e){

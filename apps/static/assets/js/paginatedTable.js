@@ -51,7 +51,7 @@ $(document).ready(function(){
             pager.empty();
             $('<p style="margin-bottom: auto; margin-top: auto; padding-left: 10px">Page: </p>').appendTo(pager);
             for (var page = 0; page < numPages; page++) {
-                $('<span class="page-number"></span>').text(page + 1).bind('click', {
+                $('<span class="page-number"></span>').text(page + 1).on('click', {
                     newPage: page
                 }, function(event) {
                     currentPage = event.data['newPage'];
