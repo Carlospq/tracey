@@ -1,0 +1,132 @@
+{# Parameters: m, motif_items, motif_type ("verify"|"motif"), sequence, pdb_url #}
+{% if motif_type == "verify" %}
+<div class="row motif-header-stripe-unverified"></div>
+{% else %}
+<div class="row motif-header-stripe-verified"></div>
+{% endif %}
+<div class="row mb-3 motif-card-body">
+    <div class="row mb-1 motif-card-header">
+        <table class="detailTable">
+            <tr>
+                <td class="td-data" style="width: 5%;">
+                    {% if motif_type == "verify" %}
+                    <select name="verifymotif_id" id="{{ m.verifymotif_id }}" class="select-action">
+                        <option value="-:{{ m.verifymotif_id }}" selected>-</option>
+                        <option value="verify:{{ m.verifymotif_id }}">Verify</option>
+                        <option value="delete:{{ m.verifymotif_id }}">Delete</option>
+                    </select>
+                    {% else %}
+                    <select name="motif_id" id="{{ m.motif_id }}" class="select-action">
+                        <option value="-:{{ m.motif_id }}" selected>-</option>
+                        <option value="unverify:{{ m.motif_id }}">Unverify</option>
+                        <option value="delete:{{ m.motif_id }}">Delete</option>
+                    </select>
+                    {% endif %}
+                </td>
+                <td class="td-data">
+                    <div class="row mb-3 motif-card-inner">
+                        <div class="row mb-1 motif-card-header">
+                            <table class="detailTable">
+                                <tr>
+                                    <td class="td-data"><b>Domain: </b> {{ m.domaingroup.domain.domainname }} </td>
+                                    <td class="td-data"><b>E-value: </b> <a style="pointer-events: none; color: {% if motif_items|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motif_items|get_item:m|get_item:'eValue' }}</a></td>
+                                    <td class="td-data"><b>Hmm-Model/Domaingroup: </b>{{ motif_items|get_item:m|get_item:'domaingroup' }}</td>
+                                    <td class="td-data"><b>Position: </b>{{ m.get_real_startposition }}-{{ m.get_real_stopposition }} (length: {{ m.get_motif_length }})</td>
+                                    <td class="td-data"><b>Functional Name: </b>{{ motif_items|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+                                </tr>
+                            </table>
+                            <hr>
+                        </div>
+                        <div class="row mb-1 motif-card-content">
+                            <table class="detailTable" style="table-layout: fixed;">
+                                <tr>
+                                    <td class="td-header">
+                                        <button class="domain-btn"
+                                                type="button"
+                                                data-start="{{ m.get_real_startposition }}"
+                                                data-end="{{ m.get_real_stopposition }}"
+                                                data-chain=""
+                                                {% if not pdb_url %} hidden {% endif %}>
+                                            Highlight in 3D
+                                        </button>
+                                    </td>
+                                    <td class="td-data">
+                                        {# safe: Plotly HTML from mark_safe(fig.to_html()); labels are domain/motif names from DB #}
+                                        <div>{{ motif_items|get_item:m|get_item:'plot'|safe }}</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-header"><b>Sequence with motif: </b></td>
+                                    <td class="td-data">
+                                        <div class="mt-2 mb-3" style="display: inline-block; text-align: justify;">
+                                            {% with motif_items|get_item:m|get_item:'stopposition' as stopposition %}
+                                                {% for letter in sequence.sequence %}{% if forloop.counter >= m.get_real_startposition and forloop.counter <= m.get_real_stopposition %}<span style="color: red">{{ letter }}</span>{% else %}<span>{{ letter }}</span>{% endif %}{% endfor %}
+                                            {% endwith %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="row mb-3 motif-card-content">
+                            <table class="detailTable" style="table-layout: fixed;">
+                                <tr>
+                                    <td class="td-header" style="table-layout: fixed;">
+                                        <table style="table-layout: fixed; width:100%;">
+                                            <tr><td><b>Hmm-Consensus: </b></td></tr>
+                                            <tr><td><b>Similarity: </b></td></tr>
+                                            <tr><td><b>Found Motif: </b></td></tr>
+                                        </table>
+                                    </td>
+                                    <td class="td-data" style="table-layout: fixed;">
+                                        <div class="overflow-x-auto">
+                                            <table style="width:100%;">
+                                                <tr>
+                                                    {% for leter in motif_items|get_item:m|get_item:'consensus' %}
+                                                        <td style="text-align: left;">{{ leter }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                                <tr>
+                                                    {% for leter in motif_items|get_item:m|get_item:'similarity' %}
+                                                        <td style="text-align: justify;">{{ leter }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                                <tr>
+                                                    {% for leter in motif_items|get_item:m|get_item:'motif' %}
+                                                        <td>{{ leter }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <hr>
+                        <div class="row mb-3" style="display: flex; align-items: center;">
+                            <div class="col-4" style="padding: 0; text-align: center;"><p style="margin: auto;">BLAST motif:</p></div>
+                            {% if motif_type == "verify" %}
+                            <div class="col-4" style="padding: 0;">TRACEY
+                                <a href="{% url 'query-verify-blast' db='TRACEYvv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
+                                <a href="{% url 'query-verify-blast' db='TRACEYuv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
+                                <a href="{% url 'query-verify-blast' db='TRACEYav' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
+                            </div>
+                            <div class="col-4" style="padding: 0;">
+                                <a href="{% url 'query-verify-blast' db='NCBIv' query_id=m.verifymotif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a>
+                            </div>
+                            {% else %}
+                            <div class="col-4" style="padding: 0;">TRACEY
+                                <a href="{% url 'query-verify-blast' db='TRACEYvm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Verified </a> /
+                                <a href="{% url 'query-verify-blast' db='TRACEYum' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  Unverified </a> /
+                                <a href="{% url 'query-verify-blast' db='TRACEYam' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;">  All </a>
+                            </div>
+                            <div class="col-4" style="padding: 0;">
+                                <a href="{% url 'query-verify-blast' db='NCBIm' query_id=m.motif_id %}" rel="noopener noreferrer" target="_blank" style="color:blue;"> against NCBI </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

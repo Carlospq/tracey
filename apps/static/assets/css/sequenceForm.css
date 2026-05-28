@@ -1,0 +1,245 @@
+.detailTable {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+.detailTable td {
+    text-align: left;
+    padding-bottom: 5px;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+.td-header {
+    width: 15%;
+    font-weight: bold;
+}
+.td-data {
+    width: 85%;
+}
+#deleteSequence:hover {
+    background-color: red;
+    border-radius: 0.3rem;
+}
+.ui-helper-hidden-accessible {
+    display: none;
+}
+.ui-autocomplete {
+    background: white;
+    border: 1px solid #ccc;
+    width: 200px;
+    height: auto;
+    max-height: 400px;
+    overflow-y: scroll;
+}
+.ui-menu .ui-menu-item a {
+    height: 20px;
+    font-size: 16px;
+    width: 100%;
+    display: block;
+}
+.ui-menu-item:hover {
+    background: lightgrey;
+}
+.ui-state-focus {
+    background: lightgrey;
+}
+.container-3d {
+    display: flex;
+    min-height: 150px;
+    max-height: 500px;
+    border: 1px solid #ddd;
+}
+.container-3d.active {
+    height: 500px;
+}
+#viewport-3d {
+    width: 60%;
+    position: relative;
+    min-height: 300px;
+}
+#viewport-3d canvas {
+    position: relative;
+    display: flex;
+    width: 100% !important;
+    height: 100% !important;
+}
+#sequence-panel-3d {
+    flex: 1;
+    border-left: 1px solid #ddd;
+    padding: 10px;
+    overflow-y: auto;
+    font-family: monospace;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+#sequence-panel-3d .residue {
+    cursor: pointer;
+    padding: 1px 2px;
+}
+#sequence-panel-3d .residue.selected {
+    background-color: #ffcc00;
+    color: #000;
+    font-weight: bold;
+}
+#sequence-panel-3d .residue:hover {
+    outline: 1px solid #888;
+}
+.domain-btn {
+    border-radius: 5px;
+    border: 1px solid;
+}
+.ngl-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid #ddd;
+    background: #f8f9fb;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.ngl-toolbar .btn-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #d0d4e0;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+.ngl-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #1f2933;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.ngl-btn + .ngl-btn {
+    border-left: 1px solid #e0e4f0;
+}
+.ngl-btn i {
+    font-size: 14px;
+    color: #4b5563;
+}
+.ngl-btn:hover {
+    background: #e5efff;
+    color: #111827;
+}
+.ngl-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+.ngl-btn.active i {
+    color: #ffffff;
+}
+@media (max-width: 768px) {
+    .ngl-toolbar {
+        flex-wrap: wrap;
+    }
+}
+#pdb-drop-area {
+    width: auto;
+    height: auto;
+    margin: 55px 15px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+}
+#pdb-drop-area.highlight {
+    border-color: #4285f4;
+    background-color: #f0f7ff;
+}
+#pdb-drop-area p {
+    margin: 0;
+    font-size: 18px;
+    color: #666;
+}
+#pdb-drop-area p a {
+    color: #4285f4;
+    text-decoration: none;
+}
+#pdb-upload-controls {
+    position: absolute;
+    z-index: 999;
+    padding: 5px;
+}
+#pdb-file-button {
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #f8f9fb;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+#res-tooltip {
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    margin-top: 10px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    width: fit-content;
+}
+#res-tooltip.hidden {
+    display: none;
+    visibility: hidden;
+}
+.residue-hover {
+    background-color: rgba(227, 83, 83, 0.65) !important;
+}
+
+/* Utility classes replacing inline styles */
+.help-icon {
+    color: blue;
+    text-align: right;
+}
+.select-action {
+    width: 100%;
+    max-width: 80px;
+    min-width: 40px;
+}
+.motif-card-body {
+    background-color: #F2F0F9;
+    border-radius: 0 0 15px 15px;
+    padding: 0 0 0 15px;
+}
+.motif-card-inner {
+    background-color: #F2F0F9;
+    border-radius: 15px;
+    padding: 10px 0 0 15px;
+}
+.motif-card-header {
+    padding: 10px 15px 0 15px;
+}
+.motif-card-content {
+    padding: 0 15px 0 15px;
+}
+.motif-header-stripe-unverified {
+    background-color: #f05b4f;
+    padding: 20px 0 0 15px;
+    border-radius: 15px 15px 0 0;
+}
+.motif-header-stripe-verified {
+    background-color: #3FB8AF;
+    padding: 20px 0 0 15px;
+    border-radius: 15px 15px 0 0;
+}
+.overflow-x-auto {
+    overflow-x: auto;
+}
+.form-field-indent {
+    padding-left: 25px;
+}
