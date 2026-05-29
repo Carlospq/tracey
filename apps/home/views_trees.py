@@ -55,10 +55,11 @@ def plotTrees(request):
     if len(taxonomy_ids) > 3500:
         return render(request, 'home/treeplot.html', {'error_length': 'Taxonomies selected exceed the maximun number of branches allowed to plot a tree. Please select a subgroup.'})
 
+    fastax = os.getenv('FASTAX_PATH', 'fastax')
     active_ids = [str(x.ncbi_taxonomy_id) for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids)]
     clean_ids = 1
     while clean_ids:
-        bashCommand = ['fastax', 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
+        bashCommand = [fastax, 'tree', '-n', '-f', '"(%taxid)"'] + active_ids
         runout = subprocess.run(bashCommand, capture_output=True)
         if runout.stderr == b'':
             tree = str(runout.stdout.decode("utf-8")).strip().replace('"', "")
