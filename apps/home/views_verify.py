@@ -514,7 +514,6 @@ def QueryVerifyView(request, sequence_id):
 
     data_3d = get_pdb_data(seq.sequence)
     context['pdb_url'] = data_3d['pdb_url'] if data_3d else ''
-    context['residues'] = data_3d['residues'] if data_3d else []
 
     motifs = context['sequence'].motifs_set.all()
     motif_coords = {}

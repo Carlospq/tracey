@@ -138,9 +138,11 @@ def update_tree(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def read_update_taxonomy_results(request):
-    f = open('utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt', 'r')
-    file_content = f.read()
-    f.close()
+    try:
+        with open('utils/ncbi_taxonomy/taxdmp/TaxonomyUpdate.report.txt', 'r') as f:
+            file_content = f.read()
+    except FileNotFoundError:
+        return HttpResponse('Update not started or still running.', content_type="text/plain")
     return HttpResponse(file_content, content_type="text/plain")
 
 

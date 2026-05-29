@@ -42,6 +42,47 @@
                         </div>
 
 						<div class="row update-card">
+                            <p class="update-header">Security & Performance improvements</p><hr>
+                            <p class="update-date"><i>Date: 29/05/2026</i></p>
+
+                            <p><b>Major updates:</b></p>
+                            <ul class="update-list">
+                                <li>Security hardening: Content Security Policy (CSP) and Permissions Policy headers added</li>
+                                <li>Sensitive configuration (external tool paths) moved to environment variables</li>
+                                <li>Multiple security fixes: subprocess handling, regex injection, response header injection</li>
+                                <li>Query cache implemented for frequent searches</li>
+                                <li>Species/shortname dropdown replaced with HTML5 datalist (fixes Chrome rendering issue with large lists)</li>
+                            </ul>
+
+                            <p style="margin-top: 20px;"><b>Minor updates:</b></p>
+                            <ul class="update-list">
+                                <li>Shortname search performance improved</li>
+                                <li>Table sorting optimized (native Array.sort replacing Bubble Sort)</li>
+                                <li>jQuery updated to 4.0.0</li>
+                                <li>Code organisation: views.py split into focused modules</li>
+                            </ul>
+                        </div>
+
+						<div class="row update-card">
+                            <p class="update-header">Interactive 3D protein structure viewer</p><hr>
+                            <p class="update-date"><i>Date: 16/02/2026</i></p>
+
+                            <p><b>Major updates:</b></p>
+                            <ul class="update-list">
+                                <li>Interactive 3D protein structure viewer added for all sequences (powered by NGL.js)</li>
+                                <li>AlphaFold structures loaded automatically when available</li>
+                                <li>Motif regions highlighted directly in the 3D structure</li>
+                            </ul>
+
+                            <p style="margin-top: 20px;"><b>Minor updates:</b></p>
+                            <ul class="update-list">
+                                <li>Downloadable Newick tree files and PNG images from taxonomy trees</li>
+                                <li>Drag & drop support for custom structure files (PDB/CIF format)</li>
+                                <li>Sequence panel with residue selection linked to 3D viewer</li>
+                            </ul>
+                        </div>
+
+						<div class="row update-card">
 
 							<!-- SVG icon -->
 							<span style="float: left; left: 5px; position: absolute">

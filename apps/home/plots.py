@@ -222,7 +222,7 @@ def get_pdb_data(sequence):
     try:
         resp = requests.get(pdb_url, timeout=10)
         resp.raise_for_status()
-    except Exception:
+    except (requests.RequestException, requests.HTTPError):
         return {}
 
     pdb_text = resp.text
