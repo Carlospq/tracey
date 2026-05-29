@@ -88,12 +88,12 @@ def features(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_taxonomy(request):
-    if dict(request.GET)['taxonomy_last_update'] == ['Last update on: Today']:
+    if request.GET.get('taxonomy_last_update') == 'Last update on: Today':
         return HttpResponse('Taxonomy already up to date.')
     else:
         cmd = ['python3', 'manage.py', 'UpdateTraceyTaxonomies']
-        outcome = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return HttpResponse(outcome)
+        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return HttpResponse('Process started.')
 
 
 @login_required(login_url="/noPermits.html")
@@ -120,19 +120,19 @@ def update_sequences(request):
         cmd.append('--onlyActive')
     if shortName != 'All':
         cmd.extend(['--species', shortName])
-    outcome = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return HttpResponse(outcome)
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return HttpResponse('Process started.')
 
 
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_tree(request):
-    if dict(request.GET)['tree_last_update'] == ['Last update on: Today']:
+    if request.GET.get('tree_last_update') == 'Last update on: Today':
         return HttpResponse('Tree already up to date.')
     else:
         cmd = ['python3', 'manage.py', 'UpdateTraceyTree']
-        outcome = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return HttpResponse(outcome)
+        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return HttpResponse('Process started.')
 
 
 @login_required(login_url="/noPermits.html")

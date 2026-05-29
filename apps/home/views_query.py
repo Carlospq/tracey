@@ -328,11 +328,12 @@ def QuerySequencesFastaFormat(request):
     elif 'multialignment' in request.POST or 'download_multialignment' in request.POST:
         if len(sequences) < 2:
             return render(request, 'home/query-sequences-multialignment.html', {'names': []})
+        hmmModel = request.POST.get('hmmModel', '')
         for d in os.listdir('utils/hmmModels/'):
             if not os.path.isdir('utils/hmmModels/%s' % (d)):
                 continue
             for f in os.listdir('utils/hmmModels/%s' % (d)):
-                if request.POST['hmmModel'][0] in f:
+                if hmmModel and hmmModel[0] in f:
                     with pyhmmer.plan7.HMMFile("./utils/hmmModels/%s/%s" % (d, f)) as hmm_file:
                         hmm = hmm_file.read()
         alphabet = pyhmmer.easel.Alphabet.amino()
@@ -348,7 +349,8 @@ def QuerySequencesFastaFormat(request):
             for al in alignedsequences:
                 file_data += ">" + al + "\n" + alignedsequences[al] + "\n"
             response = HttpResponse(file_data, content_type='application/text charset=utf-8')
-            response['Content-Disposition'] = 'attachment; filename="' + request.POST['hmmModel'] + '_MSA.fasta"'
+            safe_name = re.sub(r'[^\w\-]', '', hmmModel)
+            response['Content-Disposition'] = 'attachment; filename="%s_MSA.fasta"' % safe_name
             return response
         zippedLists = {}
         for i in range(len(names)):

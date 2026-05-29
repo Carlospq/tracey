@@ -92,7 +92,7 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
                 else:
                     dg_parent = Domaingroups.objects.get(domaingroup_id=dg.domaingroupparent_id).domaingroupname
 
-                match = re.search(d.alignment.target_sequence.strip().replace("-", "").upper(), sequence)
+                match = re.search(re.escape(d.alignment.target_sequence.strip().replace("-", "").upper()), sequence)
                 x = {'evalue': format(d.pvalue, '.1E'),
                      'pvalue': d.pvalue,
                      'aln_from': match.start() + 1,

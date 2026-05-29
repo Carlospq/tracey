@@ -1,5 +1,6 @@
 import os
 import hashlib
+import uuid
 import json
 import urllib.request
 import urllib.error
@@ -171,8 +172,10 @@ def md5(fname):
 
 
 def md5_from_seq(sequence):
-	with open('utils/tmp_files/seq_md5.txt', 'w') as temp_file:
-		temp_file.write(sequence)
-	seq_md5 = md5(temp_file.name)
-	os.remove(temp_file.name)
-	return seq_md5
+	path = 'utils/tmp_files/seq_md5_%s.txt' % uuid.uuid4().hex
+	with open(path, 'w') as f:
+		f.write(sequence)
+	try:
+		return md5(path)
+	finally:
+		os.remove(path)
