@@ -53,7 +53,7 @@ class Command(BaseCommand):
             # If log files, continue from the last one
             else:
                 logFile = open(logFileName, "r")
-                sequencesAnalysed = [int(x.split()[0]) for x in logFile.readlines() if x.split()[0].isdigit()]
+                #sequencesAnalysed = [int(x.split()[0]) for x in logFile.readlines() if x.split()[0].isdigit()]
         # Force a new complete update of TRACEY sequences
         elif options['force']:
             print("Forcing a new complete update of TRACEY sequences")

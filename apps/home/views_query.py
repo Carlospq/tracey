@@ -6,7 +6,7 @@ import django_tables2 as tables
 
 from django import template
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import render, redirect
@@ -20,13 +20,16 @@ from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty
 from .plots import build_domain_plot, get_pdb_data, get_alphafold_url
 
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
-from apps.templates.menus.query_sequences import get_keys_level_recursively
+from apps.templates.menus.query_sequences import get_keys_level_recursively, get_keys_recursively
 
 
 def index(request):
     context = {'segment': 'index'}
     html_template = loader.get_template('home/home.html')
     return HttpResponse(html_template.render(context, request))
+
+
+_PAGES_REQUIRES_LOGIN = {'updates.html'}
 
 
 def pages(request):
@@ -36,6 +39,8 @@ def pages(request):
         if load_template == 'admin':
             return HttpResponseRedirect(reverse('admin:index'))
         context['segment'] = load_template
+        if load_template in _PAGES_REQUIRES_LOGIN and not request.user.is_authenticated:
+            return HttpResponseRedirect('/noPermits.html?next=' + request.path)
         html_template = loader.get_template('home/' + load_template)
         return HttpResponse(html_template.render(context, request))
     except template.TemplateDoesNotExist:
@@ -130,6 +135,113 @@ def load_sequenceshortnames(request):
         shortnames = sorted(list(set([t.taxonomyshortname for t in Taxonomies.objects.filter(taxonomyrank='species')])))
         cache.set('taxonomy_species_shortnames', shortnames, timeout=21600)
     return render(request, 'home/query-sequences-family-sequenceshortnames.html', {'shortnames': shortnames})
+
+
+def load_taxonomy_by_shortname(request):
+    q = request.GET.get('q', '').strip()
+    search_type = request.GET.get('type', 'shortname')
+
+    from django.db.models import Count, Q
+
+    if search_type == 'scientific':
+        if len(q) < 3:
+            return JsonResponse({'taxa': []})
+        matched_ids = set(
+            Taxonomies.objects.filter(scientificname__istartswith=q)
+            .values_list('taxonomy_id', flat=True)
+        )
+    else:
+        if len(q) < 2:
+            return JsonResponse({'taxa': []})
+        matched_ids = set(
+            Taxonomies.objects.filter(
+                taxonomyshortname__istartswith=q
+            ).values_list('taxonomy_id', flat=True)
+        )
+
+    # Traverse parent-child tree to include all descendants
+    all_ids = set(matched_ids)
+    frontier = list(matched_ids)
+    while frontier:
+        children_ids = list(
+            Taxonomies.objects.filter(taxonomyparent_id__in=frontier)
+            .values_list('taxonomy_id', flat=True)
+        )
+        new_ids = [cid for cid in children_ids if cid not in all_ids]
+        all_ids.update(new_ids)
+        frontier = new_ids
+
+    # Build sequence filter: restrict to current protein layout / domain if provided
+    proteinlayout = request.GET.get('proteinlayout', '').strip()
+    domainname = request.GET.get('domainname', '').strip()
+    seq_filter = Q(sequencestatus='live')
+    if proteinlayout:
+        try:
+            menu = get_menu(request)
+            if domainname and proteinlayout in menu and domainname in menu.get(proteinlayout, {}):
+                dg_list = get_keys_recursively(menu[proteinlayout][domainname]) + [domainname]
+            elif proteinlayout in menu:
+                dg_list = get_keys_recursively(menu[proteinlayout]) + [proteinlayout]
+            else:
+                dg_list = []
+            if dg_list:
+                dg_ids = Domaingroups.objects.filter(domaingroupname__in=dg_list).values_list('domaingroup_id', flat=True)
+                motif_seq_ids = Motifs.objects.filter(domaingroup_id__in=dg_ids).values_list('sequence_id', flat=True)
+                seq_filter &= Q(sequence_id__in=motif_seq_ids)
+        except (KeyError, Exception):
+            pass
+
+    # Direct sequence counts per taxonomy
+    direct_counts_qs = (
+        Sequences.objects
+        .filter(seq_filter, taxonomy_id__in=all_ids)
+        .values('taxonomy_id')
+        .annotate(cnt=Count('sequence_id'))
+    )
+    direct_counts = {row['taxonomy_id']: row['cnt'] for row in direct_counts_qs}
+
+    # Fetch taxa with parent info for bottom-up accumulation
+    taxa_list = list(
+        Taxonomies.objects
+        .filter(taxonomy_id__in=all_ids)
+        .only('taxonomy_id', 'taxonomyrank', 'scientificname', 'taxonomyshortname', 'taxonomyparent_id')
+        .order_by('taxonomyrank', 'scientificname')
+    )
+    taxa_parent = {t.taxonomy_id: t.taxonomyparent_id for t in taxa_list}
+
+    # Propagate counts from leaves up to ancestors (topological BFS)
+    from collections import deque
+    acc_counts = {tid: direct_counts.get(tid, 0) for tid in all_ids}
+    children_of = {tid: [] for tid in all_ids}
+    for tid in all_ids:
+        pid = taxa_parent.get(tid)
+        if pid in all_ids:
+            children_of[pid].append(tid)
+    remaining_children = {tid: len(children_of[tid]) for tid in all_ids}
+    queue = deque(tid for tid in all_ids if remaining_children[tid] == 0)
+    while queue:
+        tid = queue.popleft()
+        pid = taxa_parent.get(tid)
+        if pid in all_ids:
+            acc_counts[pid] += acc_counts[tid]
+            remaining_children[pid] -= 1
+            if remaining_children[pid] == 0:
+                queue.append(pid)
+
+    # Build response — skip taxa with 0 sequences in the current layout/domain
+    taxa_data = [
+        {
+            'taxonomy_id': t.taxonomy_id,
+            'scientificname': t.scientificname or '',
+            'taxonomyrank': t.taxonomyrank or '',
+            'shortname': t.taxonomyshortname,
+            'seq_count': acc_counts.get(t.taxonomy_id, 0),
+        }
+        for t in taxa_list
+        if acc_counts.get(t.taxonomy_id, 0) > 0
+    ]
+
+    return JsonResponse({'taxa': taxa_data})
 
 
 def load_domaingroups_rank2(request):

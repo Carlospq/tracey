@@ -128,6 +128,17 @@ def get_sequences(query, verify=False, menu=None):
 		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__icontains=query['shortnamesearch'][0])]
 		seqs = seqs.filter(taxonomy__in=taxonomies)
 
+	if 'taxonomy_ids' in query and notEmpty(query, 'taxonomy_ids'):
+		ids = [int(x) for x in query['taxonomy_ids'] if x]
+		all_tax_ids = set(ids)
+		frontier = list(ids)
+		while frontier:
+			children = list(Taxonomies.objects.filter(taxonomyparent_id__in=frontier).values_list('taxonomy_id', flat=True))
+			new_ids = [c for c in children if c not in all_tax_ids]
+			all_tax_ids.update(new_ids)
+			frontier = new_ids
+		seqs = seqs.filter(taxonomy_id__in=all_tax_ids)
+
 	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
 		seqs = seqs.filter(foreignannotation__icontains=query['foreignannotation'][0])
 

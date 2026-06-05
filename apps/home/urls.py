@@ -55,6 +55,7 @@ urlpatterns = [
     path('ajax/load-domaingroups-rank2/', views.load_domaingroups_rank2, name='ajax_load_domaingroups_rank2'),
     path('ajax/load-species/', views.load_species, name='ajax_load_species'),
     path('ajax/load-sequenceshortnames/', views.load_sequenceshortnames, name='ajax_load_sequenceshortnames'),
+    path('ajax/load-taxonomy-search/', views.load_taxonomy_by_shortname, name='ajax_load_taxonomy_search'),
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
     path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
     path('ajax/update-sequences/', views.update_sequences, name='ajax_update_sequences'),

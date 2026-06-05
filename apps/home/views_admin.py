@@ -110,7 +110,8 @@ def update_sequences(request):
     if continueVal not in VALID_CONTINUE_VALS:
         return HttpResponse('Invalid continueVal parameter.', status=400)
     if shortName not in VALID_SHORT_NAMES:
-        return HttpResponse('Invalid shortName parameter.', status=400)
+        if not Taxonomies.objects.filter(taxonomyshortname=shortName).exists():
+            return HttpResponse('Invalid shortName parameter.', status=400)
     if not Domains.objects.filter(domainname=domain).exists() and domain != '':
         return HttpResponse('Invalid domain parameter.', status=400)
 

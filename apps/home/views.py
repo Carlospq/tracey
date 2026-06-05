@@ -34,6 +34,7 @@ from apps.home.views_query import (
     load_domains,
     load_domaingroups_rank1,
     load_sequenceshortnames,
+    load_taxonomy_by_shortname,
     load_domaingroups_rank2,
     load_queryverifysequences,
     updateSequenceStatus,

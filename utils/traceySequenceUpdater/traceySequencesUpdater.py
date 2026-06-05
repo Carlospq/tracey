@@ -702,7 +702,6 @@ def sequenceUpdate(sequence, summary_output, sequencesAnalysed):
 				seq.save()
 			comment += 'dbxref updated to %s; ' % accessionVersion
 
-
 		if "lamin" in newShortname:
 
 			comment += 'Sequence is a LAMIN; Sequence status changed from %s to dead' % seq.sequencestatus

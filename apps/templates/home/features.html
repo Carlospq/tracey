@@ -210,6 +210,10 @@
 													<option value="DaRe">Danio rerio</option>
 													<option value="SaCe">Saccharomyces c.</option>
 												</select>
+												<div style="display:inline-flex; align-items:center; margin-top:5px;">
+													<label for="shortNameText" style="margin-right:5px; font-size:12px;">Or shortname:</label>
+													<input type="text" id="shortNameText" name="shortNameText" placeholder="e.g. HoSa" style="width:70px; font-size:12px;">
+												</div>
 												<select id="domain" name="domain">
 													{% for domain in domains %}
 														<option value="{{ domain }}">{{ domain }}</option>
@@ -308,7 +312,8 @@
         // Loading animation
 		e.preventDefault();
         var sequences_last_update = document.getElementById("sequences_last_update").innerHTML;
-        var shortName = document.getElementById("shortName").value;
+        var shortNameText = document.getElementById("shortNameText").value.trim();
+        var shortName = shortNameText !== "" ? shortNameText : document.getElementById("shortName").value;
         var domain = document.getElementById("domain").value;
         var continueVal = document.getElementById("continue").value;
         var onlyActive = document.getElementById("onlyActive").checked;

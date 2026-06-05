@@ -5,32 +5,34 @@
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <style>
-    .taxonomyDiv {
-        width: 100%;
-        display: block;
+	.formrow { display: table; width: 100%; }
+	.formcell1 { display: table-cell; width: 25%; vertical-align: top; text-wrap: nowrap; }
+	.formcell2 { display: table-cell; vertical-align: top; text-align: center; width: 5%; color: blue; }
+	.formcell3 { display: table-cell; vertical-align: top; width: 70%; }
+
+    #taxonomy-search-panel {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 6px 8px;
+        margin-top: 4px;
+        background: white;
+        height: 14.5em;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-	.formrow {
-		display: table;
-		width: 100%;
-	}
-	.formcell1 {
-		display: table-cell;
-		width: 25%;
-		vertical-align: top;
-		text-wrap: nowrap;
-	}
-	.formcell2 {
-		display: table-cell;
-		vertical-align: top;
-		text-align: center;
-		width: 5%;
-		color: blue;
-	}
-	.formcell3 {
-		display: table-cell;
-		vertical-align: top;
-		width: 70%;
-	}
+    #taxonomy-search-panel label { font-weight: normal; margin-bottom: 0; }
+
+    /* Taxonomy column navigator */
+    #tax-nav-viewport { border: 1px solid #dee2e6; border-radius: 3px; }
+    .tax-nav-col { height: 100%; overflow-y: auto; flex-shrink: 0; padding: 2px 0; box-sizing: border-box; }
+    .tax-nav-item {
+        padding: 3px 8px; cursor: pointer; font-size: 0.88em;
+        display: flex; justify-content: space-between; align-items: center;
+        border-radius: 3px; user-select: none;
+    }
+    .tax-nav-item:hover { background: #f0f4ff; }
+    .tax-nav-item.active { background: #d0e4ff; font-weight: bold; }
 </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -57,6 +59,7 @@
 						  data-load-species-url="{% url 'ajax_load_species' %}"
 						  data-load-domains-url="{% url 'ajax_load_domains' %}"
 						  data-load-sequenceshortnames-url="{% url 'ajax_load_sequenceshortnames' %}"
+						  data-load-taxonomy-search-url="{% url 'ajax_load_taxonomy_search' %}"
 						  data-load-domaingroups-rank1-url="{% url 'ajax_load_domaingroups_rank1' %}"
 						  data-load-domaingroups-rank2-url="{% url 'ajax_load_domaingroups_rank2' %}">
 						<input type="text" name="motif" value="{{ family }}" hidden></input>
@@ -68,6 +71,8 @@
 
 							<!-- Column 1 -->
 							<div class="col-lg-4 col-sm-4">
+
+								<div style="min-height:14.5em;">
 
 								<!-- ProteinLayout Name -->
 								<div class="mb-3 formrow">
@@ -113,8 +118,10 @@
 									</div>
 								</div>
 
+								</div><!-- /min-height wrapper col1 -->
+
 								<!-- domainGroups -->
-								<div class="fieldWrapper" id="domaingroup" style="height: 14.5em; width: 100%; padding: 0">
+								<div class="fieldWrapper" id="domaingroup" style="height: 14.5em; width: 100%; padding: 0;">
 									{{ form.domaingroup }}
 								</div>
 
@@ -123,49 +130,40 @@
 							<!-- Column 2 -->
 							<div class="col-lg-4 col-sm-4">
 
-								<!-- Shortname -->
-								<div class="mb-3 formrow">
-									<div class="formcell1"><label for="shortname">Shortname</label></div>
-									<div class="formcell2"><a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup"> ?</a></div>
-									<div class="formcell3">
-										<input type="text" name="shortname" id="shortname" list="shortname-datalist" style="width: 100%" placeholder="Type to search..." autocomplete="off">
-										<datalist id="shortname-datalist">
-											{% for val in shortnames %}
-												<option value="{{ val }}">
-											{% endfor %}
-										</datalist>
-									</div>
-								</div>
-
-								<!-- Shortname search -->
-								<div class="mb-3 formrow">
-									<div class="formcell1"><label for="{{ form.shortnamesearch.id_for_label }}">Search short name</label></div>
-									<div class="formcell2"></div>
-									<div class="formcell3 fieldWrapper">
-										{{ form.shortnamesearch }}
-									</div>
-								</div>
-
 								<!-- Taxonomy -->
-								<div class="mb-3 formrow">
-									<div class="formcell1"><label for="{{ form.taxonomy_rank.id_for_label }}">Taxonomy</label></div>
+								<div class="mb-1 formrow">
+									<div class="formcell1"><label>Taxonomy</label></div>
 									<div class="formcell2"><a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup">
 										<abbr data-toggle="tooltip" title='Click for full description'> ? </abbr>
 									</a></div>
-									<div class="taxonomyDiv" id="taxonomyDiv" style="display: block; width: 100%; padding: 0">
-										<select style="width: 100%" name="taxonomy" id="taxonomy_rank_0" onChange="taxonomyDiv(this)">
-											<option value=""></option>
-											{% for val in taxonomy_ranks %}
-												<option value= "{{ val }}" style="{% if not '-' in val and not '+' in val %}font-weight: bold;{% endif %}"> {{ val.capitalize }} </option>
-											{% endfor %}
-										</select>
+									<div class="formcell3"></div>
+								</div>
+								<div id="taxonomy-navigator" style="margin-bottom:0.75rem;">
+									<div id="tax-nav-header" style="display:flex; align-items:center; height:1.8em; border-bottom:1px solid #eee; margin-bottom:3px; padding:0 2px;">
+										<span id="tax-nav-back" style="cursor:pointer; color:#007bff; padding-right:8px; font-size:1.2em; line-height:1; visibility:hidden;" title="Back">&#8592;</span>
+										<span id="tax-nav-breadcrumb" style="font-size:0.82em; color:#666; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+										<a href="#" id="tax-nav-clear" style="font-size:0.78em; color:#999; padding-left:8px; visibility:hidden; white-space:nowrap;" title="Clear selection">&#10005; clear</a>
 									</div>
+									<div id="tax-nav-viewport" style="overflow:hidden; position:relative; height:10em;">
+										<div id="tax-nav-slider" style="display:flex; height:100%; transition:transform 0.2s ease;"></div>
+									</div>
+									<input type="hidden" name="taxonomy" id="taxonomy-value" value="">
+								</div>
+
+								<!-- Species List -->
+								<div class="mb-3 formrow">
+									<div class="fieldWrapper" style="height: 14.5em; width: 100%; padding: 0">
+										<select name="species_list" id="species_list" multiple style="width: 100%; height: 14.5em"></select>
+									</div>
+									<p style="color: red; width: 100%">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
 								</div>
 
 							</div>
 
 							<!-- Column 3 -->
 							<div class="col-lg-4 col-sm-4">
+
+								<div style="min-height:14.5em;">
 
 								<!-- Aliases -->
 								<div class="mb-3 formrow">
@@ -186,12 +184,39 @@
 									{% if error %}<p style="color: red; width: 100%">{% if 'Foreign' in error %} {{ error }} {% endif %}</p>{% endif %}
 								</div>
 
-								<!-- Species List -->
+								<!-- Shortname search -->
 								<div class="mb-3 formrow">
-									<div class="fieldWrapper" style="height: 17.8em; width: 100%; padding: 0">
-										<select name="species_list" id="species_list" multiple style="width: 100%; height: 17.8em"></select>
+									<div class="formcell1"><label for="shortname-search-input">Shortname</label></div>
+									<div class="formcell2"><a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup"> ?</a></div>
+									<div class="formcell3">
+										<input type="text" id="shortname-search-input" style="width: 100%"
+											   placeholder="e.g. HoSa, GiIn..." autocomplete="off">
+										<input type="text" name="shortname" id="shortname" style="display:none">
 									</div>
-									<p style="color: red; width: 100%">{% if error %}{% if 'At least one' in error %} {{ error }} {% endif %}{% endif %}</p>
+								</div>
+
+								<!-- Scientific name search -->
+								<div class="mb-3 formrow">
+									<div class="formcell1"><label for="sciname-search-input">Scientific name</label></div>
+									<div class="formcell2"></div>
+									<div class="formcell3">
+										<input type="text" id="sciname-search-input" style="width: 100%"
+											   placeholder="e.g. Homo sapiens, Giardia..." autocomplete="off">
+									</div>
+								</div>
+
+								</div><!-- /min-height wrapper col3 -->
+
+								<!-- Organism results panel (static) -->
+								<div id="taxonomy-search-panel">
+									<div id="taxonomy-search-status" style="color:#888; font-size:0.85em; flex-shrink:0; padding-bottom:3px;">Type above to search organisms</div>
+									<div id="taxonomy-search-results" style="flex:1; overflow-y:auto; min-height:0;"></div>
+									<div id="taxonomy-search-actions" style="flex-shrink:0; border-top:1px solid #eee; padding-top:4px; margin-top:4px;">
+										<small>
+											<a href="#" id="tax-select-all" style="color:blue;">Select all</a> &nbsp;|&nbsp;
+											<a href="#" id="tax-clear-all" style="color:blue;">Clear</a>
+										</small>
+									</div>
 								</div>
 
 							</div>
@@ -220,228 +245,235 @@
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-4.0.0.min.js"></script>
 <script>
+    // ── Taxonomy Column Navigator ─────────────────────────────────────────────
+    var taxNavHistory = [];
+    var taxNavUrlRank = null;
+    var taxNavUrlSpecies = null;
+    var TAX_NAV_VW = 0;  // cached once on init
+    var TAX_RANKS_INITIAL = [
+        {% for val in taxonomy_ranks %}{"value":"{{ val|escapejs }}","label":"{{ val|capfirst|escapejs }}","bold":{% if '-' not in val and '+' not in val %}true{% else %}false{% endif %}},
+        {% endfor %}
+    ];
+
+    function taxNavPushColumn(items) {
+        var colIdx = $('#tax-nav-slider .tax-nav-col').length; // index of the new column
+        var vw = TAX_NAV_VW;
+        var $col = $('<div class="tax-nav-col">').css('width', vw + 'px');
+        if (items.length === 0) {
+            $col.append($('<div style="padding:8px;color:#888;font-size:0.85em;">No subcategories</div>'));
+        } else {
+            items.forEach(function(item) {
+                var $item = $('<div class="tax-nav-item">').attr('data-value', item.value);
+                var $lbl = $('<span>').text(item.label);
+                if (item.bold) $lbl.css('font-weight', 'bold');
+                $item.append($lbl).append($('<span style="color:#bbb;font-size:0.85em;margin-left:4px;">').text('›'));
+                $item.on('click', function() { taxNavSelectItem(item, colIdx); });
+                $col.append($item);
+            });
+        }
+        $('#tax-nav-slider').append($col);
+        var n = $('#tax-nav-slider .tax-nav-col').length;
+        $('#tax-nav-slider').css('width', (n * vw) + 'px');
+        if (n > 1) {
+            setTimeout(function() {
+                $('#tax-nav-slider').css('transform', 'translateX(-' + ((n - 1) * vw) + 'px)');
+            }, 10);
+            $('#tax-nav-back').css('visibility', 'visible');
+        }
+    }
+
+    function taxNavSelectItem(item, colIdx) {
+        var vw = TAX_NAV_VW;
+        // Remove any columns pushed deeper than this one (handles re-selecting at any level)
+        while ($('#tax-nav-slider .tax-nav-col').length > colIdx + 1) {
+            $('#tax-nav-slider .tax-nav-col').last().remove();
+        }
+        var n = $('#tax-nav-slider .tax-nav-col').length;
+        $('#tax-nav-slider').css('width', (n * vw) + 'px');
+        $('#tax-nav-slider').css('transform', 'translateX(-' + (colIdx * vw) + 'px)');
+
+        // Mark active in current column
+        $('#tax-nav-slider .tax-nav-col').eq(colIdx).find('.tax-nav-item').removeClass('active');
+        $('#tax-nav-slider .tax-nav-col').eq(colIdx).find('.tax-nav-item[data-value="' + item.value + '"]').addClass('active');
+
+        // Truncate history to this depth, then push new selection
+        taxNavHistory = taxNavHistory.slice(0, colIdx);
+        taxNavHistory.push(item);
+
+        $('#tax-nav-breadcrumb').text(taxNavHistory.map(function(h) { return h.label; }).join(' › '));
+        $('#taxonomy-value').val(item.value);
+        $('#tax-nav-back').css('visibility', 'visible');
+        $('#tax-nav-clear').css('visibility', 'visible');
+        taxNavUpdateSpecies();
+
+        $.ajax({
+            url: taxNavUrlRank,
+            data: { 'taxonomy_rank': item.value, 'reduced': 'true' },
+            success: function(data) {
+                var children = $('<select>').html(data).find('option').map(function() {
+                    return { value: $(this).val(), label: $(this).text().trim(), bold: false };
+                }).get().filter(function(i) { return i.value; });
+                if (children.length > 0) taxNavPushColumn(children);
+            }
+        });
+    }
+
+    function taxNavGoBack() {
+        var $cols = $('#tax-nav-slider .tax-nav-col');
+        if ($cols.length <= 1) return;
+        var vw = TAX_NAV_VW;
+        $('#tax-nav-slider').css('transform', 'translateX(-' + (($cols.length - 2) * vw) + 'px)');
+        setTimeout(function() {
+            $('#tax-nav-slider .tax-nav-col').last().remove();
+            var n = $('#tax-nav-slider .tax-nav-col').length;
+            $('#tax-nav-slider').css('width', (n * vw) + 'px');
+        }, 210);
+        taxNavHistory.pop();
+        $('#tax-nav-breadcrumb').text(taxNavHistory.map(function(h) { return h.label; }).join(' › '));
+        $('#taxonomy-value').val(taxNavHistory.length > 0 ? taxNavHistory[taxNavHistory.length - 1].value : '');
+        if (taxNavHistory.length === 0) {
+            $('#tax-nav-back').css('visibility', 'hidden');
+            $('#tax-nav-clear').css('visibility', 'hidden');
+        }
+        taxNavUpdateSpecies();
+    }
+
+    function taxNavReset() {
+        taxNavHistory = [];
+        $('#tax-nav-slider .tax-nav-col').not(':first').remove();
+        $('#tax-nav-slider').css({ transform: 'translateX(0)', width: TAX_NAV_VW + 'px' });
+        $('#tax-nav-slider .tax-nav-col').first().find('.tax-nav-item').removeClass('active');
+        $('#tax-nav-breadcrumb').text('');
+        $('#taxonomy-value').val('');
+        $('#tax-nav-back').css('visibility', 'hidden');
+        $('#tax-nav-clear').css('visibility', 'hidden');
+        taxNavUpdateSpecies();
+    }
+
+    function taxNavUpdateSpecies() {
+        if (taxNavHistory.length === 0) { $('#species_list').html(''); return; }
+        $.ajax({
+            url: taxNavUrlSpecies,
+            data: { 'taxonomy_list[]': taxNavHistory.map(function(h) { return h.value; }), 'domainname': $('#domainname').val() },
+            success: function(data) { $('#species_list').html(data); }
+        });
+    }
+
+    // ── Domain selectors ──────────────────────────────────────────────────────
+    $("#proteinlayout").change(function () {
+        $.ajax({
+            url: $("#FamilyForm").attr("data-load-domains-url"),
+            data: { 'proteinlayout': $(this).val() },
+            success: function(data) { $("#domainname").html(data); $("#domaingroup_rank").html(""); $("#id_domaingroup").html(""); }
+        });
+    });
+
+    $("#domainname").change(function () {
+        $.ajax({
+            url: $("#FamilyForm").attr("data-load-domaingroups-rank1-url"),
+            data: { 'proteinlayout': $("#proteinlayout").val(), 'domainname': $(this).val() },
+            success: function(data) { $("#domaingroup_rank").html(data); $("#id_domaingroup").html(""); }
+        });
+    });
+
+    $("#domaingroup_rank").change(function () {
+        $.ajax({
+            url: $("#FamilyForm").attr("data-load-domaingroups-rank2-url"),
+            data: { 'proteinlayout': $("#proteinlayout").val(), 'domaingroup_rank': $(this).val(), 'domainname': $("#domainname").val() },
+            success: function(data) { $("#id_domaingroup").html(data); }
+        });
+    });
+
+    // ── Organism live search ──────────────────────────────────────────────────
+    var taxSearchUrl = null;
+    var taxSearchTimer = null;
+    var RANK_ORDER = ['genus', 'species', 'subspecies', 'varietas', 'forma', 'strain', 'isolate'];
+
+    function triggerTaxSearch(q, type) {
+        clearTimeout(taxSearchTimer);
+        $('#taxonomy-search-status').text('Searching...');
+        $('#taxonomy-search-results').empty();
+        taxSearchTimer = setTimeout(function() {
+            $.get(taxSearchUrl, {
+                q: q, type: type,
+                proteinlayout: $('#proteinlayout').val(),
+                domainname: $('#domainname').val()
+            }, function(data) { renderTaxSearchPanel(data.taxa); });
+        }, 300);
+    }
+
+    function restorePlaceholder() {
+        var sn = $('#shortname-search-input').val().trim();
+        var sc = $('#sciname-search-input').val().trim();
+        if (sn.length < 2 && sc.length < 3) {
+            clearTimeout(taxSearchTimer);
+            $('#taxonomy-search-results').empty();
+            $('#taxonomy-search-status').text('Type above to search organisms');
+        }
+    }
+
+    $('#shortname-search-input').on('input', function() {
+        var q = $(this).val().trim();
+        if (q.length >= 2) triggerTaxSearch(q, 'shortname'); else restorePlaceholder();
+    });
+
+    $('#sciname-search-input').on('input', function() {
+        var q = $(this).val().trim();
+        if (q.length >= 3) triggerTaxSearch(q, 'scientific'); else restorePlaceholder();
+    });
+
+    function renderTaxSearchPanel(taxa) {
+        var $results = $('#taxonomy-search-results');
+        $results.empty();
+        if (taxa.length === 0) { $('#taxonomy-search-status').text('No organisms found.'); return; }
+        $('#taxonomy-search-status').text('');
+        var grouped = {};
+        taxa.forEach(function(t) { var r = t.taxonomyrank || 'other'; if (!grouped[r]) grouped[r] = []; grouped[r].push(t); });
+        var orderedRanks = RANK_ORDER.filter(function(r) { return grouped[r]; });
+        Object.keys(grouped).forEach(function(r) { if (orderedRanks.indexOf(r) === -1) orderedRanks.push(r); });
+        orderedRanks.forEach(function(rank) {
+            if (!grouped[rank]) return;
+            var $group = $('<div>');
+            $group.append($('<div style="font-weight:bold;font-size:0.78em;text-transform:uppercase;color:#666;margin-top:5px;">').text(rank));
+            grouped[rank].forEach(function(t) {
+                var cbId = 'tax-cb-' + t.taxonomy_id;
+                var $cb = $('<input type="checkbox">').attr('id', cbId).attr('data-taxonomy-id', t.taxonomy_id);
+                var $lbl = $('<label style="margin-left:4px;cursor:pointer;font-size:0.88em;">').attr('for', cbId)
+                    .text(t.scientificname + ' (' + t.shortname + ', ' + t.seq_count + ' seqs)');
+                $group.append($('<div style="padding:1px 0;">').append($cb).append($lbl));
+            });
+            $results.append($group);
+        });
+    }
+
+    $('#tax-select-all').on('click', function(e) { e.preventDefault(); $('#taxonomy-search-results input[type=checkbox]').prop('checked', true); });
+    $('#tax-clear-all').on('click', function(e) { e.preventDefault(); $('#taxonomy-search-results input[type=checkbox]').prop('checked', false); });
+
+    $('#FamilyForm').on('submit', function() {
+        $(this).find('input[name=taxonomy_ids]').remove();
+        var checkedIds = [];
+        $('#taxonomy-search-results input[type=checkbox]:checked').each(function() { checkedIds.push($(this).attr('data-taxonomy-id')); });
+        if (checkedIds.length > 0) {
+            var $form = $(this);
+            checkedIds.forEach(function(id) { $form.append($('<input type="hidden" name="taxonomy_ids">').val(id)); });
+            $('#shortname').val('');
+        } else {
+            var typed = $('#shortname-search-input').val().trim();
+            if (typed) $('#shortname').val(typed);
+        }
+    });
+
+    // ── Init ─────────────────────────────────────────────────────────────────
     $(document).ready(function() {
         $('.has-popover').popover({'trigger':'hover'});
+        taxNavUrlRank    = $("#FamilyForm").attr("data-load-taxonomy-rank-url");
+        taxNavUrlSpecies = $("#FamilyForm").attr("data-load-species-url");
+        taxSearchUrl     = $("#FamilyForm").attr("data-load-taxonomy-search-url");
+        TAX_NAV_VW       = $('#tax-nav-viewport').width() || 200;
+        $('#tax-nav-back').on('click', taxNavGoBack);
+        $('#tax-nav-clear').on('click', function(e) { e.preventDefault(); taxNavReset(); });
+        taxNavPushColumn(TAX_RANKS_INITIAL);
     });
-
-    // Load secuential taxonomy ranks
-    function taxonomyDiv(object) {
-        var url = $("#FamilyForm").attr("data-load-taxonomy-rank-url");
-        var url_species = $("#FamilyForm").attr("data-load-species-url");
-        var taxonomy_rank = object.value;
-        var parent = object.parentElement;
-        var rankNum = parseInt(object.id.split('taxonomy_rank_')[1])+1;
-
-        // remove children ranks
-		var children = document.getElementById("taxonomyDiv").children;
-        for (var i = children.length - 1; i >= 0; i--) {
-            var child = children[i];
-            var current_id = parseInt(child.id.split('taxonomy_rank_')[1]);
-            if (parseInt(current_id) >= parseInt(rankNum)) {
-                child.remove()
-            }
-        }
-
-        // create new child rank
-		var selectList = document.createElement("select");
-        selectList.id = "taxonomy_rank_"+rankNum;
-        selectList.name = "taxonomy";
-        selectList.style = 'width: 100%; margin-top: 5px;';
-        selectList.addEventListener(
-            'change',
-			(event) => {taxonomyDiv(selectList)}
-		);
-        parent.appendChild(selectList);
-        // var selectedList = document.getElementById(selectList.id);
-		var selectedList = $("#"+selectList.id)
-
-		$.ajax({
-			url: url,
-			data: {
-                'taxonomy_rank': taxonomy_rank,
-				'reduced': 'true'
-			},
-			success: function (data) {
-                selectedList.html(data);
-                var x = selectedList[0]
-				if (x.options.length == 1){
-                    selectedList.hide();
-                };
-            }
-        });
-
-        var taxonomy_list = [];
-        var taxonomy_ranks = document.getElementsByName("taxonomy");
-        taxonomy_ranks.forEach((tax) => taxonomy_list.push(tax.value));
-
-        var domainname = document.getElementById("domainname").value;
-        $.ajax({
-			url: url_species,
-			data: {
-                'taxonomy_rank': taxonomy_rank,
-				'taxonomy_list': taxonomy_list,
-				'domainname': domainname,
-			},
-			success: function (data) {
-                $("#species_list").html(data);
-            }
-        });
-    }
-
-    function updateShortnameDatalist(optionsHtml) {
-        var temp = document.createElement('select');
-        temp.innerHTML = optionsHtml;
-        var datalist = document.getElementById('shortname-datalist');
-        datalist.innerHTML = Array.from(temp.options)
-            .filter(function(o) { return o.value; })
-            .map(function(o) { return '<option value="' + o.value + '">'; })
-            .join('');
-    }
-
-	// Change in Protein Layout
-	$("#proteinlayout").change(function () {
-        var urldomains = $("#FamilyForm").attr("data-load-domains-url");
-		//var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
-        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
-        var proteinlayout = $(this).val();
-
-        // Load domain names
-        $.ajax({
-			url: urldomains,
-			data: {
-				'proteinlayout': proteinlayout
-			},
-			success: function (data) {
-				$("#domainname").html(data);
-                $("#domaingroup_rank").html("");	 // Update rank1
-				$("#id_domaingroup").html("");		 // Clear rank2
-			}
-		});
-
-        // Load Domain Group rank1
-        //$.ajax({
-		//	url: urldomaingroupsrank1,
-		//	data: {
-		//		'proteinlayout': proteinlayout
-		//	},
-		//	success: function (data) {
-		//		 $("#domaingroup_rank").html(data);	 // Update rank1
-		//		 $("#id_domaingroup").html("");		 // Clear rank2
-		//	}
-		//});
-
-        // Load shortnames
-        $.ajax({
-			url: urlshortnames,
-			data: {
-				'proteinlayout': proteinlayout
-			},
-			success: function (data) {
-				updateShortnameDatalist(data);
-			}
-		});
-    })
-
-    // Change in Domain Name
-    $("#domainname").change(function () {
-		var urldomaingroupsrank1 = $("#FamilyForm").attr("data-load-domaingroups-rank1-url");
-        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
-        var proteinlayout = $("#proteinlayout").val();
-		var domainname = $(this).val();
-
-        // Load Domain Group rank1
-        $.ajax({
-			url: urldomaingroupsrank1,
-			data: {
-                'proteinlayout': proteinlayout,
-				'domainname': domainname
-			},
-			success: function (data) {
-				 $("#domaingroup_rank").html(data);	 // Update rank1
-                 $("#id_domaingroup").html("");		 // Clear rank2
-			}
-		});
-
-		// Load shortnames
-		$.ajax({
-			url: urlshortnames,
-			data: {
-                'proteinlayout': proteinlayout,
-                'domainname': domainname
-			},
-			success: function (data) {
-                updateShortnameDatalist(data);
-            }
-        });
-    });
-
-    // Change in domain group rank
-    $("#domaingroup_rank").change(function () {
-        var url = $("#FamilyForm").attr("data-load-domaingroups-rank2-url");
-        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
-		var proteinlayout = $("#proteinlayout").val();
-		var domainname = $("#domainname").val();
-        var domaingroup_rank = $(this).val();
-
-        $.ajax({
-			url: url,
-			data: {
-                'proteinlayout': proteinlayout,
-				'domaingroup_rank': domaingroup_rank,
-				'domainname': domainname
-			},
-			success: function (data) {
-                $("#id_domaingroup").html(data);
-            }
-        });
-
-        // Load shortnames
-		$.ajax({
-			url: urlshortnames,
-			data: {
-                'proteinlayout': proteinlayout,
-                'domainname': domainname,
-				'domaingroup_rank': domaingroup_rank
-			},
-			success: function (data) {
-                updateShortnameDatalist(data);
-            }
-        });
-    });
-
-    // Click on domaingroups
-    $("#id_domaingroup").on('change', loadShortNames);
-	function loadShortNames() {
-        var urlshortnames = $("#FamilyForm").attr("data-load-sequenceshortnames-url");
-		var proteinlayout = $("#proteinlayout").val();
-		var domainname = $("#domainname").val();
-        var domaingroup_rank = $("#domaingroup_rank").val();
-        var domaingroup = document.getElementById("id_domaingroup");
-
-		var result = [];
-        var options = domaingroup.options;
-        var opt;
-        for (var i=0, iLen=options.length; i<iLen; i++) {
-            opt = options[i];
-            if (opt.selected) {
-                result.push(opt.value || opt.text);
-            }
-        }
-        // Load shortnames
-		$.ajax({
-			url: urlshortnames,
-			data: {
-                'proteinlayout': proteinlayout,
-                'domainname': domainname,
-				'domaingroup_rank': domaingroup_rank,
-				'domaingroup': result
-			},
-			success: function (data) {
-                updateShortnameDatalist(data);
-            }
-        });
-    }
-
 </script>
 
 {% endblock content %}
