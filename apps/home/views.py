@@ -45,6 +45,7 @@ from apps.home.views_query import (
     QuerySequences3dViewer,
     QuerySequencesDetails,
     DetailsSequencesFastaFormat,
+    suggest_aliases,
 )
 
 from apps.home.views_motifs import (
@@ -82,3 +83,18 @@ from apps.home.views_admin import (
     read_update_sequences_results,
     download_file,
 )
+
+from django.http import HttpResponse
+
+
+def robots_txt(request):
+    lines = [
+        "User-agent: *",
+        "Disallow: /admin/",
+        "Disallow: /accounts/",
+        "Disallow: /captcha/",
+        "Allow: /",
+        "",
+        "Sitemap: https://tracey.unil.ch/sitemap.xml",
+    ]
+    return HttpResponse("\n".join(lines), content_type="text/plain")

@@ -27,10 +27,21 @@
 </title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="google-site-verification" content="Wg_9sWVPy6-HhKaGvzuKFsoVQKiliHfHkjMmN4eb6M0" />
 <meta name="title" content="TRACEY DB">
 <meta name="author" content="Carlos Pulido">
-<meta name="description" content="Interactive protein sequence database for membrain binding proteins including SNARE, Rab, Arf and related families">
-<meta name="keywords" content="SNARE Ras RAB Arf database tracey phylogeny domain motif" />
+<meta name="description" content="Interactive protein sequence database for membrain binding proteins including SNARE, Rab, Arf, Ras and related families">
+<meta name="keywords" content="SNARE Ras RAB Arf database tracey phylogeny domain motif HMM" />
+
+<!-- Canonical URL -->
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TRACEY DB">
+<meta property="og:title" content="{% block og_title %}TRACEY DB - Protein Sequence Database{% endblock %}">
+<meta property="og:description" content="{% block og_description %}Interactive protein sequence database for membrane binding proteins including SNARE, Rab, Arf and related families{% endblock %}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
 
 <!-- Favicon -->
 <link rel="apple-touch-icon" sizes="120x120" href="{{ ASSETS_ROOT }}/img/favicon/apple-touch-icon.png">

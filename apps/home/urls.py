@@ -63,6 +63,7 @@ urlpatterns = [
     path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"),
     path('ajax/updateSequenceStatus', views.updateSequenceStatus, name="ajax_updateSequenceStatus"),
     path('ajax/suggestNames', views.suggestNames, name="ajax_suggestNames"),
+    path('ajax/suggest-aliases', views.suggest_aliases, name='ajax_suggest_aliases'),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),

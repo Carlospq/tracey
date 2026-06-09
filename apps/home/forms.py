@@ -83,13 +83,11 @@ class FamilyForm(forms.Form):
     foreignannotation = forms.CharField(
                             label = "foreignannotation",
                             required = False,
-                            validators = [validators.RegexValidator('^gi\|([0-9]+)$',
-                                                                    'Foreign annotation format is not correct. Please use NCBI format.')] # [NCBIpattern]
                         )
 
     foreignannotation.widget.attrs.update({'type': 'text',
                                            'style': 'width: 100%; display: table-cell',
-                                           'placeholder': "ex: 'gi|21426793'"})
+                                           'placeholder': "ex: 'gi|21426793', 'putative synaptobrevin'"})
 
     # Aliases
     aliases = forms.CharField(
@@ -97,6 +95,7 @@ class FamilyForm(forms.Form):
                             required=False,
                             )
     aliases.widget.attrs.update({'type': 'text',
+                                 'autocomplete': 'off',
                                  'style': 'width: 100%; display: table-cell',
                                  'placeholder': "ex: 'synaptobrevin3'"})
 
@@ -120,7 +119,7 @@ class FamilyForm(forms.Form):
                         required = False,
                     )
     domaingroup.widget.attrs.update({'size': 7,
-                                     'style': 'width: 100%; margin-top: 6px; height: 14.5em;'})
+                                     'style': 'width: 100%; margin-top: 8px; height: 14.5em;'})
 
 
 def get_taxonomy_choices():

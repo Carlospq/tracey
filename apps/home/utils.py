@@ -190,3 +190,290 @@ def md5_from_seq(sequence):
 		return md5(path)
 	finally:
 		os.remove(path)
+
+
+
+def get_kingdom_stats():
+	from django.db.models import Count
+	# 1. Cargar árbol taxonómico en memoria (1 query)
+	all_taxonomies = Taxonomies.objects.values(
+		'taxonomy_id', 'taxonomyparent_id', 'taxonomyrank', 'scientificname'
+	)
+	children_map = {}
+	taxonomy_info = {}
+	for t in all_taxonomies:
+		children_map.setdefault(t['taxonomyparent_id'], []).append(t['taxonomy_id'])
+		taxonomy_info[t['taxonomy_id']] = t
+	kingdoms = [t for t in taxonomy_info.values() if t['taxonomyrank'] == 'kingdom']
+	# 2. Contar secuencias live con SNARE o HABC agrupadas por taxonomy_id (1 query)
+	seq_counts = (
+		Sequences.objects
+		.filter(sequencestatus='live', motifs__motifname__in=['SNARE', 'HABC'])
+		.values('taxonomy_id')
+		.annotate(seq_count=Count('sequence_id', distinct=True))
+	)
+	seq_count_map = {row['taxonomy_id']: row['seq_count'] for row in seq_counts}
+	# 3. BFS en memoria para cada reino; acumular todos los taxonomy_ids cubiertos
+	result = []
+	covered_tax_ids = set()
+	for kingdom in kingdoms:
+		all_ids = {kingdom['taxonomy_id']}
+		frontier = [kingdom['taxonomy_id']]
+		while frontier:
+			next_frontier = []
+			for tid in frontier:
+				for child_id in children_map.get(tid, []):
+					if child_id not in all_ids:
+						all_ids.add(child_id)
+						next_frontier.append(child_id)
+			frontier = next_frontier
+		covered_tax_ids.update(all_ids)
+		total_seqs = sum(seq_count_map.get(tid, 0) for tid in all_ids)
+		species_count = sum(1 for tid in all_ids if tid in seq_count_map)
+		result.append({
+			'kingdom': kingdom['scientificname'],
+			'sequences': total_seqs,
+			'species': species_count,
+		})
+	# 4. Secuencias sin reino asignado (SAR y otros grupos sin rank "kingdom")
+	uncovered_tax_ids = set(seq_count_map.keys()) - covered_tax_ids
+	result.append({
+		'kingdom': 'No kingdom assigned',
+		'sequences': sum(seq_count_map.get(tid, 0) for tid in uncovered_tax_ids),
+		'species': len(uncovered_tax_ids),
+	})
+	return sorted(result, key=lambda x: x['sequences'], reverse=True)
+
+
+def get_annotation_stats():
+	from django.db.models import Count
+	# 1. Dominios anotados por tipo (filas en Motifs, no secuencias)
+	domain_counts = (
+		Motifs.objects
+		.filter(sequence__sequencestatus='live', motifname__in=['SNARE', 'HABC'])
+		.values('motifname')
+		.annotate(count=Count('motif_id'))
+	)
+	domains = {row['motifname']: row['count'] for row in domain_counts}
+	# 2. Familias taxonómicas: subir el árbol hasta rank='family' para cada taxonomy_id
+	all_tax_ids = list(
+		Sequences.objects
+		.filter(sequencestatus='live', motifs__motifname__in=['SNARE', 'HABC'])
+		.values_list('taxonomy_id', flat=True)
+		.distinct()
+	)
+	all_taxonomies = Taxonomies.objects.values('taxonomy_id', 'taxonomyparent_id', 'taxonomyrank', 'scientificname')
+	parent_map = {}
+	taxonomy_info = {}
+	for t in all_taxonomies:
+		parent_map[t['taxonomy_id']] = t['taxonomyparent_id']
+		taxonomy_info[t['taxonomy_id']] = t
+	def find_family(taxonomy_id):
+		visited = set()
+		current = taxonomy_id
+		while current and current not in visited:
+			visited.add(current)
+			info = taxonomy_info.get(current)
+			if info is None:
+				break
+			if info['taxonomyrank'] == 'family':
+				return info['scientificname']
+			current = parent_map.get(current)
+		return None
+	families = {find_family(tid) for tid in all_tax_ids if tid is not None}
+	families.discard(None)
+	return {
+		'snare_domains': domains.get('SNARE', 0),
+		'habc_domains': domains.get('Habc', 0),
+		'total_domains': sum(domains.values()),
+		'taxonomic_families': len(families),
+	}
+
+
+def diagnose_unclassified():
+	"""Lista los taxones sin phylum, mostrando su linaje de ranks para identificar dónde clasificarlos."""
+	from django.db.models import Count
+	all_taxonomies = Taxonomies.objects.values(
+		'taxonomy_id', 'taxonomyparent_id', 'taxonomyrank', 'scientificname'
+	)
+	parent_map = {}
+	taxonomy_info = {}
+	children_map = {}
+	for t in all_taxonomies:
+		parent_map[t['taxonomy_id']] = t['taxonomyparent_id']
+		taxonomy_info[t['taxonomy_id']] = t
+		children_map.setdefault(t['taxonomyparent_id'], []).append(t['taxonomy_id'])
+	covered_tax_ids = set()
+	for t in taxonomy_info.values():
+		if t['taxonomyrank'] == 'kingdom':
+			frontier = [t['taxonomy_id']]
+			covered_tax_ids.add(t['taxonomy_id'])
+			while frontier:
+				next_frontier = []
+				for tid in frontier:
+					for child_id in children_map.get(tid, []):
+						if child_id not in covered_tax_ids:
+							covered_tax_ids.add(child_id)
+							next_frontier.append(child_id)
+				frontier = next_frontier
+	seq_counts = (
+		Sequences.objects
+		.filter(sequencestatus='live', motifs__motifname__in=['SNARE', 'HABC'])
+		.values('taxonomy_id')
+		.annotate(seq_count=Count('sequence_id', distinct=True))
+	)
+	seq_count_map = {row['taxonomy_id']: row['seq_count'] for row in seq_counts}
+	uncovered_tax_ids = set(seq_count_map.keys()) - covered_tax_ids
+	def get_lineage(taxonomy_id):
+		lineage = []
+		visited = set()
+		current = taxonomy_id
+		while current and current not in visited:
+			visited.add(current)
+			info = taxonomy_info.get(current)
+			if info is None:
+				break
+			lineage.append(f"{info['taxonomyrank']}:{info['scientificname']}")
+			if info['taxonomyrank'] in ('superkingdom', 'kingdom'):
+				break
+			current = parent_map.get(current)
+		return ' > '.join(reversed(lineage))
+	unclassified = []
+	for tid in uncovered_tax_ids:
+		visited = set()
+		current = tid
+		has_phylum = False
+		while current and current not in visited:
+			visited.add(current)
+			info = taxonomy_info.get(current)
+			if info is None:
+				break
+			if info['taxonomyrank'] == 'phylum':
+				has_phylum = True
+				break
+			current = parent_map.get(current)
+		if not has_phylum:
+			unclassified.append({
+				'name': taxonomy_info[tid]['scientificname'],
+				'rank': taxonomy_info[tid]['taxonomyrank'],
+				'sequences': seq_count_map[tid],
+				'lineage': get_lineage(tid),
+			})
+	unclassified.sort(key=lambda x: x['sequences'], reverse=True)
+	for u in unclassified:
+		print(f"[{u['sequences']:>4} seqs] {u['name']:35} ({u['rank']:15})  {u['lineage']}")
+	print(f"\nTotal: {len(unclassified)} taxones / {sum(u['sequences'] for u in unclassified)} seqs")
+
+
+def diagnose_kingdom_stats():
+	from django.db.models import Count
+	base_filter = {'motifs__motifname__in': ['SNARE', 'HABC']}
+	# A. Total con filtro live (el que usa get_kingdom_stats)
+	total_live = Sequences.objects.filter(sequencestatus='live', **base_filter).distinct().count()
+	species_live = Sequences.objects.filter(sequencestatus='live', **base_filter).values('taxonomy_id').distinct().count()
+	# B. Total sin filtro de status (para comparar con la cifra del manuscrito)
+	total_all = Sequences.objects.filter(**base_filter).distinct().count()
+	species_all = Sequences.objects.filter(**base_filter).values('taxonomy_id').distinct().count()
+	# C. Secuencias con taxonomy_id NULL
+	null_live = Sequences.objects.filter(sequencestatus='live', taxonomy_id__isnull=True, **base_filter).distinct().count()
+	# D. Suma real del seq_count_map (lo que distribuye get_kingdom_stats entre kingdoms)
+	seq_count_map_total = sum(
+		row['seq_count'] for row in
+		Sequences.objects.filter(sequencestatus='live', **base_filter)
+		.values('taxonomy_id')
+		.annotate(seq_count=Count('sequence_id', distinct=True))
+	)
+	# E. Secuencias en Verifymotifs con SNARE o HABC (no incluidas en get_kingdom_stats)
+	verify_live = Sequences.objects.filter(
+		sequencestatus='live',
+		verifymotifs__motifname__in=['SNARE', 'HABC']
+	).distinct().count()
+	# F. Desglose por sequencestatus (para identificar qué status suman 18.811)
+	status_breakdown = (
+		Sequences.objects.filter(**base_filter)
+		.values('sequencestatus')
+		.annotate(
+			seq_count=Count('sequence_id', distinct=True),
+			species_count=Count('taxonomy_id', distinct=True),
+		)
+		.order_by('-seq_count')
+	)
+	print("=== Diagnóstico get_kingdom_stats ===")
+	print(f"[A] Live + SNARE/HABC:               {total_live:>6} seqs  / {species_live:>5} species")
+	print(f"[B] Todos status + SNARE/HABC:        {total_all:>6} seqs  / {species_all:>5} species")
+	print(f"[C] Live + taxonomy NULL:              {null_live:>6} seqs")
+	print(f"[D] Suma seq_count_map (distribuido):  {seq_count_map_total:>6} seqs")
+	print(f"[E] Live en Verifymotifs SNARE/HABC:   {verify_live:>6} seqs")
+	print(f"    Diff A-D (no distribuidas):         {total_live - seq_count_map_total:>6} seqs")
+	print(f"    Diff manuscrito-A (18811-A):         {18811 - total_live:>6} seqs")
+	print()
+	print("[F] Desglose por sequencestatus:")
+	running = 0
+	for row in status_breakdown:
+		running += row['seq_count']
+		print(f"    {str(row['sequencestatus']):20}  {row['seq_count']:>6} seqs / {row['species_count']:>5} species  (acum: {running})")
+
+
+def get_no_kingdom_by_phylum():
+	from django.db.models import Count
+	# 1. Cargar árbol taxonómico en memoria
+	all_taxonomies = Taxonomies.objects.values(
+		'taxonomy_id', 'taxonomyparent_id', 'taxonomyrank', 'scientificname'
+	)
+	children_map = {}
+	parent_map = {}
+	taxonomy_info = {}
+	for t in all_taxonomies:
+		children_map.setdefault(t['taxonomyparent_id'], []).append(t['taxonomy_id'])
+		parent_map[t['taxonomy_id']] = t['taxonomyparent_id']
+		taxonomy_info[t['taxonomy_id']] = t
+	# 2. BFS hacia abajo desde cada reino para obtener covered_tax_ids
+	covered_tax_ids = set()
+	for t in taxonomy_info.values():
+		if t['taxonomyrank'] == 'kingdom':
+			frontier = [t['taxonomy_id']]
+			covered_tax_ids.add(t['taxonomy_id'])
+			while frontier:
+				next_frontier = []
+				for tid in frontier:
+					for child_id in children_map.get(tid, []):
+						if child_id not in covered_tax_ids:
+							covered_tax_ids.add(child_id)
+							next_frontier.append(child_id)
+				frontier = next_frontier
+	# 3. Conteo de secuencias live SNARE/HABC por taxonomy_id
+	seq_counts = (
+		Sequences.objects
+		.filter(sequencestatus='live', motifs__motifname__in=['SNARE', 'HABC'])
+		.values('taxonomy_id')
+		.annotate(seq_count=Count('sequence_id', distinct=True))
+	)
+	seq_count_map = {row['taxonomy_id']: row['seq_count'] for row in seq_counts}
+	# 4. Taxones sin reino que tienen secuencias
+	uncovered_tax_ids = set(seq_count_map.keys()) - covered_tax_ids
+	# 5. Para cada taxón, subir el árbol buscando phylum; si no hay, usar class como fallback
+	def find_ancestor_rank(taxonomy_id, ranks):
+		visited = set()
+		current = taxonomy_id
+		while current and current not in visited:
+			visited.add(current)
+			info = taxonomy_info.get(current)
+			if info is None:
+				break
+			if info['taxonomyrank'] in ranks:
+				return info['scientificname']
+			current = parent_map.get(current)
+		return 'Unclassified'
+	# 6. Agrupar por phylum (con fallback a class)
+	phylum_seqs = {}
+	phylum_species = {}
+	for tid in uncovered_tax_ids:
+		phylum = find_ancestor_rank(tid, ['phylum', 'class'])
+		phylum_seqs[phylum] = phylum_seqs.get(phylum, 0) + seq_count_map.get(tid, 0)
+		phylum_species[phylum] = phylum_species.get(phylum, 0) + 1
+	result = [
+		{'phylum': p, 'sequences': phylum_seqs[p], 'species': phylum_species[p]}
+		for p in phylum_seqs
+	]
+	return sorted(result, key=lambda x: x['sequences'], reverse=True)
+

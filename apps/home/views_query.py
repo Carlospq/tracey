@@ -558,3 +558,17 @@ def DetailsSequencesFastaFormat(request, sequence_id):
         raise Http404("Sequence does not exist")
 
     return render(request, 'home/details-sequences-fasta.html', {'sequence': sequence})
+
+
+def suggest_aliases(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 3:
+        return JsonResponse([], safe=False)
+    suggestions = (
+        Sequences.objects
+        .filter(aliases__icontains=q)
+        .exclude(aliases__isnull=True).exclude(aliases='')
+        .values_list('aliases', flat=True)
+        .distinct()[:15]
+    )
+    return JsonResponse(list(suggestions), safe=False)

@@ -15,6 +15,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.sitemaps.views import sitemap
+from apps.home.views import robots_txt
+from apps.home.sitemaps import StaticViewSitemap
+
+sitemaps = {'static': StaticViewSitemap}
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -22,7 +27,9 @@ urlpatterns = [
 
     path('captcha/', include('captcha.urls')),
 
-    # ADD NEW Routes HERE
+    # SEO
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 
     # Leave `Home.Urls` as last the last line
     path("", include("apps.home.urls")),
