@@ -11,7 +11,8 @@ urlpatterns = [
     # The home page
     path('', views.index, name='home'),
 
-    # Download  files
+    # Download  files — HMM must be before the generic download/<str:filename> pattern
+    path('download/hmm', views.download_hmm_zip, name='download_hmm_zip'),
     path('download/<str:filename>', views.download_file, name='download_file'),
 
     # Features

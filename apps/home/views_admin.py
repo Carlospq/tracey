@@ -4,6 +4,7 @@ import subprocess
 import datetime
 import mimetypes
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -79,10 +80,29 @@ def features(request):
                "last_sequences_update": last_sequences_update,
                "last_sequences_update_end": last_sequences_update_end,
                "last_tree_update": last_tree_update,
-               "domains": [d.domainname for d in Domains.objects.all()]
+               "domains": [d.domainname for d in Domains.objects.all()],
+               "hmm_catalog": get_hmm_catalog(),
                }
 
     return render(request, 'home/features.html', context)
+
+
+def get_hmm_catalog():
+    base = os.path.join(str(settings.BASE_DIR), 'utils', 'hmmModels')
+    try:
+        db_files = sorted(
+            f for f in os.listdir(base)
+            if os.path.isfile(os.path.join(base, f))
+        )
+        families = {}
+        for entry in sorted(os.scandir(base), key=lambda e: e.name):
+            if entry.is_dir():
+                files = sorted(f.name for f in os.scandir(entry.path) if f.name.endswith('.hmm'))
+                if files:
+                    families[entry.name] = files
+        return {'db_files': db_files, 'families': families}
+    except (FileNotFoundError, PermissionError):
+        return {'db_files': [], 'families': {}}
 
 
 @login_required(login_url="/noPermits.html")
@@ -99,26 +119,18 @@ def update_taxonomy(request):
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def update_sequences(request):
-    VALID_CONTINUE_VALS = {'continue', 'force'}
     VALID_SHORT_NAMES = {'All', 'HoSa', 'MuMu', 'RaNo', 'DaRe', 'SaCe'}
 
-    continueVal = request.GET.get('continueVal', '')
     domain = request.GET.get('domain', '')
-    onlyActive = request.GET.get('onlyActive', 'false')
     shortName = request.GET.get('shortName', 'All')
 
-    if continueVal not in VALID_CONTINUE_VALS:
-        return HttpResponse('Invalid continueVal parameter.', status=400)
     if shortName not in VALID_SHORT_NAMES:
         if not Taxonomies.objects.filter(taxonomyshortname=shortName).exists():
             return HttpResponse('Invalid shortName parameter.', status=400)
     if not Domains.objects.filter(domainname=domain).exists() and domain != '':
         return HttpResponse('Invalid domain parameter.', status=400)
 
-    cmd = ['python3', 'manage.py', 'UpdateTraceySequences',
-           '--%s' % continueVal, '--domain', domain]
-    if onlyActive == 'true':
-        cmd.append('--onlyActive')
+    cmd = ['python3', 'manage.py', 'UpdateTraceySequences', '--force', '--domain', domain]
     if shortName != 'All':
         cmd.extend(['--species', shortName])
     subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -190,4 +202,41 @@ def download_file(request, filename=''):
     mime_type, _ = mimetypes.guess_type(filepath)
     response = HttpResponse(path, content_type=mime_type)
     response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def download_hmm_zip(request):
+    import io
+    import zipfile
+
+    selection = request.GET.get('selection', '')
+    base_dir = os.path.realpath(os.path.join(str(settings.BASE_DIR), 'utils', 'hmmModels'))
+    buffer = io.BytesIO()
+
+    if selection == 'TRACEY_db':
+        zip_name = 'TRACEY_HMM_database.zip'
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for f in sorted(os.listdir(base_dir)):
+                fpath = os.path.join(base_dir, f)
+                if os.path.isfile(fpath):
+                    zf.write(fpath, f)
+    else:
+        if not selection:
+            return HttpResponse(status=400)
+        family_dir = os.path.realpath(os.path.join(base_dir, selection))
+        if not family_dir.startswith(base_dir + os.sep):
+            return HttpResponse(status=403)
+        if not os.path.isdir(family_dir):
+            return HttpResponse(status=404)
+        zip_name = f'TRACEY_HMM_{selection}.zip'
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for f in sorted(os.listdir(family_dir)):
+                if f.endswith('.hmm'):
+                    zf.write(os.path.join(family_dir, f), f)
+
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
     return response

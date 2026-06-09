@@ -171,10 +171,30 @@
                                 </div>
                             </div>
 
-							<!-- Generate HMM models -->
+							<!-- HMM Models -->
                             <div class="feature-card">
-                                <div class="feature-header">Generate HMM models</div>
-                                <div class="feature-body"> This section will be updated in the future...</div>
+                                <div class="feature-header">HMM Models</div>
+                                <div class="feature-body">
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Download TRACEY HMM profile models for use with HMMER3 (<code>hmmsearch</code>, <code>hmmscan</code>).</p>
+                                        <p style="margin-bottom: 10px;">Select a protein family or the full TRACEY database:</p>
+                                        <select id="hmm_selection" style="width: 100%; font-size: 15px; padding: 4px;">
+                                            <option value="TRACEY_db">TRACEY db (full database)</option>
+                                            {% for family, files in hmm_catalog.families.items %}
+                                            <option value="{{ family }}">{{ family }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p id="hmm_hint" style="font-size: 12px; margin-top: 10px; color: #555;">
+                                            TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)
+                                        </p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        <input type="button" id="download_hmm_btn" value="Download .zip">
+                                    </div>
+                                    <div id="loader_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                        <div class="loader"></div>
+                                    </div>
+                                </div>
                             </div>
 
 							<!-- Update Sequences -->
@@ -194,33 +214,36 @@
 										<div class="feature-body-footer">
 											{% if last_sequences_update_end != "Update in progress" %}
 
-												<div style="display:inline-flex">
-													<input type="checkbox" id="onlyActive" name="onlyActive" value="onlyActive" checked style="margin-right: 5px">
-													<label for="onlyActive" style="margin-right: 10px; height: 1em"> Only active sequences</label><br>
-													<select id="continue" name="continue" style="">
-														<option value="continue">Continue</option>
-														<option value="force">Force new</option>
+												<!-- Row 1: species selection -->
+												<div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
+													<label style="font-size:12px;">
+														<input type="radio" name="speciesMode" value="All" id="speciesModeAll" checked>
+														All species
+													</label>
+													<label style="font-size:12px;">
+														<input type="radio" name="speciesMode" value="shortname" id="speciesModeShortname">
+														Shortname:
+													</label>
+													<div id="shortname-update-wrapper" style="position:relative; display:none;">
+														<input type="text" id="shortNameText" name="shortNameText"
+															   placeholder="e.g. HoSa" autocomplete="off"
+															   style="width:110px; font-size:12px;">
+														<div id="shortname-update-results"
+															 style="display:none; position:absolute; top:100%; left:0; z-index:200;
+																	background:#fff; border:1px solid #ccc; border-radius:4px;
+																	min-width:220px; max-height:180px; overflow-y:auto; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15);">
+														</div>
+													</div>
+												</div>
+												<!-- Row 2: protein family + submit -->
+												<div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
+													<select id="domain" name="domain">
+														{% for domain in domains %}
+															<option value="{{ domain }}">{{ domain }}</option>
+														{% endfor %}
 													</select>
+													<input class="mt-1" type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
 												</div>
-												<select id="shortName" name="shortName">
-													<option value="All">All</option>
-													<option value="HoSa">Homo sapiens</option>
-													<option value="MuMu">Mus musculus</option>
-													<option value="RaNo">Rattus norvergicus</option>
-													<option value="DaRe">Danio rerio</option>
-													<option value="SaCe">Saccharomyces c.</option>
-												</select>
-												<div style="display:inline-flex; align-items:center; margin-top:5px;">
-													<label for="shortNameText" style="margin-right:5px; font-size:12px;">Or shortname:</label>
-													<input type="text" id="shortNameText" name="shortNameText" placeholder="e.g. HoSa" style="width:70px; font-size:12px;">
-												</div>
-												<select id="domain" name="domain">
-													{% for domain in domains %}
-														<option value="{{ domain }}">{{ domain }}</option>
-													{% endfor %}
-												</select>
-
-												<input class="mt-1" type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
 											{% endif %}
 											<i><p class="p-footer" id='sequences_last_update'>Last update on: {{last_sequences_update}}</p></i>
 											<i><p id='last_sequences_update_end'><b>{{ last_sequences_update_end }}</b></p></i>
@@ -248,6 +271,7 @@
         <!-- End Card frame -->
     </div>
 </div>
+
 </body>
 
 {% endblock content %}
@@ -256,6 +280,8 @@
 {% block javascripts %}
 <script src="{{ ASSETS_ROOT }}/js/jquery-4.0.0.min.js"></script>
 <script>
+
+    var reloadOnAjaxStop = false;
 
     $(document).on('submit','#UpdateTaxonomyForm', function(e){
         // Loading animation
@@ -267,6 +293,7 @@
         loader.style.display = "flex";
         msg.style.display = "none";
 
+        reloadOnAjaxStop = true;
         $.ajax({
           url: "{% url 'ajax_update_taxonomy' %}",
           data: {
@@ -293,6 +320,7 @@
         loader.style.display = "flex";
         msg.style.display = "none";
 
+        reloadOnAjaxStop = true;
         $.ajax({
           url: "{% url 'ajax_update_tree' %}",
           data: {
@@ -308,15 +336,72 @@
         });
     });
 
+    // ── Update Sequences — species help search ───────────────────────────────
+    var taxSearchUpdateUrl = "{% url 'ajax_load_taxonomy_search' %}";
+    var taxSearchUpdateTimer = null;
+
+    $('input[name="speciesMode"]').on('change', function() {
+        if ($(this).val() === 'shortname') {
+            $('#shortname-update-wrapper').show();
+            $('#shortNameText').focus();
+        } else {
+            $('#shortname-update-wrapper').hide();
+            $('#shortNameText').val('');
+            $('#shortname-update-results').hide().empty();
+        }
+    });
+
+    $('#shortNameText').on('keydown', function(e) {
+        if (e.key === 'Enter') e.preventDefault();
+    });
+
+    $('#shortNameText').on('input', function() {
+        var q = $(this).val().trim();
+        clearTimeout(taxSearchUpdateTimer);
+        if (q.length < 2) {
+            $('#shortname-update-results').hide().empty();
+            return;
+        }
+        taxSearchUpdateTimer = setTimeout(function() {
+            $.get(taxSearchUpdateUrl, { q: q, type: 'shortname' }, function(data) {
+                var $res = $('#shortname-update-results').empty();
+                if (!data.taxa || data.taxa.length === 0) {
+                    $res.html('<div style="padding:6px 8px;color:#888;">No results</div>').show();
+                    return;
+                }
+                data.taxa.forEach(function(t) {
+                    var label = t.scientificname + ' (' + t.shortname + ')';
+                    var $item = $('<div>')
+                        .text(label)
+                        .css({ padding: '5px 8px', cursor: 'pointer', "text-align": 'left' })
+                        .on('mouseenter', function() { $(this).css('background', '#f0f0f0'); })
+                        .on('mouseleave', function() { $(this).css('background', ''); })
+                        .on('mousedown', function(e) {
+                            e.preventDefault(); // prevent textbox blur
+                            e.stopPropagation();
+                            $('#shortNameText').val(t.shortname);
+                            $res.hide().empty();
+                        });
+                    $res.append($item);
+                });
+                $res.show();
+            });
+        }, 300);
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#shortname-update-wrapper').length) {
+            $('#shortname-update-results').hide();
+        }
+    });
+
     $(document).on('submit','#UpdateSequencesForm', function(e){
-        // Loading animation
-		e.preventDefault();
+        e.preventDefault();
         var sequences_last_update = document.getElementById("sequences_last_update").innerHTML;
-        var shortNameText = document.getElementById("shortNameText").value.trim();
-        var shortName = shortNameText !== "" ? shortNameText : document.getElementById("shortName").value;
+        var mode = $('input[name="speciesMode"]:checked').val();
+        var shortName = (mode === 'shortname') ? $('#shortNameText').val().trim() : 'All';
+        if (mode === 'shortname' && shortName === '') { alert('Please enter a shortname.'); return; }
         var domain = document.getElementById("domain").value;
-        var continueVal = document.getElementById("continue").value;
-        var onlyActive = document.getElementById("onlyActive").checked;
         var loader = document.getElementById("loader_sequences");
         var msg = document.getElementById("loader_msg_sequences");
         document.getElementById("sequences_last_update").innerHTML = "This will take several hours... Go for a coffee!";
@@ -324,27 +409,53 @@
         document.getElementById("update_sequences").style.display = "none";
         loader.style.display = "flex";
         msg.style.display = "none";
+        reloadOnAjaxStop = true;
         $.ajax({
           url: "{% url 'ajax_update_sequences' %}",
           data: {
               'sequences_last_update': sequences_last_update,
-			  'shortName': shortName,
-			  'continueVal': continueVal,
-			  'domain': domain,
-			  'onlyActive': onlyActive,
+              'shortName': shortName,
+              'domain': domain,
           },
-
           success: function (data) {
             $("#loader_msg_sequences").html(data);
             document.getElementById("sequences_last_update").innerHTML = "Last update on: Today";
             loader.style.display = "none";
             msg.style.display = "flex";
           }
-         });
+        });
+    });
+
+    var hmmCounts = {
+        {% for family, files in hmm_catalog.families.items %}'{{ family }}': {{ files|length }},
+        {% endfor %}
+    };
+
+    document.getElementById('hmm_selection').addEventListener('change', function() {
+        var hint = document.getElementById('hmm_hint');
+        if (this.value === 'TRACEY_db') {
+            hint.textContent = 'TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)';
+        } else {
+            var count = hmmCounts[this.value] || '?';
+            hint.textContent = 'Family ' + this.value + ': ' + count + ' .hmm profile files';
+        }
+    });
+
+    document.getElementById('download_hmm_btn').addEventListener('click', function() {
+        var selection = document.getElementById('hmm_selection').value;
+        var loader = document.getElementById('loader_hmm');
+        var btn = this;
+        loader.style.display = 'flex';
+        btn.disabled = true;
+        window.location.href = "{% url 'download_hmm_zip' %}?selection=" + encodeURIComponent(selection);
+        setTimeout(function() { loader.style.display = 'none'; btn.disabled = false; }, 3000);
     });
 
     $(document).ajaxStop(function(){
-        window.location.reload();
+        if (reloadOnAjaxStop) {
+            reloadOnAjaxStop = false;
+            window.location.reload();
+        }
     });
 </script>
 {% endblock javascripts %}
