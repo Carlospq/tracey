@@ -4,7 +4,9 @@ import uuid
 import json
 import urllib.request
 import urllib.error
+import urllib.parse
 import pandas as pd
+from Bio.Phylo.PhyloXML import Taxonomy
 
 from django.core.cache import cache
 
@@ -38,6 +40,46 @@ def get_alphafold_url(sequence):
 		except (urllib.error.HTTPError, urllib.error.URLError, KeyError, IndexError):
 			result = False
 		cache.set(cache_key, result, timeout=86400)
+	return result
+
+
+def get_wikipedia_image(scientific_name):
+	if not scientific_name:
+		return None
+
+	def retrieve_wiki_img(key):
+		try:
+			name_encoded = urllib.parse.quote(key.replace(' ', '_'))
+			url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{name_encoded}'
+			req = urllib.request.Request(url, headers={'User-Agent': 'traceyDB/1.0 (carlospq88@gmail.com)'})
+			data = urllib.request.urlopen(req, timeout=10).read().decode('utf8')
+			parsed = json.loads(data)
+			image_url = parsed.get('thumbnail', {}).get('source')
+			page_url = parsed.get('content_urls', {}).get('desktop', {}).get('page')
+			result = {'image_url': image_url, 'page_url': page_url} if image_url else False
+			return result
+		except Exception:
+			return False
+
+	# Try species name
+	species_cache_key = f'wikipedia_img_{scientific_name.replace(" ", "_")}'
+	result = cache.get(species_cache_key)
+	if result is None:
+		result = retrieve_wiki_img(scientific_name)
+		cache.set(species_cache_key, result, timeout=86400)
+
+	# Try parent taxonomy name as fallback
+	if result is False:
+		taxonomy = Taxonomies.objects.filter(scientificname=scientific_name).first()
+		if taxonomy and taxonomy.taxonomyparent_id:
+			parent = Taxonomies.objects.filter(taxonomy_id=taxonomy.taxonomyparent_id).first()
+			if parent and parent.scientificname:
+				parent_cache_key = f'wikipedia_img_{parent.scientificname.replace(" ", "_")}'
+				result = cache.get(parent_cache_key)
+				if result is None:
+					result = retrieve_wiki_img(parent.scientificname)
+					cache.set(parent_cache_key, result, timeout=86400)
+
 	return result
 
 

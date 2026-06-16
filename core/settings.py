@@ -224,6 +224,7 @@ CSP_FONT_SRC = (
 CSP_IMG_SRC = (
     "'self'",
     "data:",                        # SVG/PNG plots served as data URIs in detail views
+    "https://upload.wikimedia.org", # Wikipedia species thumbnails
 )
 
 CSP_CONNECT_SRC = (

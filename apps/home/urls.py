@@ -60,6 +60,7 @@ urlpatterns = [
     path('ajax/load-queryverifysequences/', views.load_queryverifysequences, name='ajax_load_queryverifysequences'),
     path('ajax/update-taxonomy/', views.update_taxonomy, name='ajax_update_taxonomy'),
     path('ajax/update-sequences/', views.update_sequences, name='ajax_update_sequences'),
+    path('ajax/rescan-motifs/', views.rescan_motifs, name='ajax_rescan_motifs'),
     path('ajax/ajax-update-tree/', views.update_tree, name='ajax_update_tree'),
     path('ajax/plot_phylogenetic_tree', views.plotTrees, name="ajax_plot_phylogenetic_tree"),
     path('ajax/updateSequenceStatus', views.updateSequenceStatus, name="ajax_updateSequenceStatus"),

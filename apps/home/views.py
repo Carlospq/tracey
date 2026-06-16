@@ -78,6 +78,7 @@ from apps.home.views_admin import (
     features,
     update_taxonomy,
     update_sequences,
+    rescan_motifs,
     update_tree,
     read_update_taxonomy_results,
     read_update_sequences_results,

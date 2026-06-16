@@ -570,6 +570,12 @@ menu = {
 				}
 			}
 		},
+		'Longin':{
+			'Longin.I': {},
+			'Longin.II': {},
+			'Longin.III': {},
+			'Longin.IV': {}
+		},
 		'LGL': {}
 	},
 	"TMR": {},

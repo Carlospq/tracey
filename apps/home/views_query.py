@@ -16,7 +16,7 @@ from django_tables2.export.export import TableExport
 
 from .models import *
 from .forms import *
-from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty
+from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty, get_wikipedia_image
 from .plots import build_domain_plot, get_pdb_data, get_alphafold_url
 
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
@@ -299,14 +299,28 @@ def QuerySequences(request):
     form = FamilyForm
 
     proteinLayoutsList = sorted([pfam for pfam in get_menu(request)])
-    domainsList = sorted([x.domainname for x in Domains.objects.filter(domainname__in=["SNARE", "Habc", "LGL"])])
 
-    SNAREdomainID = Domains.objects.get(domainname="SNARE").domain_id
+    domains_map = {name: did for name, did in Domains.objects.filter(
+        domainname__in=["SNARE", "Habc", "Longin", "LGL"]
+    ).values_list("domainname", "domain_id")}
+    domainsList = sorted(domains_map.keys())
+    SNAREdomainID = domains_map["SNARE"]
+
     SNAREdomaingroups = Domaingroups.objects.filter(domain_id=SNAREdomainID)
     SNAREdomaingroupnames = []
-
     SNAREmotifs = Motifs.objects.filter(domaingroup_id__in=SNAREdomaingroups.values('domaingroup_id'))
-    shortnames = sorted(list(set([x.sequenceshortname.split("_")[0] for x in Sequences.objects.filter(sequence_id__in=SNAREmotifs.values('sequence_id')) if x.sequenceshortname.split("_")[0] != ""])))
+
+    shortnames = cache.get('querysequences_snare_shortnames')
+    if shortnames is None:
+        raw_names = Sequences.objects.filter(
+            sequence_id__in=SNAREmotifs.values('sequence_id')
+        ).values_list('sequenceshortname', flat=True)
+        shortnames = sorted({
+            prefix
+            for name in raw_names
+            if (prefix := name.split("_")[0]) != ""
+        })
+        cache.set('querysequences_snare_shortnames', shortnames, timeout=86400)
 
     taxonomy_ranks = [x for x in reducedTRACEYtaxonomies]
 
@@ -509,6 +523,7 @@ def QuerySequencesDetails(request, sequence_id):
         return render(request, 'home/query-sequences-details.html', context)
 
     context["speciesname"] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id=context['sequence'].taxonomy_id)][0]
+    context["wiki_image"] = get_wikipedia_image(context["speciesname"])
     if 'pdb' in context['sequence'].foreignannotation:
         m = re.search(r'pdb\|([A-Z0-9]+)\|([A-z0-9\s]+)', context['sequence'].foreignannotation)
         context["pdb"] = m.group(1)

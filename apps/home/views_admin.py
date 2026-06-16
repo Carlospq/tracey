@@ -1,17 +1,20 @@
 import os
 import re
+import json
 import subprocess
 import datetime
 import mimetypes
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils.timezone import now
 
 from .models import *
 from .views_verify import staff_login_required
+from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
 
 
 @login_required(login_url="/noPermits.html")
@@ -82,6 +85,9 @@ def features(request):
                "last_tree_update": last_tree_update,
                "domains": [d.domainname for d in Domains.objects.all()],
                "hmm_catalog": get_hmm_catalog(),
+               "hmm_families": list(menu.keys()),
+               "hmm_domains": json.dumps({f: list(menu[f].keys()) for f in menu}),
+               "all_hmm_keys": json.dumps(get_keys_recursively(menu)),
                }
 
     return render(request, 'home/features.html', context)
@@ -135,6 +141,62 @@ def update_sequences(request):
         cmd.extend(['--species', shortName])
     subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return HttpResponse('Process started.')
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def rescan_motifs(request):
+    hmm          = request.GET.get('hmm', '').strip()
+    family       = request.GET.get('family', '').strip()
+    species      = request.GET.get('species', '').strip()
+    evalue       = request.GET.get('evalue', '1e-10').strip()
+    motif_filter = request.GET.get('motifFilter', '').strip()
+    only_active  = request.GET.get('onlyActive', '') == 'true'
+    dry_run      = request.GET.get('dryRun', '') == 'true'
+
+    if not hmm and not family:
+        return HttpResponse('Specify an HMM key or a family.', status=400)
+
+    all_keys = set(get_keys_recursively(menu))
+    if hmm and hmm not in all_keys:
+        return HttpResponse('Invalid HMM key.', status=400)
+    if family and family not in menu:
+        return HttpResponse('Invalid family.', status=400)
+
+    try:
+        float(evalue)
+    except ValueError:
+        return HttpResponse('Invalid e-value.', status=400)
+
+    if species and not Taxonomies.objects.filter(
+            Q(taxonomyshortname=species) | Q(scientificname=species)).exists():
+        return HttpResponse('Species not found in TRACEY.', status=400)
+
+    if motif_filter and not Domains.objects.filter(domainname=motif_filter).exists():
+        return HttpResponse('Invalid motif-filter domain.', status=400)
+
+    cmd = ['python3', 'manage.py', 'ReScanMotifs']
+    if hmm:
+        cmd.extend(['--hmm', hmm])
+    else:
+        cmd.extend(['--family', family])
+    if species:
+        cmd.extend(['--species', species])
+    cmd.extend(['--evalue', evalue])
+    if motif_filter:
+        cmd.extend(['--motif-filter', motif_filter])
+    if only_active:
+        cmd.append('--onlyActive')
+    if dry_run:
+        cmd.append('--dry-run')
+
+    if dry_run:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        output = result.stdout + (('\n--- stderr ---\n' + result.stderr) if result.stderr.strip() else '')
+        return HttpResponse(output or '(no output)', content_type='text/plain')
+
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return HttpResponse('Re-scan started.')
 
 
 @login_required(login_url="/noPermits.html")

@@ -92,6 +92,9 @@
             a {
               color: blue;
             }
+            .feature-card.tall { height: auto; min-height: 650px; }
+            .feature-card.tall .feature-body { height: auto; }
+            .feature-card.tall .feature-body-main { height: auto; min-height: 380px; }
     </style>
 </head>
 
@@ -142,61 +145,6 @@
                                 </div>
                             </div>
 
-							<!-- Build Phylogenetic Tree -->
-                            <div class="feature-card">
-                                <div class="feature-header">Build Phylogenetic Tree</div>
-                                <div class="feature-body">
-                                    <form method='post' action='#' name="UpdateTreeForm" id="UpdateTreeForm">
-                                    {% csrf_token %}
-                                    <div class="feature-body-main">
-                                        <p style="margin-bottom: 15px;">Reconstructs tree of life using all taxonomies in TRACEY. This tree will follow the current NCBI phylogeny. It is recomended to update TRACEY taxonomies before running this feature.</p>
-                                        <img src="{{ASSETS_ROOT}}/img/images/treeoflife.png" alt="Tree of life" style="margin: auto; margin-top: 10px; width: 200px; height: 200px; border-radius: 10px 10px 10px 10px;">
-                                        <p style="font-size: 13px;"> Download current tree (<a href="{% url 'download_file' 'TRACEY_phylogeneticTree.newick' %}">newick</a>/
-                                                                                            <a href="{% url 'download_file' 'TRACEY_phylogeneticTree.pdf' %}">PDF</a>)
-                                        </p>
-                                    </div>
-                                    <div class="feature-body-footer">
-										{% if last_tree_update != "Tree in progress" %}
-											<input type="submit" value="Update Tree" name='update_tree' id='update_tree'>
-										{% endif %}
-                                        <i><p class="p-footer" id='tree_last_update'>Last update on: {{last_tree_update}}</p></i>
-                                    </div>
-                                    <div class="progress-bar" style="background: transparent;">
-                                        <div id="loader_tree" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
-                                            <div class="loader"></div>
-                                        </div>
-                                        <div id="loader_msg_tree" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
-                                    </div>
-                                    </form>
-                                </div>
-                            </div>
-
-							<!-- HMM Models -->
-                            <div class="feature-card">
-                                <div class="feature-header">HMM Models</div>
-                                <div class="feature-body">
-                                    <div class="feature-body-main">
-                                        <p style="margin-bottom: 15px;">Download TRACEY HMM profile models for use with HMMER3 (<code>hmmsearch</code>, <code>hmmscan</code>).</p>
-                                        <p style="margin-bottom: 10px;">Select a protein family or the full TRACEY database:</p>
-                                        <select id="hmm_selection" style="width: 100%; font-size: 15px; padding: 4px;">
-                                            <option value="TRACEY_db">TRACEY db (full database)</option>
-                                            {% for family, files in hmm_catalog.families.items %}
-                                            <option value="{{ family }}">{{ family }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <p id="hmm_hint" style="font-size: 12px; margin-top: 10px; color: #555;">
-                                            TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)
-                                        </p>
-                                    </div>
-                                    <div class="feature-body-footer">
-                                        <input type="button" id="download_hmm_btn" value="Download .zip">
-                                    </div>
-                                    <div id="loader_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
-                                        <div class="loader"></div>
-                                    </div>
-                                </div>
-                            </div>
-
 							<!-- Update Sequences -->
 							<div class="feature-card">
                                 <div class="feature-header">Update TRACEY Sequences</div>
@@ -235,6 +183,7 @@
 														</div>
 													</div>
 												</div>
+
 												<!-- Row 2: protein family + submit -->
 												<div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
 													<select id="domain" name="domain">
@@ -257,6 +206,156 @@
 
 									</form>
 								</div>
+                            </div>
+
+							<!-- Re-scan Motifs -->
+							<div class="feature-card">
+								<div class="feature-header">Re-scan Motifs</div>
+								<div class="feature-body">
+									<form method='post' action='#' name="ReScanMotifsForm" id="ReScanMotifsForm">
+										{% csrf_token %}
+										<div class="feature-body-main">
+											<p style="margin-bottom:10px;">Re-scan sequences against HMM profiles and update Motifs in TRACEY.</p>
+
+											<!-- Species filter -->
+											<p style="font-size:13px; font-weight:bold; margin-bottom:4px;">Species filter <span style="font-weight:normal;">(optional)</span></p>
+											<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+												<div style="position:relative; flex:1; min-width:140px;">
+													<input type="text" id="rescanShortNameText" placeholder="Shortname (e.g. HoSa)" autocomplete="off"
+														   style="width:100%; font-size:12px; box-sizing:border-box;">
+													<div id="rescan-shortname-results"
+														 style="display:none; position:absolute; top:100%; left:0; z-index:200;
+																background:#fff; border:1px solid #ccc; border-radius:4px;
+																min-width:220px; max-height:160px; overflow-y:auto; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15);">
+													</div>
+												</div>
+												<div style="position:relative; flex:1; min-width:140px;">
+													<input type="text" id="rescanScientificText" placeholder="Scientific name" autocomplete="off"
+														   style="width:100%; font-size:12px; box-sizing:border-box;">
+													<div id="rescan-scientific-results"
+														 style="display:none; position:absolute; top:100%; left:0; z-index:200;
+																background:#fff; border:1px solid #ccc; border-radius:4px;
+																min-width:220px; max-height:160px; overflow-y:auto; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15);">
+													</div>
+												</div>
+											</div>
+
+											<!-- HMM scope -->
+											<p style="font-size:13px; font-weight:bold; margin-bottom:4px;">HMM scope <span style="font-weight:normal;">(at least one required)</span></p>
+											<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+												<div>
+													<label style="font-size:11px; color:#555;">Protein family</label>
+													<select id="rescanFamily" style="width:100%; font-size:12px; padding:3px;">
+														<option value="">— select —</option>
+														{% for f in hmm_families %}
+														<option value="{{ f }}">{{ f }}</option>
+														{% endfor %}
+													</select>
+												</div>
+												<div>
+													<label style="font-size:11px; color:#555;">Domain <span style="font-weight:normal;">(optional)</span></label>
+													<select id="rescanDomain" style="width:100%; font-size:12px; padding:3px;" disabled>
+														<option value="">— select family first —</option>
+													</select>
+												</div>
+											</div>
+											<div style="position:relative; margin-bottom:10px;">
+												<label style="font-size:11px; color:#555;">Specific HMM key (optional, overrides above)</label>
+												<input type="text" id="rescanHmmKey" placeholder="e.g. Longin.I" autocomplete="off"
+													   style="width:100%; font-size:12px; box-sizing:border-box;">
+												<div id="rescan-hmm-results"
+													 style="display:none; position:absolute; top:100%; left:0; z-index:200;
+															background:#fff; border:1px solid #ccc; border-radius:4px;
+															min-width:200px; max-height:160px; overflow-y:auto; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15);">
+												</div>
+											</div>
+
+											<!-- Options -->
+											<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; align-items:center;">
+												<label style="font-size:12px;">E-value:
+													<input type="text" id="rescanEvalue" value="1e-10"
+														   style="width:80px; font-size:12px; margin-left:4px;">
+												</label>
+												<label style="font-size:12px;">Motif filter:
+													<select id="rescanMotifFilter" style="font-size:12px; margin-left:4px;">
+														<option value="">— none —</option>
+														{% for domain in domains %}
+														<option value="{{ domain }}">{{ domain }}</option>
+														{% endfor %}
+													</select>
+												</label>
+											</div>
+											<div style="display:flex; gap:16px; flex-wrap:wrap; font-size:12px;">
+												<label><input type="checkbox" id="rescanOnlyActive" style="margin-right:4px;">Only active sequences</label>
+												<label><input type="checkbox" id="rescanDryRun" style="margin-right:4px;">Dry run (no DB writes)</label>
+											</div>
+										</div>
+										<div class="feature-body-footer" style="height:auto; padding-top:10px;">
+											<input type="submit" value="Re-scan Motifs" name='rescan_motifs' id='rescan_motifs_btn'>
+										</div>
+										<div class="progress-bar" style="background:transparent;">
+											<div id="loader_rescan" style="text-align:center; padding-bottom:20px; margin:auto; display:none;">
+												<div class="loader"></div>
+											</div>
+											<div id="loader_msg_rescan" style="text-align:center; padding-bottom:20px; margin:auto; display:none; word-wrap:break-word; word-break:break-word;"></div>
+										</div>
+									</form>
+								</div>
+							</div>
+
+							<!-- HMM Models -->
+                            <div class="feature-card">
+                                <div class="feature-header">HMM Models</div>
+                                <div class="feature-body">
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Download TRACEY HMM profile models for use with HMMER3 (<code>hmmsearch</code>, <code>hmmscan</code>).</p>
+                                        <p style="margin-bottom: 10px;">Select a protein family or the full TRACEY database:</p>
+                                        <select id="hmm_selection" style="width: 100%; font-size: 15px; padding: 4px;">
+                                            <option value="TRACEY_db">TRACEY db (full database)</option>
+                                            {% for family, files in hmm_catalog.families.items %}
+                                            <option value="{{ family }}">{{ family }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p id="hmm_hint" style="font-size: 12px; margin-top: 10px; color: #555;">
+                                            TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)
+                                        </p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        <input type="button" id="download_hmm_btn" value="Download .zip">
+                                    </div>
+                                    <div id="loader_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                        <div class="loader"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+							<!-- Build Phylogenetic Tree -->
+                            <div class="feature-card">
+                                <div class="feature-header">Build Phylogenetic Tree</div>
+                                <div class="feature-body">
+                                    <form method='post' action='#' name="UpdateTreeForm" id="UpdateTreeForm">
+                                    {% csrf_token %}
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Reconstructs tree of life using all taxonomies in TRACEY. This tree will follow the current NCBI phylogeny. It is recomended to update TRACEY taxonomies before running this feature.</p>
+                                        <img src="{{ASSETS_ROOT}}/img/images/treeoflife.png" alt="Tree of life" style="margin: auto; margin-top: 10px; width: 200px; height: 200px; border-radius: 10px 10px 10px 10px;">
+                                        <p style="font-size: 13px;"> Download current tree (<a href="{% url 'download_file' 'TRACEY_phylogeneticTree.newick' %}">newick</a>/
+                                                                                            <a href="{% url 'download_file' 'TRACEY_phylogeneticTree.pdf' %}">PDF</a>)
+                                        </p>
+                                    </div>
+                                    <div class="feature-body-footer">
+										{% if last_tree_update != "Tree in progress" %}
+											<input type="submit" value="Update Tree" name='update_tree' id='update_tree'>
+										{% endif %}
+                                        <i><p class="p-footer" id='tree_last_update'>Last update on: {{last_tree_update}}</p></i>
+                                    </div>
+                                    <div class="progress-bar" style="background: transparent;">
+                                        <div id="loader_tree" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                            <div class="loader"></div>
+                                        </div>
+                                        <div id="loader_msg_tree" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                    </div>
+                                    </form>
+                                </div>
                             </div>
 
                             <span class="stretch"></span>
@@ -449,6 +548,149 @@
         btn.disabled = true;
         window.location.href = "{% url 'download_hmm_zip' %}?selection=" + encodeURIComponent(selection);
         setTimeout(function() { loader.style.display = 'none'; btn.disabled = false; }, 3000);
+    });
+
+    // ── Re-scan Motifs ──────────────────────────────────────────────────────────
+    var allHmmKeys  = {{ all_hmm_keys|safe }};
+    var hmmDomains  = {{ hmm_domains|safe }};
+    var rescanTaxTimerSn = null;
+    var rescanTaxTimerSc = null;
+    var rescanHmmTimer = null;
+
+    function bindRescanTaxBox(inputSel, resultsSel, type, minLen, otherSel) {
+        $(inputSel).on('keydown', function(e) { if (e.key === 'Enter') e.preventDefault(); });
+        $(inputSel).on('input', function() {
+            var q = $(this).val().trim();
+            var timer = (type === 'shortname') ? rescanTaxTimerSn : rescanTaxTimerSc;
+            clearTimeout(timer);
+            if (q.length < minLen) { $(resultsSel).hide().empty(); return; }
+            var t = setTimeout(function() {
+                $.get(taxSearchUpdateUrl, { q: q, type: type }, function(data) {
+                    var $res = $(resultsSel).empty();
+                    if (!data.taxa || !data.taxa.length) {
+                        $res.html('<div style="padding:6px 8px;color:#888;">No results</div>').show();
+                        return;
+                    }
+                    data.taxa.forEach(function(t) {
+                        var value = (type === 'shortname') ? t.shortname : t.scientificname;
+                        $('<div>').text(t.scientificname + ' (' + t.shortname + ')')
+                            .css({ padding: '5px 8px', cursor: 'pointer', 'text-align': 'left' })
+                            .on('mouseenter', function() { $(this).css('background', '#f0f0f0'); })
+                            .on('mouseleave', function() { $(this).css('background', ''); })
+                            .on('mousedown', function(e) {
+                                e.preventDefault(); e.stopPropagation();
+                                $(inputSel).val(value);
+                                $(otherSel).val('');
+                                $res.hide().empty();
+                            }).appendTo($res);
+                    });
+                    $res.show();
+                });
+            }, 300);
+            if (type === 'shortname') rescanTaxTimerSn = t; else rescanTaxTimerSc = t;
+        });
+    }
+    bindRescanTaxBox('#rescanShortNameText', '#rescan-shortname-results', 'shortname', 2, '#rescanScientificText');
+    bindRescanTaxBox('#rescanScientificText', '#rescan-scientific-results', 'scientific', 3, '#rescanShortNameText');
+
+    $('#rescanFamily').on('change', function() {
+        var family = $(this).val();
+        var $domain = $('#rescanDomain');
+        $domain.empty();
+        if (!family || !hmmDomains[family] || !hmmDomains[family].length) {
+            $domain.append('<option value="">— no domains —</option>').prop('disabled', true);
+        } else {
+            $domain.append('<option value="">— all (full family) —</option>');
+            hmmDomains[family].forEach(function(d) {
+                $domain.append($('<option>').val(d).text(d));
+            });
+            $domain.prop('disabled', false);
+        }
+        $('#rescanHmmKey').val('');
+    });
+
+    $('#rescanHmmKey').on('keydown', function(e) { if (e.key === 'Enter') e.preventDefault(); });
+    $('#rescanHmmKey').on('input', function() {
+        var q = $(this).val().trim().toLowerCase();
+        clearTimeout(rescanHmmTimer);
+        var $res = $('#rescan-hmm-results');
+        if (q.length < 2) { $res.hide().empty(); return; }
+        rescanHmmTimer = setTimeout(function() {
+            var matches = allHmmKeys.filter(function(k) { return k.toLowerCase().indexOf(q) !== -1; }).slice(0, 30);
+            $res.empty();
+            if (!matches.length) { $res.html('<div style="padding:6px 8px;color:#888;">No results</div>').show(); return; }
+            matches.forEach(function(k) {
+                $('<div>').text(k)
+                    .css({ padding: '5px 8px', cursor: 'pointer', 'text-align': 'left' })
+                    .on('mouseenter', function() { $(this).css('background', '#f0f0f0'); })
+                    .on('mouseleave', function() { $(this).css('background', ''); })
+                    .on('mousedown', function(e) {
+                        e.preventDefault(); e.stopPropagation();
+                        $('#rescanHmmKey').val(k);
+                        $res.hide().empty();
+                    }).appendTo($res);
+            });
+            $res.show();
+        }, 200);
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#rescanShortNameText, #rescan-shortname-results').length)
+            $('#rescan-shortname-results').hide();
+        if (!$(e.target).closest('#rescanScientificText, #rescan-scientific-results').length)
+            $('#rescan-scientific-results').hide();
+        if (!$(e.target).closest('#rescanHmmKey, #rescan-hmm-results').length)
+            $('#rescan-hmm-results').hide();
+    });
+
+    $(document).on('submit', '#ReScanMotifsForm', function(e) {
+        e.preventDefault();
+        var hmmKey = $('#rescanHmmKey').val().trim();
+        var domain = $('#rescanDomain').val();
+        var family = $('#rescanFamily').val();
+        // priority: specific key > domain > family
+        var hmm           = hmmKey || domain;
+        var effectiveFamily = hmm ? '' : family;
+        if (!hmm && !effectiveFamily) { alert('Select a protein family or enter an HMM key.'); return; }
+        var species    = $('#rescanShortNameText').val().trim() || $('#rescanScientificText').val().trim();
+        var dryRun     = $('#rescanDryRun').is(':checked');
+        var params = {
+            hmm:         hmm,
+            family:      effectiveFamily,
+            species:     species,
+            evalue:      $('#rescanEvalue').val().trim(),
+            motifFilter: $('#rescanMotifFilter').val(),
+            onlyActive:  $('#rescanOnlyActive').is(':checked'),
+            dryRun:      dryRun
+        };
+
+        if (dryRun) {
+            window.open("{% url 'ajax_rescan_motifs' %}?" + $.param(params), '_blank');
+            return;
+        }
+
+        var loader = document.getElementById('loader_rescan');
+        var msg    = document.getElementById('loader_msg_rescan');
+        document.getElementById('rescan_motifs_btn').style.display = 'none';
+        loader.style.display = 'flex';
+        msg.style.display = 'none';
+        reloadOnAjaxStop = true;
+        $.ajax({
+            url: "{% url 'ajax_rescan_motifs' %}",
+            data: params,
+            success: function(data) {
+                $('#loader_msg_rescan').html(data);
+                loader.style.display = 'none';
+                msg.style.display = 'flex';
+            },
+            error: function(xhr) {
+                $('#loader_msg_rescan').html('Error: ' + xhr.responseText);
+                loader.style.display = 'none';
+                msg.style.display = 'flex';
+                document.getElementById('rescan_motifs_btn').style.display = '';
+                reloadOnAjaxStop = false;
+            }
+        });
     });
 
     $(document).ajaxStop(function(){

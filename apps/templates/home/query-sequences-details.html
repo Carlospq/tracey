@@ -317,14 +317,25 @@
 						<!-- Taxonomy info -->
 						<div id="taxonomy-info">
 							<h4>Taxonomy Information</h4>
-							<table class="detailTable" style="margin-left: 15px;">
-								{% for k in sequence.get_TaxInfo %}
-								<tr>
-									<td class="td-header">{{ k }}:</td>
-									<td class="td-data">{{ sequence.get_TaxInfo|get_item:k }}</td>
-								</tr>
-								{% endfor %}
-							</table>
+							<div style="display:flex; align-items:flex-start;">
+								<table class="detailTable" style="margin-left: 15px; width:40%;">
+									{% for k in sequence.get_TaxInfo %}
+									<tr>
+										<td class="td-header">{{ k }}:</td>
+										<td class="td-data">{{ sequence.get_TaxInfo|get_item:k }}</td>
+									</tr>
+									{% endfor %}
+								</table>
+								{% if wiki_image %}
+								<div style="width:auto; margin: auto;">
+									<a href="{{ wiki_image.page_url }}" target="_blank" rel="noopener noreferrer">
+										<img src="{{ wiki_image.image_url }}"
+											 alt="{{ speciesname }}"
+											 style="max-height: 240px; width:auto; border-radius:8px; object-fit:cover;">
+									</a>
+								</div>
+								{% endif %}
+							</div>
 						</div>
 
 						<!-- 3Dmol.js Protein Viewer -->
