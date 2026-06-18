@@ -38,7 +38,7 @@ def download_ncbi_taxonomy_files(path, url='https://ftp.ncbi.nlm.nih.gov/pub/tax
     os.remove(path+"taxdmp.zip")
 
 
-def read_ncbi_files(path):
+def read_ncbi_files(path = 'utils/ncbi_taxonomy/taxdmp/'):
     # Check and Read NCBI files
     file_nodes = path+'nodes.dmp'
     file_names = path+'names.dmp'

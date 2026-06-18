@@ -16,7 +16,7 @@ from django_tables2.export.export import TableExport
 
 from .models import *
 from .forms import *
-from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty, get_wikipedia_image
+from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty, get_wikipedia_image, user_can_access_sequence
 from .plots import build_domain_plot, get_pdb_data, get_alphafold_url
 
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
@@ -498,6 +498,9 @@ def QuerySequences3dViewer(request, sequence_id):
         context['log'] = 'Seqence ID %s not found in TRACEY' % (sequence_id)
         return render(request, 'home/query-sequences-details.html', context)
 
+    if not user_can_access_sequence(request, context['sequence']):
+        raise Http404
+
     context["fetch3d"] = get_alphafold_url(context['sequence'].sequence)
 
     motifs = context['sequence'].motifs_set.all()
@@ -521,6 +524,9 @@ def QuerySequencesDetails(request, sequence_id):
     except Sequences.DoesNotExist:
         context['log'] = 'Seqence ID %s not found in TRACEY' % (sequence_id)
         return render(request, 'home/query-sequences-details.html', context)
+
+    if not user_can_access_sequence(request, context['sequence']):
+        raise Http404
 
     context["speciesname"] = [x.scientificname for x in Taxonomies.objects.filter(taxonomy_id=context['sequence'].taxonomy_id)][0]
     context["wiki_image"] = get_wikipedia_image(context["speciesname"])
@@ -571,6 +577,9 @@ def DetailsSequencesFastaFormat(request, sequence_id):
         sequence = Sequences.objects.get(pk=sequence_id)
     except Sequences.DoesNotExist:
         raise Http404("Sequence does not exist")
+
+    if not user_can_access_sequence(request, sequence):
+        raise Http404
 
     return render(request, 'home/details-sequences-fasta.html', {'sequence': sequence})
 

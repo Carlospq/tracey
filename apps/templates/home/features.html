@@ -26,7 +26,7 @@
             .features-container {
               width: 100%;
               height: 100%;
-              text-align: justify;
+              text-align: center;
               -ms-text-justify: distribute-all-lines;
               text-justify: distribute-all-lines;
               min-width: 400px;
@@ -47,6 +47,7 @@
               min-width: 400px;
               height: 600px;
               border-radius: 10px 10px 0px 0px;
+			  margin: 1%;
               margin-bottom: 25px;
             }
             .feature-header {
@@ -210,6 +211,7 @@
 
 							<!-- Re-scan Motifs -->
 							<div class="feature-card">
+
 								<div class="feature-header">Re-scan Motifs</div>
 								<div class="feature-body">
 									<form method='post' action='#' name="ReScanMotifsForm" id="ReScanMotifsForm">
@@ -301,6 +303,42 @@
 										</div>
 									</form>
 								</div>
+
+							</div>
+
+							<!-- Upload new sequences -->
+							<div class="feature-card">
+
+								<div class="feature-header">Upload new sequences</div>
+								<div class="feature-body">
+
+									<form method='post' action='#' name="UploadSequencesForm" id="UploadSequencesForm" enctype="multipart/form-data">
+
+										{% csrf_token %}
+										<div class="feature-body-main">
+
+											<p style="margin-bottom: 15px;">Upload sequences into TRACEY from a fasta file. Sequences will be analyzed against TRACEY HMMs and assigned best hits automatically.</p>
+											<p style="margin-bottom: 10px;">File must be in fasta format and follow <a href="help_doc_upload_sequences.html" target="_blank" style="text-decoration: underline; color: blue">THIS</a> format instructions for the header</p>
+
+											<div style="margin: auto; margin-top: 55px; ">
+												<label for="sequences_file" style="display: block; margin-bottom: 6px; font-size: 14px;">Select FASTA file:</label>
+												<input type="file" id="sequences_file" name="sequences_file" accept=".fasta,.fa,.txt" style="auto; font-size: 14px;">
+											</div>
+
+										</div>
+
+										<div class="feature-body-footer">
+											<input type="submit" id="upload_sequences_btn" value="Upload sequences">
+										</div>
+
+										<div id="loader_upload_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+											<div class="loader"></div>
+										</div>
+										<div id="loader_msg_upload_sequences" style="text-align:center; padding-bottom:20px; margin:auto; display:none; word-wrap:break-word; word-break:break-word;"></div>
+
+									</form>
+
+                                </div>
 							</div>
 
 							<!-- HMM Models -->
@@ -689,6 +727,38 @@
                 msg.style.display = 'flex';
                 document.getElementById('rescan_motifs_btn').style.display = '';
                 reloadOnAjaxStop = false;
+            }
+        });
+    });
+
+    $(document).on('submit', '#UploadSequencesForm', function(e) {
+        e.preventDefault();
+        var file = document.getElementById('sequences_file').files[0];
+        if (!file) {
+            alert('Please select a FASTA file.');
+            return;
+        }
+        var formData = new FormData(this);
+        var loader = document.getElementById('loader_upload_sequences');
+        var msg    = document.getElementById('loader_msg_upload_sequences');
+        document.getElementById('upload_sequences_btn').style.display = 'none';
+        loader.style.display = 'flex';
+        msg.style.display = 'none';
+        $.ajax({
+            url: "{% url 'ajax_upload_sequences' %}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(data) {
+                loader.style.display = 'none';
+                document.getElementById('upload_sequences_btn').style.display = '';
+                window.open(URL.createObjectURL(new Blob([data], {type: 'text/html'})), '_blank');
+            },
+            error: function(xhr) {
+                loader.style.display = 'none';
+                document.getElementById('upload_sequences_btn').style.display = '';
+                window.open(URL.createObjectURL(new Blob([xhr.responseText || 'Unknown error'], {type: 'text/html'})), '_blank');
             }
         });
     });

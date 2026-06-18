@@ -1,0 +1,24 @@
+<div style="padding: 15px;">
+
+	<p>Example of a valid entry for this FASTA file:</p>
+	<p style="margin-bottom: 0px;">>HoSa_Syx18||Homo sapiens||sourcedatabase:NCBI_refseq;dbxref:NP_058626.1;foreignannotation:gi|8394376|ref|NP_058626.1| syntaxin 18 [Homo sapiens]-Chromosome 4;aliases:STX18, Ufe1</p>
+	<p style="margin-bottom: 65px; margin-top: 0px;">MAVDITLLFRASVKTVKTRNKALGVAVGGGVDGSRDELFRRSPRPKGDFSSRAREVISHIGKLRDFLLEHRKDYINAYSHTMSEYGRMTDTERDQIDQDAQIFMRTCSEAIQQLRTEAHKEIHSQQVKEHRTAVLDFIEDYLKRVCKLYSEQRAIRVKRVVDKKRLSKLEPEPNTKTRESTSSEKVSQSPSKDSEENPATEERPEKILAETQPELGTWGDGKGEDELSPEEIQMFEQENQRLIGEMNSLFDEVRQIEGRVVEISRLQEIFTEKVLQQEAEIDSIHQLVVGATENIKEGNEDIREAIKNNAGFRVWILFFLVMCSFSLLFLDWYDS</p>
+
+	<p>Sequences must follow standard one/multiple lines FASTA format</p>
+	<p>Sequence must contain only common characters, without any symbols such as "-" or "*". It should not contain N's</p>
+	<p>Header must have 2 mandatory fields and 1 optional field</p>
+	<p>Fields must be separated by a double vertical bar "||"</p>
+	<p>First field will be used as sequence shortname (eg. "HoSa_Syx18")</p>
+	<p>Second field must be the species name as written in NCBI</p>
+	<p>Extra fields will follow the format "key:value" separated by a ";" (eg. "sourcedatabase:NCBI_refseq; dbxref:NP_005859.1"). <b>NOTE: This fields should not contain semicolons (;) in their descriptions or pattern will be disrupted creating errors in the sequence entry</b></p>
+	<p>List of available keys in the extra fields:</p>
+	<ul>
+		<li><b>sourcedatabase</b>: Name of the source database</li>
+		<li><b>dbxref</b>: ID used in the sourcedatabase for this same sequence</li>
+		<li><b>foreignannotation</b>: IDs for other databases, if any, and extra description of the protein (eg. "gi|8394376|ref|NP_058626.1| syntaxin 18 [Homo sapiens]-Chromosome 4")</li>
+		<li><b>aliases</b>: Other names that can be attributed to this protein</li>
+		<li><b>sequencecomments</b>: Any comment that needs to be added to the sequence</li>
+		<li><b>gene</b>: NCBI ID for the associated gene, if any</li>
+	</ul>
+
+</div>

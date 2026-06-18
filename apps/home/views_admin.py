@@ -4,6 +4,7 @@ import json
 import subprocess
 import datetime
 import mimetypes
+from time import gmtime, strftime
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -15,6 +16,8 @@ from django.utils.timezone import now
 from .models import *
 from .views_verify import staff_login_required
 from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
+from utils.motifPredictor.reScanMotifs import reScanMotifs
+from utils.ncbi_taxonomy.TaxonomyUpdater import create_ncbi_taxonomy, read_ncbi_files
 
 
 @login_required(login_url="/noPermits.html")
@@ -302,3 +305,137 @@ def download_hmm_zip(request):
     response = HttpResponse(buffer.read(), content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
     return response
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def upload_sequences(request):
+
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+    if 'sequences_file' not in request.FILES:
+        return HttpResponse('No file received.', status=400)
+
+    uploaded_file = request.FILES['sequences_file']
+    try:
+        content = uploaded_file.read().decode('utf-8')
+    except UnicodeDecodeError:
+        return HttpResponse('File encoding error. File must be UTF-8.', status=400)
+
+    # Parse FASTA — header fields separated by ||, extras by ;key:value
+    parsed = {}
+    current_header = None
+    parse_errors = []
+
+    # Initialize empty variable for NCBI dictionary
+    ncbi = None
+
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith('>'):
+            try:
+                raw_header = line[1:]
+                fields = raw_header.split('||')
+                shortname = fields[0].strip() if len(fields) > 0 else ''
+                scientific_name = fields[1].strip() if len(fields) > 1 else ''
+                extras = {}
+                if len(fields) > 2:
+                    for kv in fields[2].split(';'):
+                        kv = kv.strip()
+                        if ':' in kv:
+                            k, v = kv.split(':', 1)
+                            extras[k.strip()] = v.strip()
+                current_header = raw_header
+                parsed[current_header] = {'shortname': shortname, 'scientific_name': scientific_name, 'sequence': '', **extras}
+            except Exception:
+                parse_errors.append(f'Could not parse header: {line[:80]}')
+                current_header = None
+        elif current_header:
+            parsed[current_header]['sequence'] += line
+
+    # Create entries
+    created = []
+    errors = list(parse_errors)
+    warnings = []
+
+    for header, data in parsed.items():
+        shortname      = data.get('shortname', '').strip()
+        scientific_name = data.get('scientific_name', '').strip()
+        sequence_str   = data.get('sequence', '').strip()
+
+        if not shortname:
+            errors.append(f'Missing shortname in: {header[:60]}')
+            continue
+        if not scientific_name:
+            errors.append(f'{shortname}: missing scientific name')
+            continue
+        if not sequence_str:
+            errors.append(f'{shortname}: empty sequence')
+            continue
+
+        taxonomy = Taxonomies.objects.filter(scientificname=scientific_name).first()
+        if not taxonomy:
+            try:
+                if not ncbi:
+                    ncbi = read_ncbi_files()
+                ncbi_id = [x for x in ncbi['dict_names'] if ncbi['dict_names'][x]['name_txt'] == scientific_name][0]
+                taxonomy = create_ncbi_taxonomy(ncbi_id, ncbi)
+            except Exception:
+                errors.append(f'{shortname}: taxonomy not found for "{scientific_name}"')
+                continue
+
+        if Sequences.objects.filter(sequence=sequence_str, taxonomy=taxonomy).exists():
+            errors.append(f'{shortname}: sequence already exists for {scientific_name}')
+            continue
+
+        if Sequences.objects.filter(sequenceshortname=shortname, taxonomy=taxonomy).exists():
+            warnings.append(f'{shortname}: shortname duplicated for {scientific_name}')
+
+        try:
+            gene = Genes.objects.create(ncbigene_id='-1')
+            seq_obj = Sequences.objects.create(
+                sequenceshortname=shortname,
+                sequence=sequence_str,
+                taxonomy=taxonomy,
+                gene=gene,
+                foreignannotation=data.get('foreignannotation', ''),
+                annotation='',
+                sourcedatabase=data.get('sourcedatabase', ''),
+                dbxref=data.get('dbxref') or None,
+                aliases=data.get('aliases') or None,
+                sequencetype='protein',
+                sequencestatus='live',
+                private=1,
+                replacedby=-1,
+                changelog=strftime("%d.%m.%Y|%H:%M:%S|", gmtime()) + request.user.username + ' - uploadSequences;',
+            )
+            created.append(shortname)
+        except Exception as e:
+            errors.append(f'{shortname}: database error — {e}')
+            continue
+
+        try:
+            reScanMotifs([seq_obj], hmm_keys=get_keys_recursively(menu), evalue=1e-1)
+        except Exception:
+            pass  # sequence created; motifs can be added later via Re-scan Motifs
+
+    lines = ['<html><head><meta charset="utf-8"><style>',
+             'body{font-family:monospace;padding:24px;background:#f8f8f8;}',
+             'h2{margin-bottom:12px;}',
+             '.ok{color:#2a7a2a;} .err{color:#c0392b;} .warn{color:#f39c12;}',
+             'ul{margin-top:6px;} li{margin-bottom:4px;}',
+             '</style></head><body>',
+             f'<h2>Upload results</h2>',
+             f'<p class="ok">&#10003; {len(created)} sequence(s) uploaded successfully.</p>']
+    if created:
+        lines.append('<ul>' + ''.join(f'<li class="ok">{s}</li>' for s in created) + '</ul>')
+    if errors:
+        lines.append(f'<p class="err">&#10007; {len(errors)} skipped:</p>')
+        lines.append('<ul>' + ''.join(f'<li class="err">{e}</li>' for e in errors) + '</ul>')
+    if warnings:
+        lines.append(f'<p class="warn">&#10007; {len(warnings)} warning(s):</p>')
+        lines.append('<ul>' + ''.join(f'<li class="warn">{e}</li>' for e in warnings) + '</ul>')
+    lines.append('</body></html>')
+    return HttpResponse('\n'.join(lines))

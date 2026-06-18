@@ -87,6 +87,12 @@ def get_menu(request):
 	return menu_full if request.user.is_staff else menu_public
 
 
+def user_can_access_sequence(request, sequence):
+	allowed_dg = set(get_keys_recursively(get_menu(request)))
+	seq_dg_names = set(sequence.motifs_set.values_list('domaingroup__domaingroupname', flat=True))
+	return seq_dg_names.issubset(allowed_dg)
+
+
 def get_children(model, parent, parent_id, child_parent_id, children=None, search_type='iexact'):
 	if children is None:
 		children = []
