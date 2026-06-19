@@ -17,7 +17,7 @@ from .models import *
 from .views_verify import staff_login_required
 from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
 from utils.motifPredictor.reScanMotifs import reScanMotifs
-from utils.ncbi_taxonomy.TaxonomyUpdater import create_ncbi_taxonomy, read_ncbi_files
+from utils.ncbi_taxonomy.TaxonomyUpdater import create_ncbi_taxonomy, read_ncbi_files, build_ncbi_dict_from_entrez
 
 
 @login_required(login_url="/noPermits.html")
@@ -327,8 +327,9 @@ def upload_sequences(request):
     current_header = None
     parse_errors = []
 
-    # Initialize empty variable for NCBI dictionary
+    # Initialize empty variable for NCBI dictionary (Tier 3 fallback)
     ncbi = None
+    entrez_cache = {}
 
     for line in content.splitlines():
         line = line.strip()
@@ -377,14 +378,28 @@ def upload_sequences(request):
 
         taxonomy = Taxonomies.objects.filter(scientificname=scientific_name).first()
         if not taxonomy:
+            taxonomy = entrez_cache.get(scientific_name)
+        if not taxonomy:
             try:
-                if not ncbi:
-                    ncbi = read_ncbi_files()
-                ncbi_id = [x for x in ncbi['dict_names'] if ncbi['dict_names'][x]['name_txt'] == scientific_name][0]
-                taxonomy = create_ncbi_taxonomy(ncbi_id, ncbi)
+                built = build_ncbi_dict_from_entrez(scientific_name)
+                if built:
+                    ncbi_id, ncbi_entrez = built
+                    taxonomy = create_ncbi_taxonomy(ncbi_id, ncbi_entrez)
             except Exception:
-                errors.append(f'{shortname}: taxonomy not found for "{scientific_name}"')
-                continue
+                taxonomy = None
+            if not taxonomy:
+                try:
+                    if not ncbi:
+                        ncbi = read_ncbi_files()
+                    ncbi_id = [x for x in ncbi['dict_names']
+                               if ncbi['dict_names'][x]['name_txt'] == scientific_name][0]
+                    taxonomy = create_ncbi_taxonomy(ncbi_id, ncbi)
+                except Exception:
+                    taxonomy = None
+            entrez_cache[scientific_name] = taxonomy
+        if not taxonomy:
+            errors.append(f'{shortname}: taxonomy not found for "{scientific_name}"')
+            continue
 
         if Sequences.objects.filter(sequence=sequence_str, taxonomy=taxonomy).exists():
             errors.append(f'{shortname}: sequence already exists for {scientific_name}')

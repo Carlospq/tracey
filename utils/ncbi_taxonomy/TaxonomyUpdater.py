@@ -27,7 +27,52 @@
 
 #####################################
 from apps.home.models import *
-import datetime, os, zipfile, requests
+import datetime, os, zipfile, requests, time
+
+try:
+    from Bio import Entrez
+    Entrez.email = "carlospq88@gmail.com"
+    _HAS_ENTREZ = True
+except Exception:
+    _HAS_ENTREZ = False
+
+
+def build_ncbi_dict_from_entrez(scientific_name, throttle=0.34):
+    if not _HAS_ENTREZ:
+        return None
+    try:
+        handle = Entrez.esearch(db="taxonomy", term=scientific_name)
+        search = Entrez.read(handle); handle.close()
+        if throttle:
+            time.sleep(throttle)
+        ids = search.get("IdList", [])
+        if not ids:
+            return None
+        tax_id = ids[0]
+        handle = Entrez.efetch(db="taxonomy", id=tax_id, retmode="xml")
+        records = Entrez.read(handle); handle.close()
+        if throttle:
+            time.sleep(throttle)
+        if not records:
+            return None
+        t = records[0]
+        if str(t.get('ScientificName', '')).lower() != scientific_name.strip().lower():
+            return None
+        chain = [{'id': str(n['TaxId']), 'name': str(n['ScientificName']),
+                  'rank': str(n.get('Rank', 'no rank'))} for n in t.get('LineageEx', [])]
+        chain.append({'id': str(t['TaxId']), 'name': str(t['ScientificName']),
+                      'rank': str(t.get('Rank', 'no rank'))})
+        ncbi = {'dict_nodes': {}, 'dict_names': {},
+                'dict_delnodes': {}, 'dict_merged': {}, 'dict_division': {}}
+        for i, node in enumerate(chain):
+            parent_id = chain[i - 1]['id'] if i > 0 else node['id']
+            ncbi['dict_nodes'][node['id']] = {
+                'tax_id': node['id'], 'parent_tax_id': parent_id, 'rank': node['rank']
+            }
+            ncbi['dict_names'][node['id']] = {'tax_id': node['id'], 'name_txt': node['name']}
+        return str(tax_id), ncbi
+    except Exception:
+        return None
 
 def download_ncbi_taxonomy_files(path, url='https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip'):
     print('Downloading NCBI taxonomy files...')
