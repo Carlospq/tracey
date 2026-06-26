@@ -101,7 +101,7 @@ def get_children(model, parent, parent_id, child_parent_id, children=None, searc
 	cs = model.objects.none()
 	for p in parent:
 		children.append(p) if p not in children and p.analysislevel >= 2 else None
-		if getattr(p, parent_id) == 4 and isinstance(p, Domaingroups):
+		if getattr(p, parent_id) == 1018 and isinstance(p, Domaingroups):
 			cs = cs.union(model.objects.filter(**{variable_column + "__icontains": ";4"}))
 		else:
 			cs = cs.union(model.objects.filter(**{filter: getattr(p, parent_id)}))
@@ -112,7 +112,54 @@ def get_children(model, parent, parent_id, child_parent_id, children=None, searc
 	return children
 
 
-def get_sequences(query, verify=False, menu=None):
+def _apply_non_motif_filters(seqs, query):
+	if 'aliases' in query and notEmpty(query, 'aliases'):
+		seqs = seqs.filter(aliases__icontains=query['aliases'][0])
+	if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
+		status = ['live' if query['sequencestatus'][0] == '1' else query['sequencestatus'][0]][0]
+		seqs = seqs.filter(sequencestatus=status)
+	if 'private' in query and notEmpty(query, 'private'):
+		seqs = seqs.filter(private=query['private'][0])
+	if 'shortname' in query and notEmpty(query, 'shortname'):
+		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0])
+					  if t.taxonomyshortname.lower() == query['shortname'][0].lower() or
+					  t.taxonomyshortname.lower().startswith(query['shortname'][0].lower() + "_") or
+					  t.taxonomyshortname.lower().startswith(query['shortname'][0].lower() + ".")]
+		seqs = seqs.filter(taxonomy__in=taxonomies)
+	if 'shortnamesearch' in query and notEmpty(query, 'shortnamesearch'):
+		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__icontains=query['shortnamesearch'][0])]
+		seqs = seqs.filter(taxonomy__in=taxonomies)
+	if 'taxonomy_ids' in query and notEmpty(query, 'taxonomy_ids'):
+		ids = [int(x) for x in query['taxonomy_ids'] if x]
+		all_tax_ids = set(ids)
+		frontier = list(ids)
+		while frontier:
+			children = list(Taxonomies.objects.filter(taxonomyparent_id__in=frontier).values_list('taxonomy_id', flat=True))
+			new_ids = [c for c in children if c not in all_tax_ids]
+			all_tax_ids.update(new_ids)
+			frontier = new_ids
+		seqs = seqs.filter(taxonomy_id__in=all_tax_ids)
+	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
+		seqs = seqs.filter(foreignannotation__icontains=query['foreignannotation'][0])
+	if 'species_list' in query:
+		taxonomies_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(scientificname__in=query['species_list'])]
+		seqs = seqs.filter(taxonomy_id__in=taxonomies_ids)
+	if 'taxonomy' in query and notEmpty(query, 'taxonomy'):
+		query['taxonomy'] = list(filter(None, query['taxonomy']))
+		taxonomy_name = [query['taxonomy'][-1]]
+		df = get_taxonomy_df()
+		reducedTaxonomyIDs = reducedTRACEYtaxonomies_ncbiIDs[taxonomy_name[0]]
+		taxonomy_names = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyIDs)]
+		ncbi_taxonomy_ids = []
+		for t in taxonomy_names:
+			arr = list(df[(df.eq(t).any(axis=1))].index.values)
+			ncbi_taxonomy_ids = ncbi_taxonomy_ids + arr
+		taxonomy_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=ncbi_taxonomy_ids)]
+		seqs = seqs.filter(taxonomy_id__in=taxonomy_ids)
+	return seqs
+
+
+def get_sequences(query, verify=False, menu=None, include_taxonomy_no_motifs=False):
 	if menu is None:
 		menu = menu_public
 
@@ -155,57 +202,13 @@ def get_sequences(query, verify=False, menu=None):
 		if query['unverified'][0] == 'true' and query['verified'][0] == 'false':
 			seqs = verifyseqs
 
-	if 'aliases' in query and notEmpty(query, 'aliases'):
-		seqs = seqs.filter(aliases__icontains=query['aliases'][0])
+	seqs = _apply_non_motif_filters(seqs, query)
 
-	if 'sequencestatus' in query and notEmpty(query, 'sequencestatus'):
-		status = ['live' if query['sequencestatus'][0] == '1' else query['sequencestatus'][0]][0]
-		seqs = seqs.filter(sequencestatus=status)
-
-	if 'private' in query and notEmpty(query, 'private'):
-		seqs = seqs.filter(private=query['private'][0])
-
-	if 'shortname' in query and notEmpty(query, 'shortname'):
-		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0])
-					  if t.taxonomyshortname.lower() == query['shortname'][0].lower() or
-					  t.taxonomyshortname.lower().startswith(query['shortname'][0].lower() + "_") or
-					  t.taxonomyshortname.lower().startswith(query['shortname'][0].lower() + ".")]
-		seqs = seqs.filter(taxonomy__in=taxonomies)
-
-	if 'shortnamesearch' in query and notEmpty(query, 'shortnamesearch'):
-		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__icontains=query['shortnamesearch'][0])]
-		seqs = seqs.filter(taxonomy__in=taxonomies)
-
-	if 'taxonomy_ids' in query and notEmpty(query, 'taxonomy_ids'):
-		ids = [int(x) for x in query['taxonomy_ids'] if x]
-		all_tax_ids = set(ids)
-		frontier = list(ids)
-		while frontier:
-			children = list(Taxonomies.objects.filter(taxonomyparent_id__in=frontier).values_list('taxonomy_id', flat=True))
-			new_ids = [c for c in children if c not in all_tax_ids]
-			all_tax_ids.update(new_ids)
-			frontier = new_ids
-		seqs = seqs.filter(taxonomy_id__in=all_tax_ids)
-
-	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
-		seqs = seqs.filter(foreignannotation__icontains=query['foreignannotation'][0])
-
-	if 'species_list' in query:
-		taxonomies_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(scientificname__in=query['species_list'])]
-		seqs = seqs.filter(taxonomy_id__in=taxonomies_ids)
-
-	if 'taxonomy' in query and notEmpty(query, 'taxonomy'):
-		query['taxonomy'] = list(filter(None, query['taxonomy']))
-		taxonomy_name = [query['taxonomy'][-1]]
-		df = get_taxonomy_df()
-		reducedTaxonomyIDs = reducedTRACEYtaxonomies_ncbiIDs[taxonomy_name[0]]
-		taxonomy_names = [x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=reducedTaxonomyIDs)]
-		ncbi_taxonomy_ids = []
-		for t in taxonomy_names:
-			arr = list(df[(df.eq(t).any(axis=1))].index.values)
-			ncbi_taxonomy_ids = ncbi_taxonomy_ids + arr
-		taxonomy_ids = [x.taxonomy_id for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=ncbi_taxonomy_ids)]
-		seqs = seqs.filter(taxonomy_id__in=taxonomy_ids)
+	if include_taxonomy_no_motifs:
+		taxonomy_filter_keys = ['taxonomy_ids', 'species_list', 'taxonomy', 'shortname', 'shortnamesearch']
+		if any(notEmpty(query, k) for k in taxonomy_filter_keys):
+			extra_seqs = _apply_non_motif_filters(Sequences.objects.all(), query)
+			seqs = seqs | extra_seqs
 
 	if len(seqs) > 4000 and not verify:
 		return {'error': 'This query returned too many sequences (>4000). Please refine your search.'}

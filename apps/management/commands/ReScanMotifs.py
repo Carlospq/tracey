@@ -34,8 +34,8 @@ class Command(BaseCommand):
             help='Filter sequences to those that already have a motif for this domain '
                  'in the DB (e.g. SNARE, C2). Use to avoid scanning unrelated sequences.')
         parser.add_argument(
-            '--evalue', type=float, default=1e-10,
-            help='E-value cutoff passed to hmmscan (default 1e-10).')
+            '--evalue', type=float, default=1e-5,
+            help='E-value cutoff passed to hmmscan (default 1e-5).')
         parser.add_argument(
             '--hmm', type=str, required=False,
             help='Specific HMM key from the menu (e.g. Longin.I, Longin). '

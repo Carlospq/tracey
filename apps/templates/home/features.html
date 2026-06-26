@@ -323,6 +323,12 @@
 											<div style="margin: auto; margin-top: 55px; ">
 												<label for="sequences_file" style="display: block; margin-bottom: 6px; font-size: 14px;">Select FASTA file:</label>
 												<input type="file" id="sequences_file" name="sequences_file" accept=".fasta,.fa,.txt" style="auto; font-size: 14px;">
+												<div style="margin-top:12px;">
+													<label style="font-size:13px;">E-value threshold:
+														<input type="text" name="evalue" id="uploadEvalue" value="1e-5"
+															   style="width:80px; font-size:12px; margin-left:4px;">
+													</label>
+												</div>
 											</div>
 
 										</div>
@@ -738,29 +744,51 @@
             alert('Please select a FASTA file.');
             return;
         }
-        var formData = new FormData(this);
-        var loader = document.getElementById('loader_upload_sequences');
-        var msg    = document.getElementById('loader_msg_upload_sequences');
-        document.getElementById('upload_sequences_btn').style.display = 'none';
-        loader.style.display = 'flex';
-        msg.style.display = 'none';
-        $.ajax({
-            url: "{% url 'ajax_upload_sequences' %}",
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(data) {
-                loader.style.display = 'none';
-                document.getElementById('upload_sequences_btn').style.display = '';
-                window.open(URL.createObjectURL(new Blob([data], {type: 'text/html'})), '_blank');
-            },
-            error: function(xhr) {
-                loader.style.display = 'none';
-                document.getElementById('upload_sequences_btn').style.display = '';
-                window.open(URL.createObjectURL(new Blob([xhr.responseText || 'Unknown error'], {type: 'text/html'})), '_blank');
-            }
-        });
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+            var text = evt.target.result;
+            var count = (text.match(/^>/gm) || []).length;
+
+            var totalSec = Math.round(count * 3.91);
+            var mins = Math.floor(totalSec / 60);
+            var secs = totalSec % 60;
+            var timeStr = mins > 0
+                ? '~' + mins + ' min ' + (secs > 0 ? secs + ' sec' : '')
+                : '~' + secs + ' sec';
+            var estMsg = count > 0
+                ? 'Analyzing ' + count + ' sequence' + (count === 1 ? '' : 's') + '. Estimated wait: ' + timeStr + '.'
+                : 'Uploading…';
+
+            var loader = document.getElementById('loader_upload_sequences');
+            var msg    = document.getElementById('loader_msg_upload_sequences');
+            document.getElementById('upload_sequences_btn').style.display = 'none';
+            loader.style.display = 'flex';
+            msg.innerHTML = estMsg;
+            msg.style.display = 'block';
+
+            var formData = new FormData(document.getElementById('UploadSequencesForm'));
+            $.ajax({
+                url: "{% url 'ajax_upload_sequences' %}",
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    loader.style.display = 'none';
+                    msg.style.display = 'none';
+                    document.getElementById('upload_sequences_btn').style.display = '';
+                    window.open(URL.createObjectURL(new Blob([data], {type: 'text/html'})), '_blank');
+                },
+                error: function(xhr) {
+                    loader.style.display = 'none';
+                    msg.style.display = 'none';
+                    document.getElementById('upload_sequences_btn').style.display = '';
+                    window.open(URL.createObjectURL(new Blob([xhr.responseText || 'Unknown error'], {type: 'text/html'})), '_blank');
+                }
+            });
+        };
+        reader.readAsText(file);
     });
 
     $(document).ajaxStop(function(){

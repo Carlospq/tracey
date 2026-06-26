@@ -450,7 +450,7 @@ def QueryVerifyView(request, sequence_id):
                 form.data['domainsubgroup'] = form.data['domainsubgroup'] if 'domainsubgroup' in form.data else ''
                 form.data._mutable = mutable_
 
-                hits_d = motifScan(form.data['sequence'], proteinlayout=form.data['proteinlayout'], domain=form.data['domain'], domaingroup=form.data['domaingroups'], domainsubgroup=form.data['domainsubgroups'], evalcutoff=evalcutoff, menu=get_menu(request))
+                hits_d = motifScan(form.data['sequence'], proteinlayout=form.data['proteinlayout'], domain=form.data['domain'], domaingroup=form.data.get('domaingroups', ''), domainsubgroup=form.data.get('domainsubgroups', ''), evalcutoff=evalcutoff, menu=get_menu(request))
                 if 'error' in hits_d:
                     context['scanerror'] = hits_d['error']
                 else:

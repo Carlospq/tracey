@@ -316,6 +316,11 @@ def upload_sequences(request):
     if 'sequences_file' not in request.FILES:
         return HttpResponse('No file received.', status=400)
 
+    try:
+        evalue = float(request.POST.get('evalue', '1e-1'))
+    except ValueError:
+        evalue = 1e-1
+
     uploaded_file = request.FILES['sequences_file']
     try:
         content = uploaded_file.read().decode('utf-8')
@@ -358,8 +363,10 @@ def upload_sequences(request):
 
     # Create entries
     created = []
+    created_seqs = []
     errors = list(parse_errors)
     warnings = []
+    scan_hits = {}
 
     for header, data in parsed.items():
         shortname      = data.get('shortname', '').strip()
@@ -427,14 +434,18 @@ def upload_sequences(request):
                 changelog=strftime("%d.%m.%Y|%H:%M:%S|", gmtime()) + request.user.username + ' - uploadSequences;',
             )
             created.append(shortname)
+            created_seqs.append(seq_obj)
         except Exception as e:
             errors.append(f'{shortname}: database error — {e}')
             continue
 
+    if created_seqs:
         try:
-            reScanMotifs([seq_obj], hmm_keys=get_keys_recursively(menu), evalue=1e-1)
-        except Exception:
-            pass  # sequence created; motifs can be added later via Re-scan Motifs
+            result = reScanMotifs(created_seqs, hmm_keys=get_keys_recursively(menu), evalue=evalue)
+            if result:
+                scan_hits.update(result)
+        except Exception as e:
+            warnings.append(f'motif scan error — {type(e).__name__}: {e}')
 
     lines = ['<html><head><meta charset="utf-8"><style>',
              'body{font-family:monospace;padding:24px;background:#f8f8f8;}',
@@ -445,7 +456,12 @@ def upload_sequences(request):
              f'<h2>Upload results</h2>',
              f'<p class="ok">&#10003; {len(created)} sequence(s) uploaded successfully.</p>']
     if created:
-        lines.append('<ul>' + ''.join(f'<li class="ok">{s}</li>' for s in created) + '</ul>')
+        def _fmt_seq(s):
+            hits = scan_hits.get(s, [])
+            if hits:
+                return f'{s} ({len(hits)} hit{"s" if len(hits) != 1 else ""}: {", ".join(hits)})'
+            return s
+        lines.append('<ul>' + ''.join(f'<li class="ok">{_fmt_seq(s)}</li>' for s in created) + '</ul>')
     if errors:
         lines.append(f'<p class="err">&#10007; {len(errors)} skipped:</p>')
         lines.append('<ul>' + ''.join(f'<li class="err">{e}</li>' for e in errors) + '</ul>')

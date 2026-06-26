@@ -33,7 +33,7 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
     alphabet = pyhmmer.easel.Alphabet.amino()
     seq1 = pyhmmer.easel.TextSequence(name=b"Query sequence", sequence=sequence).digitize(alphabet)
 
-    if proteinlayout == "ALL":
+    if proteinlayout.upper() == "ALL":
         hmms = pyhmmer.plan7.HMMFile("./utils/hmmModels/MOTIFS.hmmDb")
     else:
         if domainsubgroup:

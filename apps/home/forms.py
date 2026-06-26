@@ -337,6 +337,23 @@ class MotifForm(forms.Form):
                 )
     domaingroup.widget.attrs.update({'style': 'width: 100%; margin-top: 6px'})
 
+    aliases = forms.CharField(
+                    label="Aliases",
+                    required=False,
+                )
+    aliases.widget.attrs.update({'type': 'text',
+                                 'autocomplete': 'off',
+                                 'style': 'width: 100%; display: table-cell',
+                                 'placeholder': "ex: 'synaptobrevin3'"})
+
+    foreignannotation = forms.CharField(
+                    label="Foreign annotation",
+                    required=False,
+                )
+    foreignannotation.widget.attrs.update({'type': 'text',
+                                           'style': 'width: 100%; display: table-cell',
+                                           'placeholder': "ex: 'gi|21426793', 'putative synaptobrevin'"})
+
     taxonomy_rank = forms.CharField(
                     label= "Taxonomy",
                     required = False,
