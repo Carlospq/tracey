@@ -256,7 +256,7 @@ def load_domaingroups_rank2(request):
 
 
 def load_queryverifysequences(request):
-    sequences = get_sequences(dict(request.POST), verify=True, menu=get_menu(request), include_taxonomy_no_motifs=True)
+    sequences = get_sequences(dict(request.POST), verify=True, menu=get_menu(request))
     if 'error' in sequences:
         context = {'sequences': '',
                    'error': sequences['error']}

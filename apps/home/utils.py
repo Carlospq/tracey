@@ -9,6 +9,7 @@ import pandas as pd
 from Bio.Phylo.PhyloXML import Taxonomy
 
 from django.core.cache import cache
+from django.db.models import Q
 
 from .models import *
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
@@ -163,6 +164,8 @@ def get_sequences(query, verify=False, menu=None, include_taxonomy_no_motifs=Fal
 	if menu is None:
 		menu = menu_public
 
+	seqs = _apply_non_motif_filters(Sequences.objects.all(), query)
+
 	if 'domainname' not in query and 'proteinlayout' not in query:
 		return {'error': "At least one of 'Domain name' or 'Protein Layout' fields are required"}
 
@@ -191,24 +194,30 @@ def get_sequences(query, verify=False, menu=None, include_taxonomy_no_motifs=Fal
 	else:
 		domaingroups = Domaingroups.objects.all()
 
-	motifs = Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))
-	seqs = Sequences.objects.filter(sequence_id__in=motifs.values('sequence_id'))
+	unverified_checked = query.get('unverified', ['false'])[0] == 'true'
+	verified_checked   = query.get('verified',   ['false'])[0] == 'true'
+
+	unverifiedmotifs = Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))
+	verifiedmotifs = Motifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))
+	unverifiedseqs, verifiedseqs, nomotifseqs = Sequences.objects.none(), Sequences.objects.none(), Sequences.objects.none()
 
 	if verify:
-		verifymotifs = Verifymotifs.objects.filter(domaingroup_id__in=domaingroups.values('domaingroup_id'))
-		verifyseqs = Sequences.objects.filter(sequence_id__in=verifymotifs.values('sequence_id'))
-		if query['unverified'][0] == query['verified'][0]:
-			seqs = seqs | verifyseqs
-		if query['unverified'][0] == 'true' and query['verified'][0] == 'false':
-			seqs = verifyseqs
+		if unverified_checked:
+			unverifiedseqs = seqs.filter(sequence_id__in=unverifiedmotifs.values('sequence_id'))
 
-	seqs = _apply_non_motif_filters(seqs, query)
+		if verified_checked:
+			verifiedseqs = seqs.filter(sequence_id__in=verifiedmotifs.values('sequence_id'))
 
-	if include_taxonomy_no_motifs:
-		taxonomy_filter_keys = ['taxonomy_ids', 'species_list', 'taxonomy', 'shortname', 'shortnamesearch']
-		if any(notEmpty(query, k) for k in taxonomy_filter_keys):
-			extra_seqs = _apply_non_motif_filters(Sequences.objects.all(), query)
-			seqs = seqs | extra_seqs
+		if not unverified_checked and not verified_checked:
+			nomotifseqs = seqs.exclude(
+				Q(sequence_id__in=Motifs.objects.filter(sequence_id__in=seqs.values('sequence_id')).values('sequence_id')) |
+				Q(sequence_id__in=Verifymotifs.objects.filter(sequence_id__in=seqs.values('sequence_id')).values('sequence_id'))
+			)
+
+	else:
+		verifiedseqs = seqs.filter(sequence_id__in=verifiedmotifs.values('sequence_id'))
+
+	seqs = unverifiedseqs | verifiedseqs | nomotifseqs
 
 	if len(seqs) > 4000 and not verify:
 		return {'error': 'This query returned too many sequences (>4000). Please refine your search.'}

@@ -84,6 +84,27 @@
 			vertical-align: top;
 			text-wrap: nowrap;
 		}
+		.help-link {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 15px; height: 15px;
+			border-radius: 50%;
+			background: #adb5bd;
+			color: #fff;
+			font-size: 10px;
+			font-weight: 700;
+			font-style: normal;
+			text-decoration: none;
+			cursor: help;
+			line-height: 1;
+			flex-shrink: 0;
+		}
+		.help-link:hover {
+			background: #6c757d;
+			color: #fff;
+			text-decoration: none;
+		}
 
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -142,7 +163,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             padding: 6px 8px;
-            margin-top: 8px;
+            margin-top: 30px;
             background: white;
             height: 14.5em;
             display: flex;
@@ -199,7 +220,10 @@
 
 								<!-- Column 1: Domain -->
                                 <div class="col-4 col-section">
-                                    <div class="col-header">Domain</div>
+                                    <div class="col-header">
+										Domain
+										<a href="help_doc_domaingroup.html" onclick="window.open('help_doc_domaingroup.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" class="help-link" title="Select protein layout, domain family and domain group to filter sequences by structural classification. The domain group list allows further refinement within a selected group.">i</a>
+									</div>
 
 									<!-- Layout -->
 									<div class="formrow">
@@ -227,11 +251,25 @@
 										<div class="formcell2"><select name="domaingroup" id="domaingroup">{% for val in MotifForm.domaingroup %}{{ val }}{% endfor %}</select></div>
 									</div>
 
+									<!-- Status & Private -->
+									<div class="col-header" style="margin-top: 30px;">Sequence status</div>
+									<div class="formrow">
+										<div class="formcell1"><label for="{{ MotifForm.status.id_for_label }}" style="white-space:nowrap; margin:0;">Status</label></div>
+										<div class="formcell2"><select name="status" id="status" style="width: 20%">{% for val in MotifForm.status %}{{ val }}{% endfor %}</select></div>
+									</div>
+									<div class="formrow">
+										<div class="formcell1"><label for="{{ MotifForm.private.id_for_label }}" style="white-space:nowrap; margin:0;">Private</label></div>
+										<div class="formcell2"><select name="private" id="private" style="width: 20%">{% for val in MotifForm.private %}{{ val }}{% endfor %}</select></div>
+									</div>
+
                                 </div>
 
 								<!-- Column 2: Taxonomy -->
                                 <div class="col-4 col-section">
-                                    <div class="col-header">Taxonomy</div>
+                                    <div class="col-header">
+										Taxonomy
+										<a href="help_doc_taxonomy.html" onclick="window.open('help_doc_taxonomy.html', 'newwindow', 'width=700,height=250'); return false;" target="popup" class="help-link" title="Navigate the taxonomy tree to filter by kingdom, phylum or lower ranks. Use the species list to select specific organisms.">i</a>
+									</div>
 
 									<div id="taxonomy-navigator" style="margin-bottom:0.75rem;">
 										<div id="tax-nav-header" style="display:flex; align-items:center; height:1.8em; margin-bottom:3px; padding:0 2px;">
@@ -257,7 +295,10 @@
 
 								<!-- Column 3: Organism & Annotation -->
 								<div class="col-4 col-section">
-                                    <div class="col-header">Organism &amp; Annotation</div>
+                                    <div class="col-header">
+										Organism &amp; Annotation
+										<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" class="help-link" title="Search by species shortname (e.g. HoSa), scientific name, sequence aliases, or any text in the foreign annotation field (NCBI ID or keyword).">i</a>
+									</div>
 
 									<!-- Aliases -->
 									<div class="mb-3 formrow">
@@ -303,14 +344,6 @@
 												<a href="#" id="tax-clear-all" style="color:blue;">Clear</a>
 											</small>
 										</div>
-									</div>
-
-									<!-- Status & Private -->
-									<div style="display:flex; gap:16px; align-items:center; margin-top:40px; width: 100%;">
-										<label for="{{ MotifForm.status.id_for_label }}" style="white-space:nowrap; margin:0;">Status</label>
-										<select name="status" id="status" style="width: 20%">{% for val in MotifForm.status %}{{ val }}{% endfor %}</select>
-										<label for="{{ MotifForm.private.id_for_label }}" style="white-space:nowrap; margin:0;">Private</label>
-										<select name="private" id="private" style="width: 20%">{% for val in MotifForm.private %}{{ val }}{% endfor %}</select>
 									</div>
 
 								</div>
