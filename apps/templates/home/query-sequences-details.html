@@ -444,7 +444,8 @@
 								<td class="td-data" style="width: auto"><b>E-value: </b> <a style="pointer-events: none; color: {% if motifs|get_item:m|get_item:'eValueFloat' < 0.05 %}red{% endif %}">{{ motifs|get_item:m|get_item:'eValue' }}</a></td>
 								<td class="td-data" style="width: auto"><b>Hmm-Model/Domaingroup: </b>{{ motifs|get_item:m|get_item:'domaingroup' }}</td>
 								<td class="td-data" style="width: auto"><b>Position: </b>{{ m.get_real_startposition }}-{{  m.get_real_stopposition }} (length: {{ m.get_motif_length }})
-								<td class="td-data" style="width: auto"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>
+								{#<td class="td-data" style="width: auto"><b>Functional Name: </b>{{ motifs|get_item:m|get_item:'domaingroupfunctionalname' }}</td>#}
+								<td class="td-data" style="width: auto"><b>Method: </b>{{ m.method.type }}</td>
 							</tr>
 						</table>
 						<hr>

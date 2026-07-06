@@ -472,7 +472,6 @@ def QueryVerifyView(request, sequence_id):
                 seq_len = len(seq.sequence)
                 if start < 1 or stop > seq_len or start >= stop:
                     raise ValueError
-                print(start, stop, dg_name)
                 dg    = Domaingroups.objects.get(domaingroupname=dg_name.replace("-",""))
                 method, _ = Methods.objects.get_or_create(
                     domaingroup_id=dg.domaingroup_id,
@@ -486,7 +485,6 @@ def QueryVerifyView(request, sequence_id):
                     '<eValue>1.0</eValue>\r\t<bitscore>0</bitscore>\r</asciiOutput>'
                     % (seq_slice, '|' * len(seq_slice), seq_slice)
                 )
-                print(seq, start, stop, seq_len, dg, method, seq_slice, ascii_xml)
                 vm = Verifymotifs(
                     sequence=seq,
                     motifname=motifname,
@@ -503,7 +501,7 @@ def QueryVerifyView(request, sequence_id):
                 )
                 vm.save()
                 form.data['changelog'] += " %s %s - Manual motif added: '%s';" % (
-                    strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motifname
+                    strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, dg.domaingroupname
                 )
             except (Domaingroups.DoesNotExist, ValueError):
                 context['manual_motif_error'] = 'Invalid domain group or position values'
