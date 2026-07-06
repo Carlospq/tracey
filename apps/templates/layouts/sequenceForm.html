@@ -349,13 +349,21 @@
 			<p>Generate new motif manually</p>
 			<table style="width: 450px;">
 				<tr style="margin-bottom: 5px;">
-					<td style="width: 50%; padding-left: 50px;">Domain:</td>
+					<td style="width: 50%; padding-left: 50px;">Protein layout:</td>
 					<td style="width: 50%; padding-left: 25px;">
-						<select name="manual_domain" id="manual_domain" style="width: 150px;">
+						<select name="manual_proteinlayout" id="manual_proteinlayout" style="width: 150px;">
 							<option value="" selected></option>
 							{% for val in proteinLayoutsList %}
 								<option value="{{ val }}">{{ val }}</option>
 							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;">Domain:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="manual_domain" id="manual_domain" style="width: 150px;">
+							<option value="" selected></option>
 						</select>
 					</td>
 				</tr>

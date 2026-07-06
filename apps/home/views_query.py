@@ -21,6 +21,7 @@ from .plots import build_domain_plot, get_pdb_data, get_alphafold_url
 
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
 from apps.templates.menus.query_sequences import get_keys_level_recursively, get_keys_recursively
+from apps.templates.menus.query_sequences_full import menu as menu_full
 
 
 def index(request):
@@ -108,10 +109,14 @@ def proteinlayoutToDomains(proteinLayoutname):
 
 def load_domains(request):
     if request.GET.get('proteinlayout'):
-        if request.GET.get('proteinlayout').upper() == "ALL":
+        proteinlayout = request.GET.get('proteinlayout')
+        if proteinlayout.upper() == "ALL":
             domains = ['']
         else:
-            domains = [d for d in get_menu(request)[request.GET.get('proteinlayout')]]
+            menu = get_menu(request)
+            if proteinlayout not in menu and request.user.is_authenticated:
+                menu = menu_full
+            domains = [d for d in menu.get(proteinlayout, {})]
     else:
         domains = [x.domainname for x in Domains.objects.all()]
     return render(request, 'home/query-sequences-family-domains.html', {'domains': domains})
@@ -120,10 +125,12 @@ def load_domains(request):
 def load_domaingroups_rank1(request):
     proteinlayout = request.GET.get('proteinlayout')
     domainname = request.GET.get('domainname')
+    menu = get_menu(request)
+    if proteinlayout and proteinlayout not in menu and request.user.is_authenticated:
+        menu = menu_full
     if proteinlayout and domainname:
-        domaingroups_rank_list = [dg_name for dg_name in get_menu(request)[proteinlayout][domainname]]
+        domaingroups_rank_list = [dg_name for dg_name in menu.get(proteinlayout, {}).get(domainname, {})]
     elif proteinlayout:
-        menu = get_menu(request)
         seen = set()
         domaingroups_rank_list = []
         for family in menu.get(proteinlayout, {}):
@@ -132,7 +139,6 @@ def load_domaingroups_rank1(request):
                     seen.add(dg)
                     domaingroups_rank_list.append(dg)
     elif domainname:
-        menu = get_menu(request)
         seen = set()
         domaingroups_rank_list = []
         for layout in menu:
@@ -267,10 +273,13 @@ def load_domaingroups_rank2(request):
         proteinlayout = request.GET.get('proteinlayout')
         domainname = request.GET.get('domainname')
         domaingroup_rank = request.GET.get('domaingroup_rank')
+        menu = get_menu(request)
+        if proteinlayout and proteinlayout not in menu and request.user.is_authenticated:
+            menu = menu_full
         if proteinlayout and domainname:
-            children_list = get_keys_level_recursively(get_menu(request)[proteinlayout][domainname][domaingroup_rank])
+            children_list = get_keys_level_recursively(
+                menu.get(proteinlayout, {}).get(domainname, {}).get(domaingroup_rank, {}))
         elif proteinlayout:
-            menu = get_menu(request)
             children_list = []
             seen = set()
             for family in menu.get(proteinlayout, {}):
@@ -280,7 +289,6 @@ def load_domaingroups_rank2(request):
                             seen.add(child)
                             children_list.append(child)
         else:
-            menu = get_menu(request)
             children_list = []
             seen = set()
             for layout in menu:

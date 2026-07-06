@@ -51,18 +51,34 @@ $("#domain").change(function () {
     });
 });
 
-// Change in Domain (manual motif form)
-// manual_domain values are top-level menu keys (same as proteinlayout)
-$("#manual_domain").change(function () {
-    var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
-    var proteinlayout = $(this).val();
-
-    setLoading("#manual_domaingroup");
+// Change in Protein layout (manual motif form)
+$("#manual_proteinlayout").change(function () {
+    var urldomains = $("#motifForm").attr("data-load-domains-url");
+    setLoading("#manual_domain");
+    clearSelect("#manual_domaingroup");
     clearSelect("#manual_domainsubgroup");
 
+    if ( !$(this).val() ) {
+        $("#manual_domain").html("").prop('disabled', false);
+    } else {
+        $.ajax({
+            url: urldomains,
+            data: {'proteinlayout': $(this).val()},
+            success: function (data) {
+                $("#manual_domain").html(data).prop('disabled', false);
+            }
+        });
+    }
+});
+
+// Change in Domain (manual motif form)
+$("#manual_domain").change(function () {
+    var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
+    setLoading("#manual_domaingroup");
+    clearSelect("#manual_domainsubgroup");
     $.ajax({
         url: urldomaingroupsrank1,
-        data: { 'proteinlayout': proteinlayout, 'domainname': '' },
+        data: { 'proteinlayout': $("#manual_proteinlayout").val(), 'domainname': $(this).val() },
         success: function (data) {
             $("#manual_domaingroup").html(data).prop('disabled', false);
         }
@@ -72,14 +88,14 @@ $("#manual_domain").change(function () {
 // Change in Domain group (manual motif form)
 $("#manual_domaingroup").change(function () {
     var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
-    var proteinlayout = $("#manual_domain").val();
-    var domaingroup_rank = $(this).val();
-
     setLoading("#manual_domainsubgroup");
-
     $.ajax({
         url: urldomaingroupsrank2,
-        data: { 'proteinlayout': proteinlayout, 'domainname': '', 'domaingroup_rank': domaingroup_rank },
+        data: {
+            'proteinlayout': $("#manual_proteinlayout").val(),
+            'domainname': $("#manual_domain").val(),
+            'domaingroup_rank': $(this).val()
+        },
         success: function (data) {
             $("#manual_domainsubgroup").html(data).prop('disabled', false);
         }
