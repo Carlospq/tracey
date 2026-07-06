@@ -436,7 +436,6 @@ def QueryVerifyView(request, sequence_id):
                 form.data['changelog'] += " %s %s - Unverified motif: '%s';" % (strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motif.motifname)
                 motif.delete()
 
-        form.data._mutable = _mutable
 
         if request.POST.get("scan"):
             if not form.data['proteinlayout']:
@@ -459,6 +458,57 @@ def QueryVerifyView(request, sequence_id):
                 context['domain'] = request.POST.get('domain')
                 context['domaingroups'] = request.POST.get('domaingroups')
                 context['evalcutoff'] = request.POST.get('evalcutoff')
+
+        if request.POST.get("add_manual_motif"):
+            motifname     = request.POST.get("manual_domain", "").strip()
+            start_str     = request.POST.get("manual_startposition", "")
+            stop_str      = request.POST.get("manual_stopposition", "")
+            dg_name       = (request.POST.get("manual_domainsubgroup", "").strip()
+                             or request.POST.get("manual_domaingroup", "").strip())
+            motifcomments = request.POST.get("manual_motifcomments", "").strip()
+            try:
+                start = int(start_str)
+                stop  = int(stop_str)
+                seq_len = len(seq.sequence)
+                if start < 1 or stop > seq_len or start >= stop:
+                    raise ValueError
+                print(start, stop, dg_name)
+                dg    = Domaingroups.objects.get(domaingroupname=dg_name.replace("-",""))
+                method, _ = Methods.objects.get_or_create(
+                    domaingroup_id=dg.domaingroup_id,
+                    type='manual',
+                    defaults={'input': '', 'parameter': ''}
+                )
+                seq_slice = seq.sequence[start - 1:stop]
+                ascii_xml = (
+                    '<asciiOutput>\r\t<consensus>%s</consensus>\r\t'
+                    '<similarity>%s</similarity>\r\t<motif>%s</motif>\r\t'
+                    '<eValue>1.0</eValue>\r\t<bitscore>0</bitscore>\r</asciiOutput>'
+                    % (seq_slice, '|' * len(seq_slice), seq_slice)
+                )
+                print(seq, start, stop, seq_len, dg, method, seq_slice, ascii_xml)
+                vm = Verifymotifs(
+                    sequence=seq,
+                    motifname=motifname,
+                    startposition=start,
+                    stopposition=stop,
+                    verifymotifcomments=motifcomments,
+                    domaingroup=dg,
+                    gaps='',
+                    active=0,
+                    method=method,
+                    verifymotifrank=1000000,
+                    asciioutput=ascii_xml,
+                    binaryoutput=''
+                )
+                vm.save()
+                form.data['changelog'] += " %s %s - Manual motif added: '%s';" % (
+                    strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, motifname
+                )
+            except (Domaingroups.DoesNotExist, ValueError):
+                context['manual_motif_error'] = 'Invalid domain group or position values'
+
+        form.data._mutable = _mutable
 
         context['form'] = form
         if form.is_valid():

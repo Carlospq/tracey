@@ -51,6 +51,41 @@ $("#domain").change(function () {
     });
 });
 
+// Change in Domain (manual motif form)
+// manual_domain values are top-level menu keys (same as proteinlayout)
+$("#manual_domain").change(function () {
+    var urldomaingroupsrank1 = $("#motifForm").attr("data-load-domaingroups-rank1-url");
+    var proteinlayout = $(this).val();
+
+    setLoading("#manual_domaingroup");
+    clearSelect("#manual_domainsubgroup");
+
+    $.ajax({
+        url: urldomaingroupsrank1,
+        data: { 'proteinlayout': proteinlayout, 'domainname': '' },
+        success: function (data) {
+            $("#manual_domaingroup").html(data).prop('disabled', false);
+        }
+    });
+});
+
+// Change in Domain group (manual motif form)
+$("#manual_domaingroup").change(function () {
+    var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");
+    var proteinlayout = $("#manual_domain").val();
+    var domaingroup_rank = $(this).val();
+
+    setLoading("#manual_domainsubgroup");
+
+    $.ajax({
+        url: urldomaingroupsrank2,
+        data: { 'proteinlayout': proteinlayout, 'domainname': '', 'domaingroup_rank': domaingroup_rank },
+        success: function (data) {
+            $("#manual_domainsubgroup").html(data).prop('disabled', false);
+        }
+    });
+});
+
 // Change in Domain group
 $("#domaingroups").change(function () {
     var urldomaingroupsrank2 = $("#motifForm").attr("data-load-domaingroups-rank2-url");

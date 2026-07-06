@@ -122,8 +122,24 @@ def load_domaingroups_rank1(request):
     domainname = request.GET.get('domainname')
     if proteinlayout and domainname:
         domaingroups_rank_list = [dg_name for dg_name in get_menu(request)[proteinlayout][domainname]]
+    elif proteinlayout:
+        menu = get_menu(request)
+        seen = set()
+        domaingroups_rank_list = []
+        for family in menu.get(proteinlayout, {}):
+            for dg in menu[proteinlayout][family]:
+                if dg not in seen:
+                    seen.add(dg)
+                    domaingroups_rank_list.append(dg)
     elif domainname:
-        domaingroups_rank_list = [dg_name for dg_name in get_menu(request)[proteinlayout][domainname]]
+        menu = get_menu(request)
+        seen = set()
+        domaingroups_rank_list = []
+        for layout in menu:
+            for dg in menu[layout].get(domainname, []):
+                if dg not in seen:
+                    seen.add(dg)
+                    domaingroups_rank_list.append(dg)
     else:
         domaingroups_rank_list = []
     return render(request, 'home/query-sequences-family-domaingroupsRank1.html', {'domaingroups_rank_list': domaingroups_rank_list})
@@ -251,7 +267,28 @@ def load_domaingroups_rank2(request):
         proteinlayout = request.GET.get('proteinlayout')
         domainname = request.GET.get('domainname')
         domaingroup_rank = request.GET.get('domaingroup_rank')
-        children_list = get_keys_level_recursively(get_menu(request)[proteinlayout][domainname][domaingroup_rank])
+        if proteinlayout and domainname:
+            children_list = get_keys_level_recursively(get_menu(request)[proteinlayout][domainname][domaingroup_rank])
+        elif proteinlayout:
+            menu = get_menu(request)
+            children_list = []
+            seen = set()
+            for family in menu.get(proteinlayout, {}):
+                if domaingroup_rank in menu[proteinlayout][family]:
+                    for child in get_keys_level_recursively(menu[proteinlayout][family][domaingroup_rank]):
+                        if child not in seen:
+                            seen.add(child)
+                            children_list.append(child)
+        else:
+            menu = get_menu(request)
+            children_list = []
+            seen = set()
+            for layout in menu:
+                if domainname in menu[layout] and domaingroup_rank in menu[layout][domainname]:
+                    for child in get_keys_level_recursively(menu[layout][domainname][domaingroup_rank]):
+                        if child not in seen:
+                            seen.add(child)
+                            children_list.append(child)
     return render(request, 'home/query-sequences-family-domaingroupsRank2.html', {'domaingroups_rank_list': children_list})
 
 

@@ -275,71 +275,131 @@
         {% endif %}
     </div>
 
+	<!-- Section for sequence verification begins here -->
     {% if 'query-verify' in segment %}
 
 	<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem; border-width: 0"></div>
 	<div style="z-index: -1; background-color: #F2F4F6; height: 40px; margin-left: -1.5rem; margin-right: -1.5rem; margin-top: -10px; margin-bottom: -10px;"></div>
 	<div style="position:relative; z-index: 999; background-color: white; height: 20px; margin-left: -1.5rem; margin-right: -1.5rem; box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.06) !important; border-radius: 0.5rem"></div>
 
-	<!-- Scan sequence against HHM models -->
 	<div class="row mb-4" style="object-fit: contain; margin-top: 5px;">
-		<p>Scan sequence against HMM models:<abbr data-toggle="tooltip" title="Scan sequence against selected motifs. Hits will be added to Not verify motif list" class="help-icon"> ? </abbr></p>
-		<table style="width: 450px;">
-			<tr style="margin-bottom: 5px;">
-				<td style="width: 50%; padding-left: 50px;"> Protein layout:</td>
-				<td style="width: 50%; padding-left: 25px;">
-					<select name="proteinlayout" id="proteinlayout" style="width: 100px;">
-						<option value="all" selected>All</option>
-						{% for val in proteinLayoutsList %}
-							<option value= "{{ val }}"> {{ val }} </option>
-						{% endfor %}
-					</select>
-				</td>
-			</tr>
-			<tr style="margin-bottom: 5px;">
-				<td style="width: 50%; padding-left: 50px;"> Protein Domain:</td>
-				<td style="width: 50%; padding-left: 25px;">
-					<select name="domain" id="domain" style="width: 100px;">
-						<option value="" selected></option>
-						<option value="all">All</option>
-						{% for val in domainsList %}
-							<option value= "{{ val }}" {% if val == domain %} selected {% endif %}> {{ val }} </option>
-						{% endfor %}
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td style="width: 50%; padding-left: 50px;"> Domain group:</td>
-				<td style="width: 50%; padding-left: 25px;">
-					<select name="domaingroups" id="domaingroups" style="width: 100px;">
-						<option value="" selected></option>
-						{% for val in domaingroupList %}
-							<option value= "{{ val }}" {% if domaingroups %} selected {% endif %}> {{ val }} </option>
-						{% endfor %}
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td style="width: 50%; padding-left: 50px;"> Domain subgroup:</td>
-				<td style="width: 50%; padding-left: 25px;">
-					<select name="domainsubgroups" id="domainsubgroups" style="width: 100px;">
-						<option value="" selected></option>
-						{% for val in domainsubgroupList %}
-							<option value= "{{ val }}" {% if domainsubgroups %} selected {% endif %}> {{ val }} </option>
-						{% endfor %}
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td style="width: 50%; padding-left: 50px;"> E-value cutoff:</td>
-				<td style="width: 50%; padding-left: 25px;">
-					1E-<input name="evalcutoff" id="evalcutoff" style="width: 75px" type="number" step="1" value={% if evalcutoff %} {{ evalcutoff }} {% else %} '10' {% endif %}>
-				</td>
-			</tr>
-		</table>
-		{% if scanerror %} <p style="padding-top: 5px; margin-bottom: 5px; color: red">{{ scanerror }}</p> {% endif %}
+
+		<!-- Scan sequence against HHM models -->
+		<div class="col-6">
+			<p>Scan sequence against HMM models:<abbr data-toggle="tooltip" title="Scan sequence against selected motifs. Hits will be added to Not verify motif list" class="help-icon"> ? </abbr></p>
+			<table style="width: 450px;">
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;"> Protein layout:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="proteinlayout" id="proteinlayout" style="width: 100px;">
+							<option value="all" selected>All</option>
+							{% for val in proteinLayoutsList %}
+								<option value= "{{ val }}"> {{ val }} </option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;"> Protein Domain:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="domain" id="domain" style="width: 100px;">
+							<option value="" selected></option>
+							<option value="all">All</option>
+							{% for val in domainsList %}
+								<option value= "{{ val }}" {% if val == domain %} selected {% endif %}> {{ val }} </option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td style="width: 50%; padding-left: 50px;"> Domain group:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="domaingroups" id="domaingroups" style="width: 100px;">
+							<option value="" selected></option>
+							{% for val in domaingroupList %}
+								<option value= "{{ val }}" {% if domaingroups %} selected {% endif %}> {{ val }} </option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td style="width: 50%; padding-left: 50px;"> Domain subgroup:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="domainsubgroups" id="domainsubgroups" style="width: 100px;">
+							<option value="" selected></option>
+							{% for val in domainsubgroupList %}
+								<option value= "{{ val }}" {% if domainsubgroups %} selected {% endif %}> {{ val }} </option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td style="width: 50%; padding-left: 50px;"> E-value cutoff:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						1E-<input name="evalcutoff" id="evalcutoff" style="width: 75px" type="number" step="1" value={% if evalcutoff %} {{ evalcutoff }} {% else %} '10' {% endif %}>
+					</td>
+				</tr>
+			</table>
+			{% if scanerror %} <p style="padding-top: 5px; margin-bottom: 5px; color: red">{{ scanerror }}</p> {% endif %}
+			<input type="submit" name="scan" value="Scan" style="width: 50px; margin-bottom: 15px; margin-left: 50px;">
+		</div>
+
+		<!-- generate motif manually -->
+		<div class="col-6">
+			<p>Generate new motif manually</p>
+			<table style="width: 450px;">
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;">Domain:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="manual_domain" id="manual_domain" style="width: 150px;">
+							<option value="" selected></option>
+							{% for val in domainsList %}
+								<option value="{{ val }}">{{ val }}</option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;">Domain group:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="manual_domaingroup" id="manual_domaingroup" style="width: 150px;">
+							<option value="" selected></option>
+						</select>
+					</td>
+				</tr>
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;">Domain subgroup:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<select name="manual_domainsubgroup" id="manual_domainsubgroup" style="width: 150px;">
+							<option value="" selected></option>
+						</select>
+					</td>
+				</tr>
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;">Start position:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<input type="number" name="manual_startposition" id="manual_startposition" min="1" max="{{ sequence.sequence|length }}" style="width: 80px;">
+					</td>
+				</tr>
+				<tr style="margin-bottom: 5px;">
+					<td style="width: 50%; padding-left: 50px;">Stop position:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<input type="number" name="manual_stopposition" id="manual_stopposition" min="1" max="{{ sequence.sequence|length }}" style="width: 80px;">
+					</td>
+				</tr>
+				<tr>
+					<td style="width: 50%; padding-left: 50px;">Comments:</td>
+					<td style="width: 50%; padding-left: 25px;">
+						<input type="text" name="manual_motifcomments" id="manual_motifcomments" style="width: 150px;">
+					</td>
+				</tr>
+			</table>
+			{% if manual_motif_error %}<p style="padding-top: 5px; margin-bottom: 5px; color: red">{{ manual_motif_error }}</p>{% endif %}
+			<input type="submit" name="add_manual_motif" value="Add motif" style="margin-top: 10px; margin-left: 50px;">
+		</div>
+
 	</div>
-	<input type="submit" name="scan" value="Scan" style="width: 50px; margin-bottom: 15px">
+
 	<hr>
 
 	<!-- 3D visualization -->
