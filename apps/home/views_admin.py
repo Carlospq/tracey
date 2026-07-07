@@ -336,7 +336,7 @@ def upload_sequences(request):
 
     cmd = ['python3', 'manage.py', 'UploadSequences', fasta_path,
            '--evalue', str(evalue), '--username', request.user.username, '--log-file', log_path]
-    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     return JsonResponse({'log_file': log_name})
 
