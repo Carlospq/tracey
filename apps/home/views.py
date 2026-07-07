@@ -83,6 +83,7 @@ from apps.home.views_admin import (
     read_update_taxonomy_results,
     read_update_sequences_results,
     upload_sequences,
+    read_upload_sequences_results,
     download_file,
     download_hmm_zip,
 )

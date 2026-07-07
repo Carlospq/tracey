@@ -4,20 +4,18 @@ import json
 import subprocess
 import datetime
 import mimetypes
-from time import gmtime, strftime
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils.timezone import now
 
 from .models import *
 from .views_verify import staff_login_required
 from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
-from utils.motifPredictor.reScanMotifs import reScanMotifs
-from utils.ncbi_taxonomy.TaxonomyUpdater import create_ncbi_taxonomy, read_ncbi_files, build_ncbi_dict_from_entrez
+from utils.traceySequenceUploader.uploadSequences import DONE_MARKER
 
 
 @login_required(login_url="/noPermits.html")
@@ -307,6 +305,10 @@ def download_hmm_zip(request):
     return response
 
 
+UPLOAD_DIR = os.path.join('utils', 'traceySequenceUploader')
+UPLOAD_INCOMING_DIR = os.path.join(UPLOAD_DIR, 'incoming')
+
+
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def upload_sequences(request):
@@ -321,152 +323,40 @@ def upload_sequences(request):
     except ValueError:
         evalue = 1e-1
 
+    os.makedirs(UPLOAD_INCOMING_DIR, exist_ok=True)
+    stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    fasta_path = os.path.join(UPLOAD_INCOMING_DIR, f'upload.{stamp}.fasta')
+    log_name = f'upload.{stamp}.log'
+    log_path = os.path.join(UPLOAD_DIR, log_name)
+
     uploaded_file = request.FILES['sequences_file']
+    with open(fasta_path, 'wb') as f:
+        for chunk in uploaded_file.chunks():
+            f.write(chunk)
+
+    cmd = ['python3', 'manage.py', 'UploadSequences', fasta_path,
+           '--evalue', str(evalue), '--username', request.user.username, '--log-file', log_path]
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    return JsonResponse({'log_file': log_name})
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def read_upload_sequences_results(request):
+    log_file = request.GET.get('log_file', '')
+    if not re.match(r'^[\w\-\.]+$', log_file) or log_file.startswith('.'):
+        return HttpResponse(status=400)
+
+    log_path = os.path.join(UPLOAD_DIR, log_file)
     try:
-        content = uploaded_file.read().decode('utf-8')
-    except UnicodeDecodeError:
-        return HttpResponse('File encoding error. File must be UTF-8.', status=400)
+        with open(log_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except FileNotFoundError:
+        return JsonResponse({'done': False})
 
-    # Parse FASTA — header fields separated by ||, extras by ;key:value
-    parsed = {}
-    current_header = None
-    parse_errors = []
+    if DONE_MARKER not in content:
+        return JsonResponse({'done': False})
 
-    # Initialize empty variable for NCBI dictionary (Tier 3 fallback)
-    ncbi = None
-    entrez_cache = {}
-
-    for line in content.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith('>'):
-            try:
-                raw_header = line[1:]
-                fields = raw_header.split('||')
-                shortname = fields[0].strip() if len(fields) > 0 else ''
-                scientific_name = fields[1].strip() if len(fields) > 1 else ''
-                extras = {}
-                if len(fields) > 2:
-                    for kv in fields[2].split(';'):
-                        kv = kv.strip()
-                        if ':' in kv:
-                            k, v = kv.split(':', 1)
-                            extras[k.strip()] = v.strip()
-                current_header = raw_header
-                parsed[current_header] = {'shortname': shortname, 'scientific_name': scientific_name, 'sequence': '', **extras}
-            except Exception:
-                parse_errors.append(f'Could not parse header: {line[:80]}')
-                current_header = None
-        elif current_header:
-            parsed[current_header]['sequence'] += line
-
-    # Create entries
-    created = []
-    created_seqs = []
-    errors = list(parse_errors)
-    warnings = []
-    scan_hits = {}
-
-    for header, data in parsed.items():
-        shortname      = data.get('shortname', '').strip()
-        scientific_name = data.get('scientific_name', '').strip()
-        sequence_str   = data.get('sequence', '').strip()
-
-        if not shortname:
-            errors.append(f'Missing shortname in: {header[:60]}')
-            continue
-        if not scientific_name:
-            errors.append(f'{shortname}: missing scientific name')
-            continue
-        if not sequence_str:
-            errors.append(f'{shortname}: empty sequence')
-            continue
-
-        taxonomy = Taxonomies.objects.filter(scientificname=scientific_name).first()
-        if not taxonomy:
-            taxonomy = entrez_cache.get(scientific_name)
-        if not taxonomy:
-            try:
-                built = build_ncbi_dict_from_entrez(scientific_name)
-                if built:
-                    ncbi_id, ncbi_entrez = built
-                    taxonomy = create_ncbi_taxonomy(ncbi_id, ncbi_entrez)
-            except Exception:
-                taxonomy = None
-            if not taxonomy:
-                try:
-                    if not ncbi:
-                        ncbi = read_ncbi_files()
-                    ncbi_id = [x for x in ncbi['dict_names']
-                               if ncbi['dict_names'][x]['name_txt'] == scientific_name][0]
-                    taxonomy = create_ncbi_taxonomy(ncbi_id, ncbi)
-                except Exception:
-                    taxonomy = None
-            entrez_cache[scientific_name] = taxonomy
-        if not taxonomy:
-            errors.append(f'{shortname}: taxonomy not found for "{scientific_name}"')
-            continue
-
-        if Sequences.objects.filter(sequence=sequence_str, taxonomy=taxonomy).exists():
-            errors.append(f'{shortname}: sequence already exists for {scientific_name}')
-            continue
-
-        if Sequences.objects.filter(sequenceshortname=shortname, taxonomy=taxonomy).exists():
-            warnings.append(f'{shortname}: shortname duplicated for {scientific_name}')
-
-        try:
-            gene = Genes.objects.create(ncbigene_id='-1')
-            seq_obj = Sequences.objects.create(
-                sequenceshortname=shortname,
-                sequence=sequence_str,
-                taxonomy=taxonomy,
-                gene=gene,
-                foreignannotation=data.get('foreignannotation', ''),
-                annotation='',
-                sourcedatabase=data.get('sourcedatabase', ''),
-                dbxref=data.get('dbxref') or None,
-                aliases=data.get('aliases') or None,
-                sequencetype='protein',
-                sequencestatus='live',
-                private=1,
-                replacedby=-1,
-                changelog=strftime("%d.%m.%Y|%H:%M:%S|", gmtime()) + request.user.username + ' - uploadSequences;',
-            )
-            created.append(shortname)
-            created_seqs.append(seq_obj)
-        except Exception as e:
-            errors.append(f'{shortname}: database error — {e}')
-            continue
-
-    if created_seqs:
-        try:
-            result = reScanMotifs(created_seqs, hmm_keys=get_keys_recursively(menu), evalue=evalue)
-            if result:
-                scan_hits.update(result)
-        except Exception as e:
-            warnings.append(f'motif scan error — {type(e).__name__}: {e}')
-
-    lines = ['<html><head><meta charset="utf-8"><style>',
-             'body{font-family:monospace;padding:24px;background:#f8f8f8;}',
-             'h2{margin-bottom:12px;}',
-             '.ok{color:#2a7a2a;} .err{color:#c0392b;} .warn{color:#f39c12;}',
-             'ul{margin-top:6px;} li{margin-bottom:4px;}',
-             '</style></head><body>',
-             f'<h2>Upload results</h2>',
-             f'<p class="ok">&#10003; {len(created)} sequence(s) uploaded successfully.</p>']
-    if created:
-        def _fmt_seq(s):
-            hits = scan_hits.get(s, [])
-            if hits:
-                return f'{s} ({len(hits)} hit{"s" if len(hits) != 1 else ""}: {", ".join(hits)})'
-            return s
-        lines.append('<ul>' + ''.join(f'<li class="ok">{_fmt_seq(s)}</li>' for s in created) + '</ul>')
-    if errors:
-        lines.append(f'<p class="err">&#10007; {len(errors)} skipped:</p>')
-        lines.append('<ul>' + ''.join(f'<li class="err">{e}</li>' for e in errors) + '</ul>')
-    if warnings:
-        lines.append(f'<p class="warn">&#10007; {len(warnings)} warning(s):</p>')
-        lines.append('<ul>' + ''.join(f'<li class="warn">{e}</li>' for e in warnings) + '</ul>')
-    lines.append('</body></html>')
-    return HttpResponse('\n'.join(lines))
+    html = content.split(DONE_MARKER)[0]
+    return JsonResponse({'done': True, 'html': html})

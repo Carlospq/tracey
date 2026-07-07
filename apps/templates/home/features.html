@@ -767,6 +767,32 @@
             msg.innerHTML = estMsg;
             msg.style.display = 'block';
 
+            function finishUpload(htmlContent) {
+                loader.style.display = 'none';
+                msg.style.display = 'none';
+                document.getElementById('upload_sequences_btn').style.display = '';
+                window.open(URL.createObjectURL(new Blob([htmlContent], {type: 'text/html'})), '_blank');
+            }
+
+            function pollUploadResults(logFile) {
+                $.ajax({
+                    url: "{% url 'ajax_upload_sequences_results' %}",
+                    type: 'GET',
+                    data: {log_file: logFile},
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data.done) {
+                            finishUpload(data.html);
+                        } else {
+                            setTimeout(function() { pollUploadResults(logFile); }, 3000);
+                        }
+                    },
+                    error: function(xhr) {
+                        finishUpload(xhr.responseText || 'Unknown error while checking upload status.');
+                    }
+                });
+            }
+
             var formData = new FormData(document.getElementById('UploadSequencesForm'));
             $.ajax({
                 url: "{% url 'ajax_upload_sequences' %}",
@@ -774,17 +800,12 @@
                 data: formData,
                 processData: false,
                 contentType: false,
+                dataType: 'json',
                 success: function(data) {
-                    loader.style.display = 'none';
-                    msg.style.display = 'none';
-                    document.getElementById('upload_sequences_btn').style.display = '';
-                    window.open(URL.createObjectURL(new Blob([data], {type: 'text/html'})), '_blank');
+                    pollUploadResults(data.log_file);
                 },
                 error: function(xhr) {
-                    loader.style.display = 'none';
-                    msg.style.display = 'none';
-                    document.getElementById('upload_sequences_btn').style.display = '';
-                    window.open(URL.createObjectURL(new Blob([xhr.responseText || 'Unknown error'], {type: 'text/html'})), '_blank');
+                    finishUpload(xhr.responseText || 'Unknown error');
                 }
             });
         };
