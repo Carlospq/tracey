@@ -193,10 +193,14 @@ def load_taxonomy_by_shortname(request):
         all_ids.update(new_ids)
         frontier = new_ids
 
-    # Build sequence filter: restrict to current protein layout / domain if provided
+    # Any live sequence counts toward a taxon, regardless of domain annotation
+    live_filter = Q(sequencestatus='live')
+
+    # Domain-group scope for the currently selected protein layout/domain, if any.
+    # None means "unscoped" — count across all domain groups.
     proteinlayout = request.GET.get('proteinlayout', '').strip()
     domainname = request.GET.get('domainname', '').strip()
-    seq_filter = Q(sequencestatus='live')
+    dg_ids = None
     if proteinlayout:
         try:
             menu = get_menu(request)
@@ -206,21 +210,61 @@ def load_taxonomy_by_shortname(request):
                 dg_list = get_keys_recursively(menu[proteinlayout]) + [proteinlayout]
             else:
                 dg_list = []
-            if dg_list:
-                dg_ids = Domaingroups.objects.filter(domaingroupname__in=dg_list).values_list('domaingroup_id', flat=True)
-                motif_seq_ids = Motifs.objects.filter(domaingroup_id__in=dg_ids).values_list('sequence_id', flat=True)
-                seq_filter &= Q(sequence_id__in=motif_seq_ids)
+            dg_ids = Domaingroups.objects.filter(domaingroupname__in=dg_list).values_list('domaingroup_id', flat=True)
         except (KeyError, Exception):
-            pass
+            dg_ids = None
 
-    # Direct sequence counts per taxonomy
-    direct_counts_qs = (
-        Sequences.objects
-        .filter(seq_filter, taxonomy_id__in=all_ids)
-        .values('taxonomy_id')
-        .annotate(cnt=Count('sequence_id'))
-    )
-    direct_counts = {row['taxonomy_id']: row['cnt'] for row in direct_counts_qs}
+    motifs_qs = Motifs.objects.all()
+    verifymotifs_qs = Verifymotifs.objects.all()
+    if dg_ids is not None:
+        motifs_qs = motifs_qs.filter(domaingroup_id__in=dg_ids)
+        verifymotifs_qs = verifymotifs_qs.filter(domaingroup_id__in=dg_ids)
+
+    # Direct total live-sequence counts per taxonomy (used only to decide inclusion, not displayed)
+    direct_total_counts = {
+        row['taxonomy_id']: row['cnt']
+        for row in (
+            Sequences.objects
+            .filter(live_filter, taxonomy_id__in=all_ids)
+            .values('taxonomy_id')
+            .annotate(cnt=Count('sequence_id'))
+        )
+    }
+
+    # Direct "with domain" counts: live sequences with a verified Motifs annotation, scoped to the selection
+    direct_domain_counts = {
+        row['taxonomy_id']: row['cnt']
+        for row in (
+            Sequences.objects
+            .filter(live_filter, taxonomy_id__in=all_ids, sequence_id__in=motifs_qs.values('sequence_id'))
+            .values('taxonomy_id')
+            .annotate(cnt=Count('sequence_id'))
+        )
+    }
+
+    # Direct "with unverified motif" counts: live sequences with a Verifymotifs annotation, scoped to the selection
+    direct_verify_counts = {
+        row['taxonomy_id']: row['cnt']
+        for row in (
+            Sequences.objects
+            .filter(live_filter, taxonomy_id__in=all_ids, sequence_id__in=verifymotifs_qs.values('sequence_id'))
+            .values('taxonomy_id')
+            .annotate(cnt=Count('sequence_id'))
+        )
+    }
+
+    # Direct "no domain" counts: live sequences with neither a Motifs nor a Verifymotifs annotation in ANY
+    # domain group — deliberately absolute/unscoped, unaffected by the current protein layout/domain selection.
+    direct_no_domain_counts = {
+        row['taxonomy_id']: row['cnt']
+        for row in (
+            Sequences.objects
+            .filter(live_filter, taxonomy_id__in=all_ids)
+            .exclude(Q(sequence_id__in=Motifs.objects.values('sequence_id')) | Q(sequence_id__in=Verifymotifs.objects.values('sequence_id')))
+            .values('taxonomy_id')
+            .annotate(cnt=Count('sequence_id'))
+        )
+    }
 
     # Fetch taxa with parent info for bottom-up accumulation
     taxa_list = list(
@@ -231,36 +275,45 @@ def load_taxonomy_by_shortname(request):
     )
     taxa_parent = {t.taxonomy_id: t.taxonomyparent_id for t in taxa_list}
 
-    # Propagate counts from leaves up to ancestors (topological BFS)
-    from collections import deque
-    acc_counts = {tid: direct_counts.get(tid, 0) for tid in all_ids}
-    children_of = {tid: [] for tid in all_ids}
-    for tid in all_ids:
-        pid = taxa_parent.get(tid)
-        if pid in all_ids:
-            children_of[pid].append(tid)
-    remaining_children = {tid: len(children_of[tid]) for tid in all_ids}
-    queue = deque(tid for tid in all_ids if remaining_children[tid] == 0)
-    while queue:
-        tid = queue.popleft()
-        pid = taxa_parent.get(tid)
-        if pid in all_ids:
-            acc_counts[pid] += acc_counts[tid]
-            remaining_children[pid] -= 1
-            if remaining_children[pid] == 0:
-                queue.append(pid)
+    def propagate_counts(direct_counts):
+        # Propagate counts from leaves up to ancestors (topological BFS)
+        from collections import deque
+        acc = {tid: direct_counts.get(tid, 0) for tid in all_ids}
+        children_of = {tid: [] for tid in all_ids}
+        for tid in all_ids:
+            pid = taxa_parent.get(tid)
+            if pid in all_ids:
+                children_of[pid].append(tid)
+        remaining_children = {tid: len(children_of[tid]) for tid in all_ids}
+        queue = deque(tid for tid in all_ids if remaining_children[tid] == 0)
+        while queue:
+            tid = queue.popleft()
+            pid = taxa_parent.get(tid)
+            if pid in all_ids:
+                acc[pid] += acc[tid]
+                remaining_children[pid] -= 1
+                if remaining_children[pid] == 0:
+                    queue.append(pid)
+        return acc
 
-    # Build response — skip taxa with 0 sequences in the current layout/domain
+    acc_total_counts = propagate_counts(direct_total_counts)
+    acc_domain_counts = propagate_counts(direct_domain_counts)
+    acc_verify_counts = propagate_counts(direct_verify_counts)
+    acc_no_domain_counts = propagate_counts(direct_no_domain_counts)
+
+    # Build response — skip taxa with 0 live sequences overall
     taxa_data = [
         {
             'taxonomy_id': t.taxonomy_id,
             'scientificname': t.scientificname or '',
             'taxonomyrank': t.taxonomyrank or '',
             'shortname': t.taxonomyshortname,
-            'seq_count': acc_counts.get(t.taxonomy_id, 0),
+            'seq_count_domain': acc_domain_counts.get(t.taxonomy_id, 0),
+            'seq_count_verify': acc_verify_counts.get(t.taxonomy_id, 0),
+            'seq_count_no_domain': acc_no_domain_counts.get(t.taxonomy_id, 0),
         }
         for t in taxa_list
-        if acc_counts.get(t.taxonomy_id, 0) > 0
+        if acc_total_counts.get(t.taxonomy_id, 0) > 0
     ]
 
     return JsonResponse({'taxa': taxa_data})

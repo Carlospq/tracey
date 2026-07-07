@@ -397,7 +397,7 @@
         $.ajax({
             url: $("#FamilyForm").attr("data-load-domains-url"),
             data: { 'proteinlayout': $(this).val() },
-            success: function(data) { $("#domainname").html(data); $("#domaingroup_rank").html(""); $("#id_domaingroup").html(""); }
+            success: function(data) { $("#domainname").html(data); $("#domaingroup_rank").html(""); $("#id_domaingroup").html(""); refreshActiveTaxSearch(); }
         });
     });
 
@@ -405,7 +405,7 @@
         $.ajax({
             url: $("#FamilyForm").attr("data-load-domaingroups-rank1-url"),
             data: { 'proteinlayout': $("#proteinlayout").val(), 'domainname': $(this).val() },
-            success: function(data) { $("#domaingroup_rank").html(data); $("#id_domaingroup").html(""); }
+            success: function(data) { $("#domaingroup_rank").html(data); $("#id_domaingroup").html(""); refreshActiveTaxSearch(); }
         });
     });
 
@@ -433,6 +433,13 @@
                 domainname: $('#domainname').val()
             }, function(data) { renderTaxSearchPanel(data.taxa); });
         }, 300);
+    }
+
+    function refreshActiveTaxSearch() {
+        var sn = $('#shortname-search-input').val().trim();
+        var sc = $('#sciname-search-input').val().trim();
+        if (sn.length >= 2) triggerTaxSearch(sn, 'shortname');
+        else if (sc.length >= 3) triggerTaxSearch(sc, 'scientific');
     }
 
     function restorePlaceholder() {
@@ -471,8 +478,9 @@
             grouped[rank].forEach(function(t) {
                 var cbId = 'tax-cb-' + t.taxonomy_id;
                 var $cb = $('<input type="checkbox">').attr('id', cbId).attr('data-taxonomy-id', t.taxonomy_id);
+                var label = t.scientificname + ' (' + t.shortname + ', ' + t.seq_count_domain + ' domain)';
                 var $lbl = $('<label style="margin-left:4px;cursor:pointer;font-size:0.88em;">').attr('for', cbId)
-                    .text(t.scientificname + ' (' + t.shortname + ', ' + t.seq_count + ' seqs)');
+                    .text(label);
                 $group.append($('<div style="padding:1px 0;">').append($cb).append($lbl));
             });
             $results.append($group);
