@@ -1,4 +1,6 @@
+import os
 import re
+import uuid
 import xml.etree.ElementTree as ET
 from time import gmtime, strftime
 
@@ -11,7 +13,7 @@ from django.shortcuts import render
 
 from .models import *
 from .forms import *
-from .utils import get_menu
+from .utils import get_menu, trimAlignment
 from .plots import build_domain_plot, get_pdb_data
 from .views_motifs import motifScan
 
@@ -270,6 +272,91 @@ def parseNCBIblastpSTDOUT(stdout):
     return [query_header, query_length, scores_header, scores, query_alignment, alignments]
 
 
+def parsePairwiseSTDOUT(stdout):
+    body = stdout.split("Lambda")[0]
+    hit_chunks = re.split(r'\n(?=>)', body)
+    hits = []
+    for chunk in hit_chunks:
+        if not chunk.lstrip().startswith('>'):
+            continue
+        lines = chunk.split('\n')
+        idx = 0
+        header_lines = []
+        while idx < len(lines) and not lines[idx].startswith('Length='):
+            header_lines.append(lines[idx])
+            idx += 1
+        if idx >= len(lines):
+            continue
+        header = ' '.join(l.strip() for l in header_lines).lstrip('>').strip()
+        seqID = header.split('|')[0].strip()
+        length_match = re.search(r'Length=(\d+)', lines[idx])
+        subject_length = length_match.group(1) if length_match else ''
+        idx += 1
+
+        while idx < len(lines) and 'Score' not in lines[idx]:
+            idx += 1
+        score_match = re.search(r'Score = ([\d.]+) bits \((\d+)\).*?Expect\S* = ([\d.e+-]+)', lines[idx]) if idx < len(lines) else None
+        bits = score_match.group(1) if score_match else ''
+        evalue = score_match.group(3) if score_match else ''
+        idx += 1
+
+        id_match = re.search(
+            r'Identities = (\d+/\d+ \(\d+%\)), Positives = (\d+/\d+ \(\d+%\))(?:, Gaps = (\d+/\d+ \(\d+%\)))?',
+            lines[idx]) if idx < len(lines) else None
+        identities = id_match.group(1) if id_match else ''
+        positives = id_match.group(2) if id_match else ''
+        gaps = id_match.group(3) if id_match and id_match.group(3) else ''
+        idx += 1
+
+        blocks = []
+        while idx < len(lines):
+            line = lines[idx]
+            if line.startswith('Query'):
+                parts = line.split()
+                if len(parts) < 4:
+                    idx += 1
+                    continue
+                qstart, qseq, qend = parts[1], parts[2], parts[3]
+                match_raw = lines[idx + 1] if idx + 1 < len(lines) else ''
+                sbjct_raw = lines[idx + 2] if idx + 2 < len(lines) else ''
+                seq_col = line.index(qseq)
+                match_segment = match_raw[seq_col:seq_col + len(qseq)].ljust(len(qseq))
+                sparts = sbjct_raw.split()
+                if len(sparts) >= 4:
+                    sstart, sseq, send = sparts[1], sparts[2], sparts[3]
+                    blocks.append({
+                        'query_start': qstart, 'query_end': qend, 'query_seq': qseq,
+                        'match_line': match_segment,
+                        'sbjct_start': sstart, 'sbjct_end': send, 'sbjct_seq': sseq,
+                    })
+                idx += 3
+            else:
+                idx += 1
+
+        if not blocks:
+            continue
+
+        hits.append({
+            'seqID': seqID, 'header': header, 'subject_length': subject_length,
+            'bits': bits, 'evalue': evalue,
+            'identities': identities, 'positives': positives, 'gaps': gaps,
+            'query_start': blocks[0]['query_start'], 'query_end': blocks[-1]['query_end'],
+            'sbjct_start': blocks[0]['sbjct_start'], 'sbjct_end': blocks[-1]['sbjct_end'],
+            'blocks': blocks,
+        })
+    return hits
+
+
+def _parse_alignment_threshold(raw_value, default=0.8):
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return default
+    if value <= 0 or value > 1:
+        return default
+    return value
+
+
 @login_required(login_url="/noPermits.html")
 @staff_login_required
 def QueryVerifyBlastView(request, db, query_id):
@@ -330,6 +417,10 @@ def QueryVerifyBlastView(request, db, query_id):
         stdout_pairwise, stderr_pairwise = blastp_cline_pairwise()
 
         context['pairwise'] = stdout_pairwise
+        try:
+            context['pairwise_hits'] = parsePairwiseSTDOUT(stdout_pairwise)
+        except Exception:
+            context['pairwise_hits'] = []
         if stderr:
             context['blast_error'] = stderr
         else:
@@ -338,8 +429,51 @@ def QueryVerifyBlastView(request, db, query_id):
             context['query_length'] = parsedstdout[1]
             context['scores_header'] = parsedstdout[2]
             context['scores'] = parsedstdout[3]
-            context['query_alignment'] = parsedstdout[4]
-            context['alignments'] = parsedstdout[5]
+
+            query_alignment = parsedstdout[4]
+            alignments = parsedstdout[5]
+
+            col_threshold = _parse_alignment_threshold(request.GET.get('col_threshold'), default=0.8)
+            row_threshold = _parse_alignment_threshold(request.GET.get('row_threshold'), default=0.8)
+            context['col_threshold'] = col_threshold
+            context['row_threshold'] = row_threshold
+            context['alignment_trim_warning'] = ''
+
+            raw_alignment_dict = {"Query_1": query_alignment['alignment']}
+            raw_alignment_dict.update({key: alignments[key]['alignment'] for key in alignments})
+
+            tmp_path = 'utils/tmp_files/trim_alignment_%s.fasta' % uuid.uuid4().hex
+            trimmed = {}
+            try:
+                trimmed, _dims = trimAlignment(raw_alignment_dict, tmp_path,
+                                                col_threshold=col_threshold,
+                                                row_threshold=row_threshold)
+            except UnboundLocalError:
+                # trimAlignment leaves `length_seq` unset when the thresholds filter
+                # out every column/row -- treat that as "no valid trim".
+                trimmed = {}
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+
+            if not trimmed or "Query_1" not in trimmed:
+                context['alignment_trim_warning'] = (
+                    "col_threshold=%.2f / row_threshold=%.2f removed the entire alignment "
+                    "(or the query row itself); showing the untrimmed alignment instead. "
+                    "Try relaxing the thresholds." % (col_threshold, row_threshold)
+                )
+                context['query_alignment'] = query_alignment
+                context['alignments'] = alignments
+            else:
+                query_alignment['alignment'] = trimmed['Query_1']
+                trimmed_alignments = {}
+                for key in alignments:          # preserve original e-value-ranked order
+                    if key in trimmed:
+                        alignments[key]['alignment'] = trimmed[key]
+                        trimmed_alignments[key] = alignments[key]
+                context['query_alignment'] = query_alignment
+                context['alignments'] = trimmed_alignments
+
             context['alignment_colors'] = alignment_colors
 
     elif context['db'] == 'NCBI':
@@ -394,7 +528,7 @@ def QueryVerifyView(request, sequence_id):
 
             if requestValue == 'delete':
                 vm.delete()
-                form.data['changelog'] += " %s %s - VerifyMotif deleted: '%s';" % (strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
+                #form.data['changelog'] += " %s %s - VerifyMotif deleted: '%s';" % (strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, vm.motifname)
             elif requestValue == 'verify':
                 m = Motifs(sequence=seq,
                            motifname=vm.motifname,

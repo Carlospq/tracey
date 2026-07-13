@@ -2,9 +2,13 @@
 <html>
 <head>
 <style>
+* {
+  box-sizing: border-box;
+}
 body {
   font-family: arial, sans-serif;
   height: 95vh;
+  margin: 0;
 }
 /* Style the tab */
 .tab {
@@ -35,6 +39,7 @@ body {
 /* Style the tab content */
 .tabcontent {
   display: none;
+  flex-direction: column;
   border: 1px solid #ccc;
   border-top: none;
   width: 98vw;
@@ -44,131 +49,200 @@ body {
   display: block;
   position: relative;
   font-family: arial, sans-serif;
-  border-collapse: collapse;
-  height: 65vh;
-  min-width: 30%;
-  max-width: 50%;
+  font-size: 14px;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
   border: black solid 1px;
 }
 .table_hits th {
   position: sticky;
   top: 0;
-  background: white;
+  z-index: 1;
+  background: #f1f1f1;
   background-clip: padding-box;
 }
 .table_hits td, .table_hits th {
-  border: 1px solid black;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
   text-align: left;
   padding: 5px;
 }
 .table_hits tr:nth-child(even) {
-  background-color: #dddddd;
+  background-color: #f5f5f5;
+}
+.table_hits tr:not(:first-child):hover {
+  background-color: peachpuff;
 }
 .container {
   margin: 0px 12px;
   position: relative;
-  width: calc(95vw + 1px);
-  height: 70vh;
+  flex: 1 1 auto;
+  min-height: 0;
   text-align: center;
   display: block;
   border: black solid 1px
 }
-.header {
-  width: calc(95vw - 1px);
-  display: block ruby;
-  position: relative;
-  z-index: 1;
-  height: auto;
-  max-height: 60px;
+.align-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 12px 10px 12px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+.threshold-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.threshold-form input[type="number"] {
+  width: 70px;
+}
+.align-scroll {
+  margin: 0 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   border: black solid 1px;
-  background-clip: content-box;
-  border-collapse: collapse;
 }
-.header_cell {
-  display: inline-block;
-  z-index: 3;
-  height: 100% !important;
-  border: black solid 1px;
-  border-style: none solid solid none;
-  margin: auto;
-}
-.alignment_cell {
-  display: block;
-  background-clip: padding-box;
-}
-.cell {
-  vertical-align: top;
-  height: 30px;
-  line-height: 30px;
-  font-size: 16px;
-}
-.query_cell {
-  display: inline-block;
-  background: grey;
-  z-index: 3;
-  background-clip: content-box;
-  border-collapse: collapse;
-}
-.alignment_line {
-  vertical-align: top;
-}
-.alignment_col {
-  display: inline-block;
-  position: relative;
-  vertical-align: top;
-  border: black solid 1px;
-  border-style: none solid none none;
-}
-.seqID {
-  width: 13%;
-}
-.values {
-  width: 4%;
-}
-.sequence {
-  width: 75%;
-}
-.alignment_results {
-  width: calc(95vw - 1px);
-  height: calc(60vh - 93px);
-  position: relative;
-  overflow-y: auto;
-  display: block ruby;
-  overflow-x: hidden;
-  border: black solid 1px;
-  border-style: none solid solid solid;
-}
-.alignment_table {
+.align-table {
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
-  padding-left: 5px;
-  padding-right: 5px;
+  font-family: arial, sans-serif;
+  font-size: 14px;
+}
+.align-table th, .align-table td {
   height: 28px;
   line-height: 28px;
-  font-family: arial, sans-serif;
-  position: relative;
-  top: 0;
-  border-collapse: collapse;
+  box-sizing: border-box;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  padding: 0;
+  text-align: center;
+  white-space: nowrap;
 }
-.alignment_table tr, .alignment_table td {
-  height: 28px;
-}
-.alignment_table td {
+.res {
+  width: 15px;
   min-width: 15px;
   max-width: 15px;
 }
-.alignment_table td:first-child {
-  padding-left: 10px;
+.align-label-row th, .align-label-row td {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f1f1f1;
 }
-.alignment_table td:last-child {
-  padding-right: 10px;
+.align-ruler-row th, .align-ruler-row td {
+  position: sticky;
+  top: 28px;
+  z-index: 3;
+  background: #fff;
+  font-size: 10px;
+  color: #555;
 }
-#top {
-  background: none;
-  border-left: black solid 1px;
-  overflow-x: scroll;
-  scrollbar-width: 100%;
-  scrollbar-color: white black;
+.align-query-row th, .align-query-row td {
+  position: sticky;
+  top: 56px;
+  z-index: 3;
+  background: #ccc;
+}
+.seqid-col {
+  position: sticky;
+  left: 0px;
+  z-index: 2;
+  width: 140px;
+  text-align: left;
+  padding-left: 6px;
+  background: #fff;
+}
+.start-col {
+  position: sticky;
+  left: 140px;
+  z-index: 2;
+  width: 55px;
+  background: #fff;
+}
+.align-label-row .seqid-col, .align-label-row .start-col,
+.align-ruler-row .seqid-col, .align-ruler-row .start-col,
+.align-query-row .seqid-col, .align-query-row .start-col {
+  z-index: 4;
+}
+.align-row:nth-child(even) td {
+  background: #f5f5f5;
+}
+.align-row.filtered-out {
+  display: none;
+}
+.pairwise-layout {
+  display: flex;
+  margin: 0 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: black solid 1px;
+}
+.pairwise-nav {
+  flex: 0 0 300px;
+  overflow-y: auto;
+  border-right: black solid 1px;
+  background: #f7f7f7;
+}
+.pairwise-nav-item {
+  display: block;
+  padding: 6px 10px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+.pairwise-nav-item .seqid {
+  font-weight: bold;
+  display: block;
+}
+.pairwise-nav-item .evalue {
+  color: #666;
+  font-size: 11px;
+}
+.pairwise-nav-item:hover {
+  background: #eaeaea;
+}
+.pairwise-nav-item.active {
+  background: #cce5ff;
+}
+.pairwise-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px;
+  text-align: left;
+}
+.pairwise-detail-panel {
+  display: none;
+}
+.pairwise-detail-panel.active {
+  display: block;
+}
+.pairwise-stats {
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.pairwise-block {
+  margin-bottom: 14px;
+}
+.pairwise-align-row {
+  font-family: monospace;
+  white-space: pre;
+  font-size: 14px;
+  line-height: 20px;
+}
+.pairwise-align-label {
+  display: inline-block;
+  width: 110px;
+  font-weight: bold;
+  vertical-align: top;
 }
 </style>
 </head>
@@ -181,7 +255,7 @@ body {
 		<button class="tablinks" onclick="openTab(event, 'Pairwise')">Pairwise</button>
     </div>
     <!-- Top hits tab -->
-    <div id="Tophits" class="tabcontent" style="display: block;">
+    <div id="Tophits" class="tabcontent" style="display: flex;">
       <div class='mb-5' style='padding: 12px;'>
           <p style="font-size: 24px; margin: 0 0 10 0"> BLAST results against {{ db }}.</p>
           <p style="font-size: 24px; margin: 0 0 10 0"> Query_1: {{ name }}</p>
@@ -216,75 +290,65 @@ body {
             <p style="font-size: 18px; margin: 0 0 10 0"> Length of motif: {{ motif_length }}aa</p>
         </div>
 
-        <div class="container" style="overflow: hidden">
-            <div class="header" style="height: 100%; max-height: 60px;"
-                ><div class="cell header_cell seqID"><b>Seq ID</b></div
-                ><div class="cell header_cell values"><b>Motif start</b></div
-                ><div class="cell header_cell sequence"><b>Alignment</b></div
-                ><div class="cell header_cell  values"><b>Motif End</b></div
-                ><div class="cell header_cell values" style="border-style: none none solid none"><b>E-val</b></div
-            ></div>
-            <div class="header"
-                ><div class="cell query_cell seqID">{{query_alignment|get_item:'seqID'}}</div
-                ><div class="cell query_cell values" style="border-left: black solid 1px;">{{query_alignment|get_item:'start'}}</div
-                ><div class="cell query_cell sequence" id="top"
-                    ><table class="alignment_table" style="background: grey;">
-                        <tr>
-                            {% for l in query_alignment|get_item:'alignment' %}
-                                <td>{{l}}</td>
-                            {% endfor %}
-                        </tr>
-                    </table
-                ></div
-                ><div class="cell query_cell values" style="border-left: black solid 1px;">{{query_alignment|get_item:'stop'}}</div
-                ><div class="cell query_cell values" style="border-left: black solid 1px; width: calc(4% - 2px);">{{query_alignment|get_item:'e-Value'}}</div
-            ></div>
-            <div class="alignment_results">
-                <div class="alignment_col seqID" style="overflow-x: auto"
-                    {% for name in alignments %}
-                    {% with al=alignments|get_item:name %}
-                        ><div class="cell alignment_cell" style="text-align: left; padding-left: 5px; right:0; {% if not forloop.counter|divisibleby:2 %} background: lightgrey; background-clip: padding-box; {% endif %}">{{al|get_item:'seqID'}}</div
-                    {% endwith %}
-                    {% endfor %}
-                ></div
-                ><div class="alignment_col values"
-                    {% for name in alignments %}
-                    {% with al=alignments|get_item:name %}
-                        ><div class="cell alignment_cell" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>{{al|get_item:'start'}}</div
-                    {% endwith %}
-                    {% endfor %}
-                ></div
-                ><div class="alignment_col sequence" id="bottom" style="overflow-x: auto; white-space: nowrap; overflow-y: hidden;">
-                    {% for name in alignments %}
-                    {% with al=alignments|get_item:name %}
-                    <div class="cell alignment_cell">
-                        <table class="alignment_table" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>
-                            <tr>
-                                {% for l in al|get_item:'alignment' %}
-                                    <td style="background: {{alignment_colors|get_item:l}}">{{l}}</td>
-                                {% endfor %}
-                            </tr>
-                        </table>
-                    </div>
-                    {% endwith %}
-                    {% endfor %}
-                </div
-                ><div class="alignment_col values"
-                    {% for name in alignments %}
-                    {% with al=alignments|get_item:name %}
-                        ><div class="cell alignment_cell" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>{{al|get_item:'stop'}}</div
-                    {% endwith %}
-                    {% endfor %}
-                ></div
-                ><div class="alignment_col values" style="border-style: none">
-                    {% for name in alignments %}
-                    {% with al=alignments|get_item:name %}
-                        <div class="cell alignment_cell" {% if not forloop.counter|divisibleby:2 %} style="background: lightgrey; background-clip: padding-box;" {% endif %}>{{al|get_item:'e-value'}}</div>
-                    {% endwith %}
-                    {% endfor %}
-                </div>
-            </div>
+        <div class="align-toolbar">
+            <form method="get" class="threshold-form">
+                <label>Col threshold
+                    <input type="number" name="col_threshold" step="0.05" min="0.05" max="1"
+                           value="{{ col_threshold|default_if_none:0.8 }}">
+                </label>
+                <label>Row threshold
+                    <input type="number" name="row_threshold" step="0.05" min="0.05" max="1"
+                           value="{{ row_threshold|default_if_none:0.8 }}">
+                </label>
+                <button type="submit">Apply</button>
+            </form>
+            <input type="text" id="seqIdFilter" placeholder="Filter by Seq ID..." style="width:220px;">
+        </div>
+        {% if alignment_trim_warning %}
+        <div style="color:#a33; padding: 0 12px 8px 12px;">{{ alignment_trim_warning }}</div>
+        {% endif %}
 
+        <div class="align-scroll">
+          <table class="align-table" id="alignmentTable">
+            <thead>
+              <tr class="align-label-row">
+                <th class="seqid-col">Seq ID</th>
+                <th class="start-col">Start</th>
+                {% for l in query_alignment|get_item:'alignment' %}<th class="res"></th>{% endfor %}
+                <th>End</th>
+                <th>E-val</th>
+              </tr>
+              <tr class="align-ruler-row">
+                <th class="seqid-col"></th>
+                <th class="start-col">Pos.</th>
+                {% for l in query_alignment|get_item:'alignment' %}
+                  <th class="res">{% if forloop.counter|divisibleby:10 %}{{ forloop.counter }}{% endif %}</th>
+                {% endfor %}
+                <th></th>
+                <th></th>
+              </tr>
+              <tr class="align-query-row">
+                <th class="seqid-col">{{ query_alignment|get_item:'seqID' }}</th>
+                <th class="start-col">{{ query_alignment|get_item:'start' }}</th>
+                {% for l in query_alignment|get_item:'alignment' %}<th class="res" style="background: {{alignment_colors|get_item:l}}">{{ l }}</th>{% endfor %}
+                <th>{{ query_alignment|get_item:'stop' }}</th>
+                <th>{{ query_alignment|get_item:'e-value' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for name in alignments %}
+              {% with al=alignments|get_item:name %}
+              <tr class="align-row" data-seqid="{{ al|get_item:'seqID' }}">
+                <td class="seqid-col">{{ al|get_item:'seqID' }}</td>
+                <td class="start-col">{{ al|get_item:'start' }}</td>
+                {% for l in al|get_item:'alignment' %}<td class="res" style="background: {{alignment_colors|get_item:l}}">{{ l }}</td>{% endfor %}
+                <td>{{ al|get_item:'stop' }}</td>
+                <td>{{ al|get_item:'e-value' }}</td>
+              </tr>
+              {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
 
     </div>
@@ -296,11 +360,43 @@ body {
             <p style="font-size: 18px; margin: 0 0 10 0"> Length of motif: {{ motif_length }}aa</p>
         </div>
 
+        {% if pairwise_hits %}
+        <div class="pairwise-layout">
+            <div class="pairwise-nav">
+                {% for hit in pairwise_hits %}
+                <div class="pairwise-nav-item" data-hit-idx="{{ forloop.counter0 }}">
+                    <span class="seqid">{{ hit.seqID }}</span>
+                    <span class="evalue">bits {{ hit.bits }} | E {{ hit.evalue }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="pairwise-detail">
+                {% for hit in pairwise_hits %}
+                <div class="pairwise-detail-panel" id="pairwise-hit-{{ forloop.counter0 }}">
+                    <p><b>{{ hit.header }}</b> (Length={{ hit.subject_length }})</p>
+                    <p class="pairwise-stats">
+                        Score: {{ hit.bits }} bits, Expect: {{ hit.evalue }}<br>
+                        Identities: {{ hit.identities }}, Positives: {{ hit.positives }}{% if hit.gaps %}, Gaps: {{ hit.gaps }}{% endif %}<br>
+                        Query {{ hit.query_start }}-{{ hit.query_end }} vs Sbjct {{ hit.sbjct_start }}-{{ hit.sbjct_end }}
+                    </p>
+                    {% for block in hit.blocks %}
+                    <div class="pairwise-block">
+                        <div class="pairwise-align-row"><span class="pairwise-align-label">Query {{ block.query_start }}-{{ block.query_end }}</span>{{ block.query_seq }}</div>
+                        <div class="pairwise-align-row"><span class="pairwise-align-label"></span>{{ block.match_line }}</div>
+                        <div class="pairwise-align-row"><span class="pairwise-align-label">Sbjct {{ block.sbjct_start }}-{{ block.sbjct_end }}</span>{{ block.sbjct_seq }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
         <div class="container" style="text-align: left; overflow-y: auto;">
 			<div style="white-space:pre; padding-left: 10px">
 				{{ pairwise }}
 			</div>
 		</div>
+        {% endif %}
 	</div>
 
 <script src="{{ ASSETS_ROOT }}/js/jquery-4.0.0.min.js"></script>
@@ -315,22 +411,35 @@ function openTab(evt, tabName) {
   for (i = 0; i < tablinks.length; i++) {
     tablinks[i].className = tablinks[i].className.replace(" active", "");
   }
-  document.getElementById(tabName).style.display = "block";
+  document.getElementById(tabName).style.display = "flex";
   evt.currentTarget.className += " active";
 };
 
-$( document ).ready(function() {
-  var div1 = $('#top');
-  var div2 = $('#bottom');
-
-  div1.scroll(function() {
-      div2.scrollLeft($(this).scrollLeft());
+var seqIdFilter = document.getElementById('seqIdFilter');
+if (seqIdFilter) {
+  seqIdFilter.addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    document.querySelectorAll('#alignmentTable tbody tr.align-row').forEach(function (row) {
+      var seqid = (row.getAttribute('data-seqid') || '').toLowerCase();
+      row.classList.toggle('filtered-out', q.length > 0 && seqid.indexOf(q) === -1);
+    });
   });
+}
 
-  div2.scroll(function() {
-      div1.scrollLeft($(this).scrollLeft());
+var pairwiseNavItems = document.querySelectorAll('.pairwise-nav-item');
+pairwiseNavItems.forEach(function (item) {
+  item.addEventListener('click', function () {
+    var idx = this.getAttribute('data-hit-idx');
+    document.querySelectorAll('.pairwise-nav-item.active').forEach(function (n) { n.classList.remove('active'); });
+    document.querySelectorAll('.pairwise-detail-panel.active').forEach(function (p) { p.classList.remove('active'); });
+    this.classList.add('active');
+    var panel = document.getElementById('pairwise-hit-' + idx);
+    if (panel) panel.classList.add('active');
   });
 });
+if (pairwiseNavItems.length) {
+  pairwiseNavItems[0].click();
+}
 </script>
 
 </body>

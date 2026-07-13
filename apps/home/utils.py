@@ -537,3 +537,79 @@ def get_no_kingdom_by_phylum():
 	]
 	return sorted(result, key=lambda x: x['sequences'], reverse=True)
 
+#### ALIGNMENTS
+def readFasta(fastaFile, cleanHeaders=True):
+	sequences = {}
+	with open(fastaFile, "r") as f:
+		for line in f:
+			if line.startswith(">"):
+				line = line.strip().replace(">", "").replace(".", "_")
+				if cleanHeaders:
+					line = line.split("/")[0]
+				header = line
+				sequences[header] = ""
+			else:
+				sequences[header] += line.strip()
+	return sequences
+
+def alignFasta(sequences_fasta, alignment_file):
+	cmd = '/home/cpulidoq/anaconda3/envs/django/bin/muscle'
+	bashCommand = "%s -super5 %s -output %s" % (cmd, sequences_fasta, alignment_file)
+	process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	output, error = process.communicate()
+	return output, error
+
+def writeFasta(fasta_dict, fasta_file, replace=False):
+	if replace:
+		fasta_file = fasta_file.replace(".fasta", "_clean.fasta")
+	with open(fasta_file, 'w') as f:
+		for seq in fasta_dict:
+			f.write(">" + seq + "\n" + fasta_dict[seq] + "\n")
+	if replace:
+		os.rename(fasta_file, fasta_file.replace("_clean.fasta", ".fasta"))
+
+def cleanFasta(fasta_file, replace=True, cleanHeaders=False):
+
+	new_fasta = {}
+	fasta = readFasta(fasta_file, cleanHeaders=cleanHeaders)
+	averageLength = sum([len(fasta[x]) for x in fasta])/ len(fasta)
+
+	# Remove empty sequences and clean dashes
+	for seq in list(fasta.keys()):
+
+		fasta[seq] = fasta[seq].replace("-", "")
+		if not len(fasta[seq]) or len(fasta[seq]) < averageLength/2: continue
+		new_fasta[seq.replace(".", "_")] = fasta[seq].replace('-', '')
+
+	if replace:
+		writeFasta(new_fasta, fasta_file, replace=replace)
+
+	return new_fasta
+
+def trimAlignment(alignment_file, trimmed_alignment_file, col_threshold=0.8, row_threshold=0.8):
+	if type(alignment_file) is dict:
+		alignment = alignment_file
+	else:
+		alignment = readFasta(alignment_file)
+	alignment_trimm = {}
+	alignment_trimm_ = {}
+	elements = [[k, v] for k, v in alignment.items()]			# [[seq_id, seq in alignment], ... ]
+	# iterate over columns in alignment
+	for n in range(len(elements[0][1])):
+		coln = [x[1][n] for x in elements]
+		# Keep column if column has less gaps than col_threshold (default: 80%)
+		if coln.count('-') / len(coln) < col_threshold:
+			for name in alignment:
+				alignment_trimm_[name] = alignment_trimm_.get(name, '') + alignment[name][n]
+	# Iterate over rows in alignment_trimm_ and skip if row has more than row_threshold (default: 80%) of gaps
+	for name in alignment_trimm_:
+		if alignment_trimm_[name].count('-') / len(alignment_trimm_[name]) < row_threshold:
+			alignment_trimm[name] = alignment_trimm_[name].replace('B', 'D').replace('Z', 'Q').replace('X','-').replace('*','-').replace('x', '-')
+			length_seq = len(alignment_trimm[name])
+	alignment_dims = [len(alignment_trimm), length_seq]
+	# Write alignment into file
+	with open(trimmed_alignment_file, 'w') as af:
+		for name in alignment_trimm:
+			af.write(">" + name + "\n" + alignment_trimm[name] + "\n")
+	return alignment_trimm, alignment_dims
+
