@@ -22,7 +22,7 @@ def get_ncbi_id(seq):
 
 	if not seq.foreignannotation: return None
 
-	ncbiSources = ['gi', 'gb', 'emb', 'ref', 'dbj', 'pir', 'prf', 'sp', 'pdb', 'tpe', 'none', 'tpg']
+	ncbiSources = ['ref', 'gi', 'gb', 'emb', 'dbj', 'pir', 'prf', 'sp', 'pdb', 'tpe', 'none', 'tpg']
 	fids = seq.foreignannotation.split("|")
 	if len(fids) == 1:
 		idx = fids[0].split()[0]

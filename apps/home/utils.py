@@ -18,12 +18,16 @@ from apps.templates.menus.query_sequences_full import menu as menu_full
 
 
 _taxonomy_df = None
+_taxonomy_df_mtime = None
 
 
 def get_taxonomy_df():
-	global _taxonomy_df
-	if _taxonomy_df is None:
-		_taxonomy_df = pd.read_csv('utils/phylogeneticTrees/taxonomies.csv', index_col=0)
+	global _taxonomy_df, _taxonomy_df_mtime
+	csv_path = 'utils/phylogeneticTrees/taxonomies.csv'
+	mtime = os.path.getmtime(csv_path)
+	if _taxonomy_df is None or mtime != _taxonomy_df_mtime:
+		_taxonomy_df = pd.read_csv(csv_path, index_col=0)
+		_taxonomy_df_mtime = mtime
 	return _taxonomy_df
 
 

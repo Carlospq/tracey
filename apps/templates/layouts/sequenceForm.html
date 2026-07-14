@@ -275,10 +275,10 @@
     <!-- Submit buttons for SequenceForm -->
     <div class="mb-4" style="width: 100%; text-align: center;">
         <input type=button   value="Previous Page" onClick="javascript:history.go(-1);" style="margin-left: 50px;">
-        <a href="" style="padding: 15px;"> <img src="" width="5%" alt=""> </a>
+        <a style="padding: 15px; cursor: default"> <img src="" width="5%" alt=""> </a>
         <input type="submit" value="Submit" style="margin-right: 50px;">
         {% if 'query-verify' in segment %}
-        <a href="" style="padding: 15px;"> <img src="" width="5%" alt=""> </a>
+        <a style="padding: 15px; cursor: default"> <img src="" width="5%" alt=""> </a>
         <a href="query-verify"><input type="submit" id="deleteSequence" value="Delete sequence" name="deleteSequence" style="display: inline-block;" onclick="return confirm('Are you sure you want to delete sequence {{ sequence.sequenceshortname }}?')"></a>
         {% endif %}
     </div>

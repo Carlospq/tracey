@@ -27,6 +27,7 @@
 
 #####################################
 from apps.home.models import *
+from utils.phylogeneticTrees.generateTable import generate_taxonomy_tables
 import datetime, os, zipfile, requests, time
 
 try:
@@ -337,6 +338,9 @@ def update_tracey_taxonomies(path = 'utils/ncbi_taxonomy/taxdmp/', report_file_n
             if report_file_name:
                 with open(path+report_file_name, 'a') as fh:
                     fh.write("NOT FOUND: %s NCBI ID was not found in TRACEY\n"%(taxonomy.ncbi_taxonomy_id))
+
+    print("Regenerating taxonomy lineage tables")
+    generate_taxonomy_tables()
 
     return "\nUpdate completed."
 

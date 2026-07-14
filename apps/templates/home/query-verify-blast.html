@@ -177,6 +177,18 @@ body {
 .align-row.filtered-out {
   display: none;
 }
+.align-ruler-row .res {
+  cursor: pointer;
+}
+.align-ruler-row .res.pos-marked {
+  background: #ffcccc;
+  color: #900;
+  font-weight: bold;
+}
+.res.col-marked {
+  border-left: 2px dashed red;
+  border-right: 2px dashed red;
+}
 .pairwise-layout {
   display: flex;
   margin: 0 12px;
@@ -314,7 +326,7 @@ body {
               <tr class="align-label-row">
                 <th class="seqid-col">Seq ID</th>
                 <th class="start-col">Start</th>
-                {% for l in query_alignment|get_item:'alignment' %}<th class="res"></th>{% endfor %}
+                {% for l in query_alignment|get_item:'alignment' %}<th class="res" data-col="{{ forloop.counter0 }}"></th>{% endfor %}
                 <th>End</th>
                 <th>E-val</th>
               </tr>
@@ -322,7 +334,7 @@ body {
                 <th class="seqid-col"></th>
                 <th class="start-col">Pos.</th>
                 {% for l in query_alignment|get_item:'alignment' %}
-                  <th class="res">{% if forloop.counter|divisibleby:10 %}{{ forloop.counter }}{% endif %}</th>
+                  <th class="res" data-col="{{ forloop.counter0 }}">{% if forloop.counter|divisibleby:10 %}{{ forloop.counter }}{% endif %}</th>
                 {% endfor %}
                 <th></th>
                 <th></th>
@@ -330,7 +342,7 @@ body {
               <tr class="align-query-row">
                 <th class="seqid-col">{{ query_alignment|get_item:'seqID' }}</th>
                 <th class="start-col">{{ query_alignment|get_item:'start' }}</th>
-                {% for l in query_alignment|get_item:'alignment' %}<th class="res" style="background: {{alignment_colors|get_item:l}}">{{ l }}</th>{% endfor %}
+                {% for l in query_alignment|get_item:'alignment' %}<th class="res" data-col="{{ forloop.counter0 }}" style="background: {{alignment_colors|get_item:l}}; ">{{ l }}</th>{% endfor %}
                 <th>{{ query_alignment|get_item:'stop' }}</th>
                 <th>{{ query_alignment|get_item:'e-value' }}</th>
               </tr>
@@ -341,7 +353,8 @@ body {
               <tr class="align-row" data-seqid="{{ al|get_item:'seqID' }}">
                 <td class="seqid-col">{{ al|get_item:'seqID' }}</td>
                 <td class="start-col">{{ al|get_item:'start' }}</td>
-                {% for l in al|get_item:'alignment' %}<td class="res" style="background: {{alignment_colors|get_item:l}}">{{ l }}</td>{% endfor %}
+{#                {% for l in al|get_item:'alignment' %}<td class="res" data-col="{{ forloop.counter0 }}" style="background: {{alignment_colors|get_item:l}}">{{ l }}</td>{% endfor %}#}
+				  {% for l in al|get_item:'alignment' %}<td class="res" data-col="{{ forloop.counter0 }}" style="background-color: rgb(from {{alignment_colors|get_item:l}} r g b / 0.4);">{{ l }}</td>{% endfor %}
                 <td>{{ al|get_item:'stop' }}</td>
                 <td>{{ al|get_item:'e-value' }}</td>
               </tr>
@@ -425,6 +438,17 @@ if (seqIdFilter) {
     });
   });
 }
+
+document.querySelectorAll('.align-ruler-row .res').forEach(function (cell) {
+  cell.addEventListener('click', function () {
+    var col = this.getAttribute('data-col');
+    if (col === null) return;
+    var marked = this.classList.toggle('pos-marked');
+    document.querySelectorAll('#alignmentTable [data-col="' + col + '"]').forEach(function (c) {
+      c.classList.toggle('col-marked', marked);
+    });
+  });
+});
 
 var pairwiseNavItems = document.querySelectorAll('.pairwise-nav-item');
 pairwiseNavItems.forEach(function (item) {
