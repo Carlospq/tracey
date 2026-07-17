@@ -278,17 +278,28 @@ body {
       <div class="container">
           <table class="table_hits">
               <tr>
-                  <th style="width: 100%">Sequences producing significant alignments:</th>
+                  <th style="width: 60%">Sequences producing significant alignments:</th>
+                  <th>Domain groups</th>
                   <th style="text-align: center;">(Bits)</th>
                   <th style="text-align: center;">E-value</th>
               </tr>
               {% for name in scores %}
               {% with scr=scores|get_item:name %}
+              {% with hitseq=hit_sequences|get_item:name %}
               <tr>
-				  <td><b>{{ name }}</b> ({{scr|get_item:'seqID'}})</td>
+				  <td>
+					  {% if hitseq %}
+					  <a href="/query-sequences/{{ hitseq|get_item:'sequence_id' }}/details/" target="_blank" rel="noopener noreferrer" style="color: blue"><b>{{ name }}</b></a>
+					  {% else %}
+					  <b>{{ name }}</b>
+					  {% endif %}
+					  ({{scr|get_item:'seqID'}})
+				  </td>
+                  <td>{% if hitseq %}{{ hitseq|get_item:'domaingroups'|join:", " }}{% endif %}</td>
                   <td style="text-align: center;">{{scr|get_item:'bits'}}</td>
                   <td style="text-align: center;">{{scr|get_item:'e-value'}}</td>
               </tr>
+              {% endwith %}
               {% endwith %}
               {% endfor %}
           </table>

@@ -430,6 +430,16 @@ def QueryVerifyBlastView(request, db, query_id):
             context['scores_header'] = parsedstdout[2]
             context['scores'] = parsedstdout[3]
 
+            hit_sequences = {}
+            for hit_name in context['scores']:
+                seq_obj = Sequences.objects.filter(sequenceshortname=hit_name).first()
+                if seq_obj:
+                    hit_sequences[hit_name] = {
+                        'sequence_id': seq_obj.sequence_id,
+                        'domaingroups': list(seq_obj.motifs_set.values_list('domaingroup__domaingroupname', flat=True)),
+                    }
+            context['hit_sequences'] = hit_sequences
+
             query_alignment = parsedstdout[4]
             alignments = parsedstdout[5]
 

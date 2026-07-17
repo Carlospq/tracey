@@ -132,6 +132,7 @@ def _process(file_path, evalue, username):
                 sourcedatabase=data.get('sourcedatabase', ''),
                 dbxref=data.get('dbxref') or None,
                 aliases=data.get('aliases') or None,
+                sequencecomments=data.get('sequencecomments') or None,
                 sequencetype='protein',
                 sequencestatus='live',
                 private=1,

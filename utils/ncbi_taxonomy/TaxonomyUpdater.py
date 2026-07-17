@@ -75,6 +75,32 @@ def build_ncbi_dict_from_entrez(scientific_name, throttle=0.34):
     except Exception:
         return None
 
+INFRASPECIFIC_RANKS = {
+    'subspecies', 'strain', 'varietas', 'forma', 'forma specialis',
+    'serogroup', 'serotype', 'biotype', 'genotype', 'isolate',
+    'pathogroup', 'subvariety', 'morph',
+}
+AMBIGUOUS_RANKS = {'no rank', 'clade'}
+
+def is_species_or_below(ncbi_id, ncbi, _seen=None):
+    node = ncbi['dict_nodes'].get(str(ncbi_id))
+    if not node:
+        return False
+    rank = node['rank']
+    if rank == 'species' or rank in INFRASPECIFIC_RANKS:
+        return True
+    if rank not in AMBIGUOUS_RANKS:
+        return False
+    _seen = _seen or set()
+    if str(ncbi_id) in _seen:
+        return False
+    _seen.add(str(ncbi_id))
+    parent_id = node['parent_tax_id']
+    if parent_id == str(ncbi_id):
+        return False
+    return is_species_or_below(parent_id, ncbi, _seen)
+
+
 def download_ncbi_taxonomy_files(path, url='https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdmp.zip'):
     print('Downloading NCBI taxonomy files...')
     response = requests.get(url)
@@ -153,31 +179,31 @@ def create_ncbi_taxonomy(ncbi_id, ncbi, report_file=''):
     except:
         taxonomy_parent = create_ncbi_taxonomy(node['parent_tax_id'], ncbi)
 
-    # Check if shortname exists
-    _name = [name['name_txt'].split(" ") if len(name['name_txt'].split(" ")) > 1 else ''][0]
-    if not _name or len(_name) < 2:
-        tax_shortname = ''
-    else:
-        lengths = [[2,2], [2,3], [3,2], [3,3]]
-        for l in lengths:
-            tax_shortname = _name[0][:l[0]].title()+_name[1][:l[1]].title()
-
-            if tax_shortname.endswith("."):
-                related_taxonomies = Taxonomies.objects.filter(taxonomyshortname__istartswith=tax_shortname[:-1])
-                get_index = [int(t.taxonomyshortname[-1]) for t in related_taxonomies if "_" in t.taxonomyshortname]
-                if get_index:
-                    tax_shortname = tax_shortname[:-1] + "_" + str(max(get_index)+1)
-                else:
-                    tax_shortname = tax_shortname[:-1] + "_1"
-
-            if not Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
-                break
-
-        if not tax_shortname:
-            pass
-
-        if Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
+    # Check if shortname exists (species-level taxonomies and below only)
+    if is_species_or_below(ncbi_id, ncbi):
+        _name = [name['name_txt'].split(" ") if len(name['name_txt'].split(" ")) > 1 else ''][0]
+        if not _name or len(_name) < 2:
             tax_shortname = ''
+        else:
+            lengths = [[2,2], [2,3], [3,2], [3,3]]
+            for l in lengths:
+                tax_shortname = _name[0][:l[0]].title()+_name[1][:l[1]].title()
+
+                if tax_shortname.endswith("."):
+                    related_taxonomies = Taxonomies.objects.filter(taxonomyshortname__istartswith=tax_shortname[:-1])
+                    get_index = [int(t.taxonomyshortname[-1]) for t in related_taxonomies if "_" in t.taxonomyshortname]
+                    if get_index:
+                        tax_shortname = tax_shortname[:-1] + "_" + str(max(get_index)+1)
+                    else:
+                        tax_shortname = tax_shortname[:-1] + "_1"
+
+                if not Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
+                    break
+
+            if Taxonomies.objects.filter(taxonomyshortname=tax_shortname):
+                tax_shortname = ''
+    else:
+        tax_shortname = ''
     taxonomy = Taxonomies(scientificname = name['name_txt'],
                           taxonomycomments = 'automatically Added by TaxonomyUpdater',
                           taxonomyparent_id = int(taxonomy_parent.taxonomy_id),
