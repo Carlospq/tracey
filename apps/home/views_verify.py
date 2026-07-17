@@ -430,15 +430,27 @@ def QueryVerifyBlastView(request, db, query_id):
             context['scores_header'] = parsedstdout[2]
             context['scores'] = parsedstdout[3]
 
-            hit_sequences = {}
-            for hit_name in context['scores']:
-                seq_obj = Sequences.objects.filter(sequenceshortname=hit_name).first()
-                if seq_obj:
-                    hit_sequences[hit_name] = {
-                        'sequence_id': seq_obj.sequence_id,
-                        'domaingroups': list(seq_obj.motifs_set.values_list('domaingroup__domaingroupname', flat=True)),
-                    }
-            context['hit_sequences'] = hit_sequences
+            hit_names = list(context['scores'].keys())
+            matched_seqs = {
+                seq.sequenceshortname: seq
+                for seq in Sequences.objects.filter(sequenceshortname__in=hit_names)
+            }
+
+            domaingroups_by_seq = {}
+            if matched_seqs:
+                motif_rows = Motifs.objects.filter(
+                    sequence_id__in=[seq.sequence_id for seq in matched_seqs.values()]
+                ).values_list('sequence_id', 'domaingroup__domaingroupname')
+                for seq_id, dg_name in motif_rows:
+                    domaingroups_by_seq.setdefault(seq_id, []).append(dg_name)
+
+            context['hit_sequences'] = {
+                hit_name: {
+                    'sequence_id': seq_obj.sequence_id,
+                    'domaingroups': domaingroups_by_seq.get(seq_obj.sequence_id, []),
+                }
+                for hit_name, seq_obj in matched_seqs.items()
+            }
 
             query_alignment = parsedstdout[4]
             alignments = parsedstdout[5]
