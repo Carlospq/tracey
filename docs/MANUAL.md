@@ -359,6 +359,27 @@ legada en `apps/home/models.py` (`managed = False`), que es una tabla de autenti
 Django y no tiene relación con el control de acceso actual — no es la que hay que tocar para dar
 permisos.
 
+### Acceso limitado: solo descarga de HMMs (sin dar staff completo)
+
+Para revisores/editores que solo necesitan descargar los perfiles HMM (por ejemplo, para
+reproducibilidad de un manuscrito) sin obtener acceso a `features.html`, `query-insert` ni
+`query-verify`, existe un grupo de Django separado, `hmm_downloaders`, comprobado por el
+decorador `hmm_download_required` (`apps/home/views_verify.py`) — usado únicamente en
+`download_hmm_zip` y en la página dedicada `/download-hmm-profiles`
+(`apps/home/views_admin.py`). Los usuarios de este grupo NO obtienen `is_staff` y siguen sin
+acceso a ninguna otra sección protegida por `staff_login_required`.
+
+Para dar este acceso limitado a un usuario ya registrado:
+
+1. Entrar a `tracey.unil.ch/admin` con una cuenta de superusuario/staff.
+2. Si el grupo no existe todavía, crearlo una vez en **Groups** → "Add group", con el nombre
+   exacto `hmm_downloaders` (sin permisos adicionales de Django necesarios).
+3. Abrir **Users**, seleccionar el usuario, y añadirlo al grupo `hmm_downloaders` en el campo
+   "Groups" (sin marcar "Staff status"). Guardar.
+
+El usuario verá entonces un enlace "Download HMMs" en el menú lateral y podrá acceder a
+`/download-hmm-profiles`.
+
 ## 7. Añadir un nuevo modelo HMM
 
 Para añadir un nuevo perfil HMM a TRACEY:

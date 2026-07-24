@@ -1,4 +1,4 @@
-
+{% load template_filters %}
 
         <nav id="sidebarMenu" class="sidebar d-lg-block bg-gray-800 text-white collapse" data-simplebar>
           <div class="sidebar-inner px-4 pt-3">
@@ -122,6 +122,20 @@
                               </svg>
                           </span>
                           <span class="sidebar-text">Updates</span>
+                      </a>
+                    </li>
+                    {% endif %}
+                    <!-- HMM downloaders section (limited access, no full staff rights) -->
+                    {% if user.is_authenticated and user|has_group:"hmm_downloaders" %}
+                    <li class="nav-item {% if 'download-hmm-profiles' in segment %} active {% endif %}">
+                      <a class="nav-link" href="/download-hmm-profiles">
+                          <span class="sidebar-icon">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="yellow" class="bi bi-file-earmark-arrow-down" viewBox="0 0 16 16">
+                                  <path d="M8.5 6.5a.5.5 0 0 0-1 0v3.793L6.354 9.146a.5.5 0 1 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 10.293V6.5z"/>
+                                  <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                              </svg>
+                          </span>
+                          <span class="sidebar-text">Download HMMs</span>
                       </a>
                     </li>
                     {% endif %}

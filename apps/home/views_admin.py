@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.utils.timezone import now
 
 from .models import *
-from .views_verify import staff_login_required
+from .views_verify import staff_login_required, hmm_download_required
 from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
 from utils.traceySequenceUploader.uploadSequences import DONE_MARKER
 
@@ -110,6 +110,13 @@ def get_hmm_catalog():
         return {'db_files': db_files, 'families': families}
     except (FileNotFoundError, PermissionError):
         return {'db_files': [], 'families': {}}
+
+
+@login_required(login_url="/noPermits.html")
+@hmm_download_required
+def hmm_downloads(request):
+    context = {"segment": request.path.split('/')[-1], "hmm_catalog": get_hmm_catalog()}
+    return render(request, 'home/hmm-downloads.html', context)
 
 
 @login_required(login_url="/noPermits.html")
@@ -269,7 +276,7 @@ def download_file(request, filename=''):
 
 
 @login_required(login_url="/noPermits.html")
-@staff_login_required
+@hmm_download_required
 def download_hmm_zip(request):
     import io
     import zipfile

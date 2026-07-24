@@ -35,6 +35,17 @@ def staff_login_required(view_func):
     return decorated_view_func
 
 
+hmm_group_test = user_passes_test(
+    lambda u: u.is_staff or u.groups.filter(name='hmm_downloaders').exists(),
+    login_url="/noPermits.html"
+)
+
+
+def hmm_download_required(view_func):
+    decorated_view_func = login_required(hmm_group_test(view_func), login_url='/')
+    return decorated_view_func
+
+
 def saveVerifyMotifs(sequence_id, hits):
 
     def countGaps(alignment):

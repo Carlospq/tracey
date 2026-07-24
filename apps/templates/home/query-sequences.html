@@ -66,6 +66,10 @@
     }
     .tax-nav-item:hover { background: #f0f4ff; }
     .tax-nav-item.active { background: #d0e4ff; font-weight: bold; }
+	.tooltip .tooltip-inner {
+		max-width: 320px;
+		text-align: left;
+	}
 </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -81,8 +85,16 @@
 				<div class="card-body">
 					<div style="padding-bottom: 5px" >
 						<h1><strong> Protein Sequences Query </strong></h1>
-						<p><i> Search Tracey database for sequences fulfilling the selected parameters. </i></p>
-						{% if error %}<p style="color: red"> {{ error }} </p>{% endif %}
+						<p>
+							<i> Search Tracey database for sequences fulfilling the selected parameters. </i>
+							<a href="{% url 'query-sequences-results' %}?proteinlayout=SNARE&domainname=SNARE&taxonomy=Bilateria&aliases=STX18&sequencestatus=1&private=1"
+							   target="_blank" rel="noopener"
+							   data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+							   title="Protein domain: SNARE / SNARE <br> Taxonomy: Opisthokonta &rsaquo; Metazoa &rsaquo; Bilateria <br> Aliases: STX18">
+								See an example search &rarr;
+							</a>
+						</p>
+						<div id="form-error-toast" style="display:none; position:fixed; top:40px; right:30px; background:rgba(220, 53, 69, 0.9); color:#fff; padding:12px 20px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2000; max-width:400px; font-size:0.9em;"></div>
 						<hr>
 					</div>
 
@@ -223,7 +235,7 @@
 									<div class="formcell2"></div>
 									<div class="formcell3">
 										<input type="text" id="shortname-search-input" style="width: 100%"
-											   placeholder="e.g. HoSa, GiIn..." autocomplete="off">
+											   placeholder="e.g. HoSa, SaCe, ..." autocomplete="off">
 										<input type="text" name="shortname" id="shortname" style="display:none">
 									</div>
 								</div>
@@ -234,7 +246,8 @@
 									<div class="formcell2"></div>
 									<div class="formcell3">
 										<input type="text" id="sciname-search-input" style="width: 100%"
-											   placeholder="e.g. Homo sapiens, Giardia..." autocomplete="off">
+											   placeholder="e.g. Homo sapiens, Saccharomyces cerevisia, ..." autocomplete="off">
+										<input type="text" name="sciname" id="sciname" style="display:none">
 									</div>
 								</div>
 
@@ -265,11 +278,14 @@
                         <hr>
 
 					<input type="submit" value="Submit">
+					<button type="button" id="reset-to-example-btn" style="margin-left: 1rem;">Reset to example</button>
 					</form>
 
 				</div>
 			</div>
 			<!-- End of Form -->
+
+			{{ previous_query|json_script:"previous-query-data" }}
 
 		</div>
 
@@ -315,7 +331,7 @@
         }
     }
 
-    function taxNavSelectItem(item, colIdx) {
+    function taxNavSelectItem(item, colIdx, onDone, skipSpeciesUpdate) {
         var vw = TAX_NAV_VW;
         // Remove any columns pushed deeper than this one (handles re-selecting at any level)
         while ($('#tax-nav-slider .tax-nav-col').length > colIdx + 1) {
@@ -337,7 +353,8 @@
         $('#taxonomy-value').val(item.value);
         $('#tax-nav-back').css('visibility', 'visible');
         $('#tax-nav-clear').css('visibility', 'visible');
-        taxNavUpdateSpecies();
+        clearOrganismSearch();
+        if (!skipSpeciesUpdate) taxNavUpdateSpecies();
 
         $.ajax({
             url: taxNavUrlRank,
@@ -347,6 +364,7 @@
                     return { value: $(this).val(), label: $(this).text().trim(), bold: false };
                 }).get().filter(function(i) { return i.value; });
                 if (children.length > 0) taxNavPushColumn(children);
+                if (onDone) onDone();
             }
         });
     }
@@ -383,21 +401,29 @@
         taxNavUpdateSpecies();
     }
 
-    function taxNavUpdateSpecies() {
-        if (taxNavHistory.length === 0) { $('#species_list').html(''); return; }
+    function taxNavUpdateSpecies(onDone) {
+        if (taxNavHistory.length === 0) { $('#species_list').html(''); if (onDone) onDone(); return; }
         $.ajax({
             url: taxNavUrlSpecies,
-            data: { 'taxonomy_list[]': taxNavHistory.map(function(h) { return h.value; }), 'domainname': $('#domainname').val() },
-            success: function(data) { $('#species_list').html(data); }
+            data: { 'taxonomy_list[]': taxNavHistory.map(function(h) { return h.value; }),
+                    'proteinlayout': $('#proteinlayout').val(),
+                    'domainname': $('#domainname').val(),
+                    'domaingroup_rank': $('#domaingroup_rank').val(),
+                    'domaingroup[]': $('#id_domaingroup').val() || [] },
+            success: function(data) { $('#species_list').html(data); if (onDone) onDone(); }
         });
     }
+
+    $('#species_list').on('change', function() {
+        clearOrganismSearch();
+    });
 
     // ── Domain selectors ──────────────────────────────────────────────────────
     $("#proteinlayout").change(function () {
         $.ajax({
             url: $("#FamilyForm").attr("data-load-domains-url"),
             data: { 'proteinlayout': $(this).val() },
-            success: function(data) { $("#domainname").html(data); $("#domaingroup_rank").html(""); $("#id_domaingroup").html(""); refreshActiveTaxSearch(); }
+            success: function(data) { $("#domainname").html(data); $("#domaingroup_rank").html(""); $("#id_domaingroup").html(""); refreshActiveTaxSearch(); taxNavUpdateSpecies(); }
         });
     });
 
@@ -405,7 +431,7 @@
         $.ajax({
             url: $("#FamilyForm").attr("data-load-domaingroups-rank1-url"),
             data: { 'proteinlayout': $("#proteinlayout").val(), 'domainname': $(this).val() },
-            success: function(data) { $("#domaingroup_rank").html(data); $("#id_domaingroup").html(""); refreshActiveTaxSearch(); }
+            success: function(data) { $("#domaingroup_rank").html(data); $("#id_domaingroup").html(""); refreshActiveTaxSearch(); taxNavUpdateSpecies(); }
         });
     });
 
@@ -413,8 +439,13 @@
         $.ajax({
             url: $("#FamilyForm").attr("data-load-domaingroups-rank2-url"),
             data: { 'proteinlayout': $("#proteinlayout").val(), 'domaingroup_rank': $(this).val(), 'domainname': $("#domainname").val() },
-            success: function(data) { $("#id_domaingroup").html(data); }
+            success: function(data) { $("#id_domaingroup").html(data); refreshActiveTaxSearch(); taxNavUpdateSpecies(); }
         });
+    });
+
+    $("#id_domaingroup").on('change', function() {
+        refreshActiveTaxSearch();
+        taxNavUpdateSpecies();
     });
 
     // ── Organism live search ──────────────────────────────────────────────────
@@ -423,6 +454,12 @@
     var RANK_ORDER = ['genus', 'species', 'subspecies', 'varietas', 'forma', 'strain', 'isolate'];
 
     function triggerTaxSearch(q, type) {
+        taxNavReset();
+        if (type === 'shortname') {
+            $('#sciname-search-input').val('');
+        } else if (type === 'scientific') {
+            $('#shortname-search-input').val('');
+        }
         clearTimeout(taxSearchTimer);
         $('#taxonomy-search-status').text('Searching...');
         $('#taxonomy-search-results').empty();
@@ -430,7 +467,9 @@
             $.get(taxSearchUrl, {
                 q: q, type: type,
                 proteinlayout: $('#proteinlayout').val(),
-                domainname: $('#domainname').val()
+                domainname: $('#domainname').val(),
+                domaingroup_rank: $('#domaingroup_rank').val(),
+                'domaingroup[]': $('#id_domaingroup').val() || []
             }, function(data) { renderTaxSearchPanel(data.taxa); });
         }, 300);
     }
@@ -450,6 +489,15 @@
             $('#taxonomy-search-results').empty();
             $('#taxonomy-search-status').text('Type above to search organisms');
         }
+    }
+
+    function clearOrganismSearch() {
+        clearTimeout(taxSearchTimer);
+        $('#shortname-search-input').val('');
+        $('#sciname-search-input').val('');
+        $('#taxonomy-search-results').empty();
+        $('#taxonomy-search-status').text('Type above to search organisms');
+        $('#shortname').val('');
     }
 
     $('#shortname-search-input').on('input', function() {
@@ -497,11 +545,97 @@
         if (checkedIds.length > 0) {
             var $form = $(this);
             checkedIds.forEach(function(id) { $form.append($('<input type="hidden" name="taxonomy_ids">').val(id)); });
-            $('#shortname').val('');
-        } else {
-            var typed = $('#shortname-search-input').val().trim();
-            if (typed) $('#shortname').val(typed);
         }
+        $('#shortname').val($('#shortname-search-input').val().trim());
+        $('#sciname').val($('#sciname-search-input').val().trim());
+    });
+
+    // ── Restore previous query (after a 0-results submit) ──────────────────────
+    function taxNavRestorePath(path, speciesSelected) {
+        var idx = 0;
+        function step() {
+            if (idx >= path.length) {
+                taxNavUpdateSpecies(function() {
+                    if (speciesSelected && speciesSelected.length) $('#species_list').val(speciesSelected);
+                });
+                return;
+            }
+            taxNavSelectItem(path[idx], idx, function() { idx++; step(); }, true);
+        }
+        step();
+    }
+
+    function restorePreviousQuery(data) {
+        if (!data || !data.proteinlayout) return;
+
+        function afterDomainCascade() {
+            $('#sequencestatus').prop('checked', data.sequencestatus === '1');
+            $('#id_aliases').val(data.aliases || '');
+            $('#id_foreignannotation').val(data.foreignannotation || '');
+
+            if (data.checked_taxa && data.checked_taxa.length) {
+                if (data.shortname) $('#shortname-search-input').val(data.shortname);
+                if (data.sciname) $('#sciname-search-input').val(data.sciname);
+                renderTaxSearchPanel(data.checked_taxa);
+                data.checked_taxa.forEach(function(t) { $('#tax-cb-' + t.taxonomy_id).prop('checked', true); });
+            } else if (data.shortname) {
+                $('#shortname-search-input').val(data.shortname);
+                triggerTaxSearch(data.shortname, 'shortname');
+            } else if (data.sciname) {
+                $('#sciname-search-input').val(data.sciname);
+                triggerTaxSearch(data.sciname, 'scientific');
+            }
+
+            if (data.taxonomy_path && data.taxonomy_path.length) {
+                taxNavRestorePath(data.taxonomy_path, data.species_list);
+            }
+        }
+
+        $('#proteinlayout').val(data.proteinlayout);
+        $.ajax({
+            url: $("#FamilyForm").attr("data-load-domains-url"),
+            data: { proteinlayout: data.proteinlayout },
+            success: function(domainsHtml) {
+                $('#domainname').html(domainsHtml).val(data.domainname);
+                if (!data.domainname) { afterDomainCascade(); return; }
+                $.ajax({
+                    url: $("#FamilyForm").attr("data-load-domaingroups-rank1-url"),
+                    data: { proteinlayout: data.proteinlayout, domainname: data.domainname },
+                    success: function(rank1Html) {
+                        $('#domaingroup_rank').html(rank1Html).val(data.domaingroup_rank);
+                        if (!data.domaingroup_rank) { afterDomainCascade(); return; }
+                        $.ajax({
+                            url: $("#FamilyForm").attr("data-load-domaingroups-rank2-url"),
+                            data: { proteinlayout: data.proteinlayout, domaingroup_rank: data.domaingroup_rank, domainname: data.domainname },
+                            success: function(rank2Html) {
+                                $('#id_domaingroup').html(rank2Html).val(data.domaingroup || []);
+                                afterDomainCascade();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    var EXAMPLE_QUERY = {
+        proteinlayout: 'SNARE',
+        domainname: 'SNARE',
+        sequencestatus: '1',
+        aliases: 'STX18',
+        taxonomy_path: [
+            { value: 'Opisthokonta', label: 'Opisthokonta' },
+            { value: 'Metazoa', label: 'Metazoa' },
+            { value: 'Bilateria', label: 'Bilateria' }
+        ]
+    };
+
+    $('#reset-to-example-btn').on('click', function() {
+        clearOrganismSearch();
+        $('#domaingroup_rank').val('');
+        $('#id_domaingroup').val([]);
+        $('#id_foreignannotation').val('');
+        restorePreviousQuery(EXAMPLE_QUERY);
     });
 
     // ── Aliases autocomplete ─────────────────────────────────────────────────
@@ -549,6 +683,16 @@
         $('#tax-nav-back').on('click', taxNavGoBack);
         $('#tax-nav-clear').on('click', function(e) { e.preventDefault(); taxNavReset(); });
         taxNavPushColumn(TAX_RANKS_INITIAL);
+
+        var previousQueryEl = document.getElementById('previous-query-data');
+        if (previousQueryEl) {
+            restorePreviousQuery(JSON.parse(previousQueryEl.textContent));
+        }
+
+        {% if error %}
+        $('#form-error-toast').text("{{ error|escapejs }}").fadeIn(150);
+        setTimeout(function() { $('#form-error-toast').fadeOut(400); }, 3500);
+        {% endif %}
     });
 </script>
 

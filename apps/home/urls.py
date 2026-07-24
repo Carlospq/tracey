@@ -17,6 +17,7 @@ urlpatterns = [
 
     # Features
     path('features.html', views.features, name='features'),
+    path('download-hmm-profiles', views.hmm_downloads, name='hmm-downloads'),
 
     # Query
     path('query', views.QueryView, name='query'),

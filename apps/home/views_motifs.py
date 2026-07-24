@@ -39,11 +39,11 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
         if domainsubgroup:
             hmms = [domainsubgroup.replace("-", "")]
         elif domaingroup:
-            hmms = get_keys_recursively(menu[proteinlayout][domain][domaingroup])
+            hmms = get_keys_recursively(menu[proteinlayout][domain][domaingroup]) + [domaingroup]
         elif domain:
-            hmms = get_keys_recursively(menu[proteinlayout][domain])
+            hmms = get_keys_recursively(menu[proteinlayout][domain]) + [domain]
         elif proteinlayout:
-            hmms = get_keys_recursively(menu[proteinlayout])
+            hmms = get_keys_recursively(menu[proteinlayout]) + [proteinlayout]
         else:
             hmms = get_keys_recursively(menu)
 

@@ -257,12 +257,27 @@
         $(document).ready(function() {
             var numPerPage = $('#dt-length-0').val();
 			changeLength(numPerPage);
+
+			$('form[name="queryFasta"]').on('submit', function(e) {
+				var submitter = e.originalEvent && e.originalEvent.submitter;
+				var buttonsRequiringSelection = ['download_table', 'fasta_seq', 'fasta_motif', 'multialignment', 'download_multialignment'];
+				if (submitter && buttonsRequiringSelection.indexOf(submitter.name) !== -1) {
+					var anyChecked = document.querySelector('input[name="checkbox"]:checked');
+					if (!anyChecked) {
+						e.preventDefault();
+						$('#form-error-toast').text('Please select at least one sequence.').fadeIn(150);
+						setTimeout(function() { $('#form-error-toast').fadeOut(400); }, 4000);
+					}
+				}
+			});
 		});
 
     </script>
 </head>
 {#<body onload="makeTableScroll();">#}
 <body>
+
+<div id="form-error-toast" style="display:none; position:fixed; top:40px; right:30px; background:rgba(220, 53, 69, 0.9); color:#fff; padding:12px 20px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2000; max-width:400px; font-size:0.9em;"></div>
 
 <div class="row mt-4">
     <div class="container">
@@ -331,7 +346,7 @@
                 <div class="pager pagerTop" style="width: 75%; margin-left: 25%; display: block ruby;"></div>
             </div>
 			<p style="padding-left: 1.5rem;">This query retrived <b>{{ sequences|length }}</b> sequence(s).</p>
-            <div class="scrollingTable mb-3" style="border: 1px solid lightgrey; height: auto; min-height: 200px">
+            <div class="scrollingTable mb-3" style="border: 1px solid lightgrey; height: auto;"> {#  min-height: 200px"> #}
                 <!--<table class="hoverTable sortable" id="myTable">-->
                 <table class="hoverTable paginated" id="myTable">
                     {% for seq in sequences %}

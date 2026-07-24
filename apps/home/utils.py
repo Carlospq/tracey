@@ -117,6 +117,30 @@ def get_children(model, parent, parent_id, child_parent_id, children=None, searc
 	return children
 
 
+def find_ancestor_path(taxon_name, tree=None):
+	if tree is None:
+		tree = reducedTRACEYtaxonomies
+	for key, subtree in tree.items():
+		if key == taxon_name:
+			return [key]
+		if isinstance(subtree, dict) and subtree:
+			found = find_ancestor_path(taxon_name, subtree)
+			if found:
+				return [key] + found
+	return None
+
+
+def expand_taxonomy_descendants(taxonomy_ids):
+	all_ids = set(taxonomy_ids)
+	frontier = list(all_ids)
+	while frontier:
+		children = list(Taxonomies.objects.filter(taxonomyparent_id__in=frontier).values_list('taxonomy_id', flat=True))
+		new_ids = [c for c in children if c not in all_ids]
+		all_ids.update(new_ids)
+		frontier = new_ids
+	return all_ids
+
+
 def _apply_non_motif_filters(seqs, query):
 	if 'aliases' in query and notEmpty(query, 'aliases'):
 		seqs = seqs.filter(aliases__icontains=query['aliases'][0])
@@ -125,25 +149,21 @@ def _apply_non_motif_filters(seqs, query):
 		seqs = seqs.filter(sequencestatus=status)
 	if 'private' in query and notEmpty(query, 'private'):
 		seqs = seqs.filter(private=query['private'][0])
-	if 'shortname' in query and notEmpty(query, 'shortname'):
+	if 'taxonomy_ids' in query and notEmpty(query, 'taxonomy_ids'):
+		ids = [int(x) for x in query['taxonomy_ids'] if x]
+		seqs = seqs.filter(taxonomy_id__in=expand_taxonomy_descendants(ids))
+	elif 'shortname' in query and notEmpty(query, 'shortname'):
 		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__istartswith=query['shortname'][0])
 					  if t.taxonomyshortname.lower() == query['shortname'][0].lower() or
 					  t.taxonomyshortname.lower().startswith(query['shortname'][0].lower() + "_") or
 					  t.taxonomyshortname.lower().startswith(query['shortname'][0].lower() + ".")]
 		seqs = seqs.filter(taxonomy__in=taxonomies)
+	elif 'sciname' in query and notEmpty(query, 'sciname'):
+		matched_ids = Taxonomies.objects.filter(scientificname__istartswith=query['sciname'][0]).values_list('taxonomy_id', flat=True)
+		seqs = seqs.filter(taxonomy_id__in=expand_taxonomy_descendants(matched_ids))
 	if 'shortnamesearch' in query and notEmpty(query, 'shortnamesearch'):
 		taxonomies = [t for t in Taxonomies.objects.filter(taxonomyshortname__icontains=query['shortnamesearch'][0])]
 		seqs = seqs.filter(taxonomy__in=taxonomies)
-	if 'taxonomy_ids' in query and notEmpty(query, 'taxonomy_ids'):
-		ids = [int(x) for x in query['taxonomy_ids'] if x]
-		all_tax_ids = set(ids)
-		frontier = list(ids)
-		while frontier:
-			children = list(Taxonomies.objects.filter(taxonomyparent_id__in=frontier).values_list('taxonomy_id', flat=True))
-			new_ids = [c for c in children if c not in all_tax_ids]
-			all_tax_ids.update(new_ids)
-			frontier = new_ids
-		seqs = seqs.filter(taxonomy_id__in=all_tax_ids)
 	if 'foreignannotation' in query and notEmpty(query, 'foreignannotation'):
 		seqs = seqs.filter(foreignannotation__icontains=query['foreignannotation'][0])
 	if 'species_list' in query:

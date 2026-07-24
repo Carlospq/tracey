@@ -87,7 +87,7 @@ class FamilyForm(forms.Form):
 
     foreignannotation.widget.attrs.update({'type': 'text',
                                            'style': 'width: 100%; display: table-cell',
-                                           'placeholder': "ex: 'gi|21426793', 'putative synaptobrevin'"})
+                                           'placeholder': "e.g. 'NP_058626.1', 'gi|398366623'"})
 
     # Aliases
     aliases = forms.CharField(
@@ -97,7 +97,7 @@ class FamilyForm(forms.Form):
     aliases.widget.attrs.update({'type': 'text',
                                  'autocomplete': 'off',
                                  'style': 'width: 100%; display: table-cell',
-                                 'placeholder': "ex: 'synaptobrevin3'"})
+                                 'placeholder': "e.g. 'STX18', 'TLG1'"})
 
     # shortnamesearch
     shortnamesearch = forms.CharField(
@@ -106,7 +106,7 @@ class FamilyForm(forms.Form):
     )
     shortnamesearch.widget.attrs.update({'type': 'text',
                                          'style': 'width: 100%; display: table-cell',
-                                         'placeholder': "ex: 'PhySp'"})
+                                         'placeholder': "e.g. 'HoSa', 'SaCe'"})
 
     # Domain group
     domaingroup_rank = forms.CharField(
@@ -185,7 +185,7 @@ class InsertSequence(ModelForm):
     aliases.widget.attrs.update({'rows': 1, 'style': 'width: 100%; resize: none;'})
 
     foreignannotation = forms.CharField(required=False, label="Foreign annotation")
-    foreignannotation.widget.attrs.update({'rows': 1, 'placeholder': "ex: 'gi|21426793'", 'style': 'width: 100%; resize: none;'})
+    foreignannotation.widget.attrs.update({'rows': 1, 'placeholder': "e.g. 'NP_058626.1', 'gi|398366623'", 'style': 'width: 100%; resize: none;'})
     #######################################################################################################################
     sequence = forms.CharField(required=True, label="Sequence", widget=forms.Textarea(attrs={'rows': 5}))
     sequence.widget.attrs.update({'style': 'height: 100%; width: 100%; resize: none;'})
@@ -344,7 +344,7 @@ class MotifForm(forms.Form):
     aliases.widget.attrs.update({'type': 'text',
                                  'autocomplete': 'off',
                                  'style': 'width: 100%; display: table-cell',
-                                 'placeholder': "ex: 'synaptobrevin3'"})
+                                 'placeholder': "e.g. 'STX18', 'TLG1'"})
 
     foreignannotation = forms.CharField(
                     label="Foreign annotation",
@@ -352,7 +352,7 @@ class MotifForm(forms.Form):
                 )
     foreignannotation.widget.attrs.update({'type': 'text',
                                            'style': 'width: 100%; display: table-cell',
-                                           'placeholder': "ex: 'gi|21426793', 'putative synaptobrevin'"})
+                                           'placeholder': "e.g. 'NP_058626.1', 'gi|398366623'"})
 
     taxonomy_rank = forms.CharField(
                     label= "Taxonomy",

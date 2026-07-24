@@ -86,6 +86,7 @@ from apps.home.views_admin import (
     read_upload_sequences_results,
     download_file,
     download_hmm_zip,
+    hmm_downloads,
 )
 
 from django.http import HttpResponse

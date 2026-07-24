@@ -16,7 +16,7 @@ from django_tables2.export.export import TableExport
 
 from .models import *
 from .forms import *
-from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty, get_wikipedia_image, user_can_access_sequence
+from .utils import get_taxonomy_df, get_sequences, get_menu, notEmpty, get_wikipedia_image, user_can_access_sequence, get_children, find_ancestor_path
 from .plots import build_domain_plot, get_pdb_data, get_alphafold_url
 
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
@@ -89,7 +89,20 @@ def load_species(request):
     for v in values:
         arr = list(df[(df.eq(v).any(axis=1)) & (df['species'] != "-")].index.values)
         taxonomy_ids = taxonomy_ids + arr
-    species_list = sorted(list(set([x.scientificname for x in Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids)])))
+
+    species_taxonomies = Taxonomies.objects.filter(ncbi_taxonomy_id__in=taxonomy_ids)
+
+    dg_ids = resolve_domaingroup_ids(request)
+    if dg_ids is not None:
+        motifs_qs = Motifs.objects.filter(domaingroup_id__in=dg_ids)
+        species_taxonomies = species_taxonomies.filter(
+            taxonomy_id__in=Sequences.objects.filter(
+                sequencestatus='live',
+                sequence_id__in=motifs_qs.values('sequence_id'),
+            ).values('taxonomy_id')
+        )
+
+    species_list = sorted(set(x.scientificname for x in species_taxonomies))
     return render(request, 'home/query-sequences-family-species.html', {'species_list': species_list})
 
 
@@ -105,6 +118,40 @@ def proteinlayoutToDomains(proteinLayoutname):
     domaingroups = proteinlayoutToDomaingroups(proteinLayoutname)
     domains = Domains.objects.filter(domain_id__in=domaingroups.values('domain_id'))
     return domains
+
+
+def resolve_domaingroup_ids(request):
+    proteinlayout = request.GET.get('proteinlayout', '').strip()
+    domainname = request.GET.get('domainname', '').strip()
+    domaingroup_rank = request.GET.get('domaingroup_rank', '').strip()
+    domaingroup_selection = [x for x in request.GET.getlist('domaingroup[]') if x]
+
+    dg_ids = None
+    try:
+        menu = get_menu(request)
+        if domaingroup_selection:
+            domaingroup_list = [x.replace("-", "") for x in domaingroup_selection]
+            domaingroups_parents = Domaingroups.objects.filter(domaingroupname__in=domaingroup_list)
+            domaingroups_children = get_children(
+                Domaingroups, domaingroups_parents, "domaingroup_id", "domaingroupparent_id", children=[]
+            )
+            ids = [x.domaingroup_id for x in domaingroups_children] + [x.domaingroup_id for x in domaingroups_parents]
+            dg_ids = Domaingroups.objects.filter(domaingroup_id__in=ids).values_list('domaingroup_id', flat=True)
+        elif (domaingroup_rank and proteinlayout and domainname and proteinlayout in menu
+                and domainname in menu.get(proteinlayout, {}) and domaingroup_rank in menu[proteinlayout][domainname]):
+            dg_list = get_keys_recursively(menu[proteinlayout][domainname][domaingroup_rank]) + [domaingroup_rank]
+            dg_ids = Domaingroups.objects.filter(domaingroupname__in=dg_list).values_list('domaingroup_id', flat=True)
+        elif proteinlayout:
+            if domainname and proteinlayout in menu and domainname in menu.get(proteinlayout, {}):
+                dg_list = get_keys_recursively(menu[proteinlayout][domainname]) + [domainname]
+            elif proteinlayout in menu:
+                dg_list = get_keys_recursively(menu[proteinlayout]) + [proteinlayout]
+            else:
+                dg_list = []
+            dg_ids = Domaingroups.objects.filter(domaingroupname__in=dg_list).values_list('domaingroup_id', flat=True)
+    except (KeyError, Exception):
+        dg_ids = None
+    return dg_ids
 
 
 def load_domains(request):
@@ -198,21 +245,7 @@ def load_taxonomy_by_shortname(request):
 
     # Domain-group scope for the currently selected protein layout/domain, if any.
     # None means "unscoped" — count across all domain groups.
-    proteinlayout = request.GET.get('proteinlayout', '').strip()
-    domainname = request.GET.get('domainname', '').strip()
-    dg_ids = None
-    if proteinlayout:
-        try:
-            menu = get_menu(request)
-            if domainname and proteinlayout in menu and domainname in menu.get(proteinlayout, {}):
-                dg_list = get_keys_recursively(menu[proteinlayout][domainname]) + [domainname]
-            elif proteinlayout in menu:
-                dg_list = get_keys_recursively(menu[proteinlayout]) + [proteinlayout]
-            else:
-                dg_list = []
-            dg_ids = Domaingroups.objects.filter(domaingroupname__in=dg_list).values_list('domaingroup_id', flat=True)
-        except (KeyError, Exception):
-            dg_ids = None
+    dg_ids = resolve_domaingroup_ids(request)
 
     motifs_qs = Motifs.objects.all()
     verifymotifs_qs = Verifymotifs.objects.all()
@@ -392,6 +425,42 @@ def updateSequenceStatus(request):
     return HttpResponse('')
 
 
+def build_previous_query_context(request):
+    get = request.GET
+    previous = {
+        'proteinlayout': get.get('proteinlayout', ''),
+        'domainname': get.get('domainname', ''),
+        'domaingroup_rank': get.get('domaingroup_rank', ''),
+        'domaingroup': get.getlist('domaingroup'),
+        'sequencestatus': get.get('sequencestatus', ''),
+        'aliases': get.get('aliases', ''),
+        'foreignannotation': get.get('foreignannotation', ''),
+        'shortname': get.get('shortname', ''),
+        'sciname': get.get('sciname', ''),
+        'species_list': get.getlist('species_list'),
+        'checked_taxa': [],
+        'taxonomy_path': [],
+    }
+    taxonomy_ids = [x for x in get.getlist('taxonomy_ids') if x]
+    if taxonomy_ids:
+        dg_ids = resolve_domaingroup_ids(request)
+        motifs_qs = Motifs.objects.all() if dg_ids is None else Motifs.objects.filter(domaingroup_id__in=dg_ids)
+        for t in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids):
+            count = Sequences.objects.filter(sequencestatus='live', taxonomy_id=t.taxonomy_id,
+                                              sequence_id__in=motifs_qs.values('sequence_id')).count()
+            previous['checked_taxa'].append({
+                'taxonomy_id': t.taxonomy_id, 'scientificname': t.scientificname or '',
+                'shortname': t.taxonomyshortname, 'taxonomyrank': t.taxonomyrank or '',
+                'seq_count_domain': count,
+            })
+    taxonomy_value = get.get('taxonomy', '')
+    if taxonomy_value:
+        path_names = find_ancestor_path(taxonomy_value)
+        if path_names:
+            previous['taxonomy_path'] = [{'value': n, 'label': n} for n in path_names]
+    return previous
+
+
 def QuerySequences(request):
     segment = request.path.split('/')[-1]
     form = FamilyForm
@@ -431,6 +500,7 @@ def QuerySequences(request):
                'domaingroup_rank': SNAREdomaingroupnames,
                'form': form,
                'is_staff': request.user.is_staff,
+               'previous_query': {},
                'error': [request.session['error'] if 'error' in request.session else ''][0]}
 
     if request.method == "GET":
@@ -439,6 +509,7 @@ def QuerySequences(request):
             if context['error']:
                 context['error'] = request.session['error']
                 request.session['error'] = ''
+                context['previous_query'] = build_previous_query_context(request)
                 return render(request, 'home/query-sequences.html', context)
             elif sum([0 if x in ["", []] else 1 for x in list(form.cleaned_data.values())]) == 0:
                 if form.cleaned_data["domainname"] != None:
@@ -461,12 +532,8 @@ def QuerySequencesResults(request):
     sequences = get_sequences(context, menu=get_menu(request))
 
     if len(sequences) == 0 or 'error' in sequences:
-        if 'error' in sequences:
-            request.session['error'] = sequences['error']
-            return redirect('query-sequences')
-        else:
-            request.session['error'] = 'This query returns 0 sequences. Please select different options.'
-            return redirect('query-sequences')
+        request.session['error'] = sequences['error'] if 'error' in sequences else 'This query returns 0 sequences. Please select different options.'
+        return redirect(f"{reverse('query-sequences')}?{request.GET.urlencode()}")
 
     taxonomy_ids = sequences.values_list('taxonomy_id', flat=True)
     speciesname = {t.taxonomy_id: t.scientificname for t in Taxonomies.objects.filter(taxonomy_id__in=taxonomy_ids)}
