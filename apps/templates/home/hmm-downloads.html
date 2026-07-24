@@ -1,0 +1,167 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Download HMMs {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+
+<head>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style type="text/css">
+            .loader {
+              border: 8px solid #f3f3f3;
+              border-radius: 50%;
+              border-top: 8px solid #3498db;
+              width: 35px;
+              height: 35px;
+              -webkit-animation: spin 2s linear infinite; /* Safari */
+              animation: spin 2s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(720deg); }
+            }
+            .features-container {
+              width: 100%;
+              height: 100%;
+              text-align: center;
+              -ms-text-justify: distribute-all-lines;
+              text-justify: distribute-all-lines;
+              min-width: 400px;
+              padding: 0 5% 0 5%;
+            }
+            .feature-card {
+              vertical-align: top;
+              display: inline-block;
+              *display: inline;
+              zoom: 1;
+              width: 20%;
+              min-width: 400px;
+              height: 600px;
+              border-radius: 10px 10px 0px 0px;
+              margin: 1%;
+              margin-bottom: 25px;
+            }
+            .feature-header {
+              height: 15%;
+              padding-top: 25px;
+              font-size: 26px;
+              color: white;
+              text-align: center;
+              word-wrap: break-word;
+              word-break: break-word;
+              background: #1F2937 !important;
+              border-radius: 10px 10px 0px 0px;
+              border: #1F2937 solid 2px;
+            }
+            .feature-body {
+              border: #1F2937 solid 2px;
+              height: 85%;
+              font-size: 18px;
+              color: #1F2937;
+              text-align: center;
+              word-wrap: break-word;
+              word-break: break-word;
+              background: lightgrey;
+              padding: 20px;
+            }
+            .feature-body .feature-body-main {
+              display: block;
+              height: 380px;
+              font-size: 19px;
+            }
+            .feature-body .feature-body-main p, .feature-body .feature-body-footer p {
+              margin: 0;
+            }
+            .feature-body .feature-body-footer {
+              height: 60px;
+              font-size: 14px;
+              padding: 0;
+            }
+    </style>
+</head>
+
+<div class="row mt-4">
+    <div class="container">
+
+        <!-- Card frame -->
+        <div class="card border-0 shadow components-section">
+
+                <!-- Card body -->
+                <div class="col-12 mb-4">
+                    <div class="card-body">
+
+                        <div class="mb-5">
+                            <h1><strong> Download HMMs </strong></h1>
+                            <p><i>Download TRACEY profile-HMM models for offline searching.</i></p>
+                            <hr>
+                        </div>
+
+                        <div class="features-container">
+
+                            <!-- HMM Models -->
+                            <div class="feature-card">
+                                <div class="feature-header">HMM Models</div>
+                                <div class="feature-body">
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Download TRACEY HMM profile models for use with HMMER3 (<code>hmmsearch</code>, <code>hmmscan</code>).</p>
+                                        <p style="margin-bottom: 10px;">Select a protein family or the full TRACEY database:</p>
+                                        <select id="hmm_selection" style="width: 100%; font-size: 15px; padding: 4px;">
+                                            <option value="TRACEY_db">TRACEY db (full database)</option>
+                                            {% for family, files in hmm_catalog.families.items %}
+                                            <option value="{{ family }}">{{ family }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p id="hmm_hint" style="font-size: 12px; margin-top: 10px; color: #555;">
+                                            TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)
+                                        </p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        <input type="button" id="download_hmm_btn" value="Download .zip">
+                                    </div>
+                                    <div id="loader_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                        <div class="loader"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var hmmCounts = {
+        {% for family, files in hmm_catalog.families.items %}'{{ family }}': {{ files|length }},
+        {% endfor %}
+    };
+
+    document.getElementById('hmm_selection').addEventListener('change', function() {
+        var hint = document.getElementById('hmm_hint');
+        if (this.value === 'TRACEY_db') {
+            hint.textContent = 'TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)';
+        } else {
+            var count = hmmCounts[this.value] || '?';
+            hint.textContent = 'Family ' + this.value + ': ' + count + ' .hmm profile files';
+        }
+    });
+
+    document.getElementById('download_hmm_btn').addEventListener('click', function() {
+        var selection = document.getElementById('hmm_selection').value;
+        var loader = document.getElementById('loader_hmm');
+        var btn = this;
+        loader.style.display = 'flex';
+        btn.disabled = true;
+        window.location.href = "{% url 'download_hmm_zip' %}?selection=" + encodeURIComponent(selection);
+        setTimeout(function() { loader.style.display = 'none'; btn.disabled = false; }, 3000);
+    });
+</script>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
