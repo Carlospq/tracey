@@ -176,14 +176,12 @@ for seq_id in results:
 					asciioutput = f'<asciiOutput><bitscore>{round(d.score,2)}</bitscore><eValue>{pvalue}</eValue><consensus>{consensus}</consensus><similarity>{similarity}</similarity><motif>{motif}</motif></asciiOutput>'
 
 					# Create new method if it does not exist
-					try:
-						method = Methods.objects.get(domaingroup_id = Domaingroups.objects.get(domaingroupname=m2).domaingroup_id)
-					except:
-						method = Methods(domaingroup_id = Domaingroups.objects.get(domaingroupname=m2).domaingroup_id,
-										 input ='',
-										 type = 'hmm',
-										 parameter = '')
-						method.save()
+					m2_domaingroup_id = Domaingroups.objects.get(domaingroupname=m2).domaingroup_id
+					method, _ = Methods.objects.get_or_create(
+						domaingroup_id = m2_domaingroup_id,
+						type = 'hmm',
+						defaults = {'input': '', 'parameter': ''}
+					)
 
 					# Create new motif
 					new_motif = Motifs(sequence = sequence,

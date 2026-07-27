@@ -109,11 +109,12 @@ def updateSnareMotifs(sequences, protein_family='SNARE', analyzed_sequences=None
 			best_hit = sorted(hits_d.items(), key=lambda x: x[1]['pvalue'])[0][1]
 			if not best_hit or best_hit['dg'] == m.domaingroup: continue
 
-			try:
-				method = Methods.objects.get(domaingroup_id=Domaingroups.objects.get(domaingroupname=best_hit['dg']).domaingroup_id)
-			except:
-				method = Methods(domaingroup_id=Domaingroups.objects.get(domaingroupname=best_hit['dg']).domaingroup_id, input='', type='hmm', parameter='')
-			method.save()
+			best_hit_dg = Domaingroups.objects.get(domaingroupname=best_hit['dg'])
+			method, _ = Methods.objects.get_or_create(
+				domaingroup_id=best_hit_dg.domaingroup_id,
+				type='hmm',
+				defaults={'input': '', 'parameter': ''}
+			)
 			asciioutput = '<asciiOutput>\r\t<consensus>%s</consensus>\r\t<similarity>%s\t</similarity>\r\t<motif>%s</motif>\r\t<eValue>%s</eValue>\r\t<bitscore>321</bitscore>\r</asciiOutput>' % (
 				best_hit['alignment'].hmm_sequence, best_hit['alignment'].identity_sequence,
 				best_hit['alignment'].target_sequence, best_hit['evalue'])

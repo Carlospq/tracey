@@ -316,7 +316,7 @@ def reScanMotifs(sequences, hmm_keys, evalue=1e-5, dry_run=False):
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 def _get_or_create_method(dg):
-    method = Methods.objects.filter(domaingroup_id=dg.domaingroup_id).first()
+    method = Methods.objects.filter(domaingroup_id=dg.domaingroup_id, type='hmm').first()
     if method is None:
         next_id = (Methods.objects.aggregate(Max('method_id'))['method_id__max'] or 0) + 1
         method = Methods(method_id=next_id, domaingroup_id=dg.domaingroup_id,

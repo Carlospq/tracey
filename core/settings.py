@@ -255,3 +255,39 @@ PERMISSIONS_POLICY = {
     "fullscreen": ("self",),        # NGL 3D viewer uses the Fullscreen API
     "clipboard-write": ("self",),   # sequenceForm uses navigator.clipboard.writeText()
 }
+
+#############################################################
+# Logging
+# Writes to a file regardless of DEBUG, so warnings/exceptions logged from
+# application code are visible in production without needing DEBUG=True
+# (Django's default console handler only fires when DEBUG=True, and no
+# ADMINS/EMAIL_BACKEND is configured for mail_admins to have any effect).
+
+LOG_DIR = BASE_DIR / 'logs'
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': LOG_DIR / 'django.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'apps': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+}

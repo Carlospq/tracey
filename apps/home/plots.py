@@ -1,6 +1,7 @@
 import io
 import base64
 import colorsys
+import logging
 import urllib.parse
 import requests
 import xml.etree.ElementTree as ET
@@ -16,6 +17,8 @@ from .models import *
 from .utils import get_alphafold_url
 
 matplotlib.use('agg')
+
+logger = logging.getLogger(__name__)
 
 
 def get_motifsColors():
@@ -141,7 +144,11 @@ def build_domain_plot_from_PyHammer(protein_length, hit, evalcutoff=0):
         label = str(d.alignment).split("\n")[0].split()[0] if str(d.alignment).split("\n")[0].split()[-1] not in ["RF", "SC"] else str(d.alignment).split("\n")[1].split()[0]
         domEval = str(format(d.pvalue, '.1E'))
         motifColors = get_motifsColors()
-        domainname = Domaingroups.objects.get(domaingroupname=label).domain.domainname
+        domaingroup_for_label = Domaingroups.objects.filter(domaingroupname=label).first()
+        if domaingroup_for_label is None:
+            logger.warning("build_domain_plot_from_PyHammer: no Domaingroups row for domaingroupname=%r, skipping domain", label)
+            continue
+        domainname = domaingroup_for_label.domain.domainname
         color = 'rgb' + str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
 
         label += " (%s)" % (domEval) if domEval else ""
@@ -253,7 +260,12 @@ def get_pdb_data(sequence):
 
 def getMotifPlot_fromMotif(start, end, length, label):
     motifColors = get_motifsColors()
-    domainname = Domaingroups.objects.get(domaingroupname=label).domain.domainname
+    domaingroup_for_label = Domaingroups.objects.filter(domaingroupname=label).first()
+    if domaingroup_for_label is None:
+        logger.warning("getMotifPlot_fromMotif: no Domaingroups row for domaingroupname=%r, falling back to label", label)
+        domainname = label
+    else:
+        domainname = domaingroup_for_label.domain.domainname
     buf = io.BytesIO()
     fig, ax = plt.subplots(nrows=1, figsize=(20, 1.5), sharex=True)
     features = [

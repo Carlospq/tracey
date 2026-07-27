@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import uuid
@@ -19,6 +20,8 @@ from .views_motifs import motifScan
 
 from utils.ncbi_taxonomy.reducedTRACEYtaxonomies import *
 
+
+logger = logging.getLogger(__name__)
 
 rec_login_required = user_passes_test(lambda u: True if u.is_staff else False, login_url="/noPermits.html")
 
@@ -69,18 +72,22 @@ def saveVerifyMotifs(sequence_id, hits):
     for motif in hits:
         motifInfo = hits[motif]
         for d in motifInfo['domains']:
-            try:
-                method = Methods.objects.get(domaingroup_id=Domaingroups.objects.get(domaingroupname=d['dg']).domaingroup_id)
-            except Methods.DoesNotExist:
-                method = Methods(domaingroup_id=Domaingroups.objects.get(domaingroupname=d['dg']).domaingroup_id,
-                                 input='', type='hmm', parameter='')
-                method.save()
+            domaingroup = Domaingroups.objects.filter(domaingroupname=d['dg']).first()
+            if domaingroup is None:
+                logger.warning("saveVerifyMotifs: no Domaingroups row for domaingroupname=%r, skipping domain", d['dg'])
+                continue
+
+            method, _ = Methods.objects.get_or_create(
+                domaingroup_id=domaingroup.domaingroup_id,
+                type='hmm',
+                defaults={'input': '', 'parameter': ''}
+            )
             vm = Verifymotifs(sequence_id=sequence_id,
                               motifname=motif,
                               startposition=d['aln_from'],
                               stopposition=d['aln_to'],
                               verifymotifcomments='',
-                              domaingroup_id=Domaingroups.objects.get(domaingroupname=d['dg']).domaingroup_id,
+                              domaingroup_id=domaingroup.domaingroup_id,
                               gaps=countGaps(d['alignment'].target_sequence),
                               active=0,
                               method=method,
@@ -616,11 +623,15 @@ def QueryVerifyView(request, sequence_id):
                 form.data['domainsubgroup'] = form.data['domainsubgroup'] if 'domainsubgroup' in form.data else ''
                 form.data._mutable = mutable_
 
-                hits_d = motifScan(form.data['sequence'], proteinlayout=form.data['proteinlayout'], domain=form.data['domain'], domaingroup=form.data.get('domaingroups', ''), domainsubgroup=form.data.get('domainsubgroups', ''), evalcutoff=evalcutoff, menu=get_menu(request))
-                if 'error' in hits_d:
-                    context['scanerror'] = hits_d['error']
-                else:
-                    saveVerifyMotifs(sequence_id, hits_d)
+                try:
+                    hits_d = motifScan(form.data['sequence'], proteinlayout=form.data['proteinlayout'], domain=form.data['domain'], domaingroup=form.data.get('domaingroups', ''), domainsubgroup=form.data.get('domainsubgroups', ''), evalcutoff=evalcutoff, menu=get_menu(request))
+                    if 'error' in hits_d:
+                        context['scanerror'] = hits_d['error']
+                    else:
+                        saveVerifyMotifs(sequence_id, hits_d)
+                except Exception:
+                    logger.exception("Motif scan failed for sequence_id=%s", sequence_id)
+                    context['scanerror'] = 'An unexpected error occurred while scanning for motifs. Please contact the administrator.'
 
                 context['domain'] = request.POST.get('domain')
                 context['domaingroups'] = request.POST.get('domaingroups')
@@ -667,9 +678,9 @@ def QueryVerifyView(request, sequence_id):
                     binaryoutput=''
                 )
                 vm.save()
-                form.data['changelog'] += " %s %s - Manual motif added: '%s';" % (
-                    strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, dg.domaingroupname
-                )
+                # form.data['changelog'] += " %s %s - Manual motif added: '%s';" % (
+                #     strftime("%d.%m.%Y|%H:%M:%S|", gmtime()), user.username, dg.domaingroupname
+                # )
             except (Domaingroups.DoesNotExist, ValueError):
                 context['manual_motif_error'] = 'Invalid domain group or position values'
 

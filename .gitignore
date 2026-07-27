@@ -13,6 +13,9 @@ run_server.bat
 # Local core staticfiles
 staticfiles/
 
+# Application log files (core/settings.py LOGGING)
+logs/
+
 # If you are using PyCharm #
 .idea/
 

@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import pyhmmer
@@ -13,6 +14,9 @@ from .plots import build_domain_plot_from_PyHammer
 from apps.templates.menus.query_sequences import get_keys_recursively
 from apps.templates.menus.query_sequences import menu as menu_public
 from utils.motifPredictor.predictor import *
+
+
+logger = logging.getLogger(__name__)
 
 
 def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgroup="", evalcutoff=1e-10, menu=None):
@@ -71,11 +75,15 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
         if not any([d for d in h.domains if d.pvalue < evalcutoff]):
             continue
         h_name = h.name.decode('UTF-8')
+        domaingroup_for_hit = Domaingroups.objects.filter(domaingroupname=h_name).first()
+        if domaingroup_for_hit is None:
+            logger.warning("motifScan: no Domaingroups row for domaingroupname=%r, skipping hit", h_name)
+            continue
         hits_d[h_name] = {}
         hits_d[h_name]['sequence'] = sequence
         hits_d[h_name]['plot'] = build_domain_plot_from_PyHammer(len(sequence), h, evalcutoff)
         hits_d[h_name]['split_sequence'] = [letter for letter in sequence]
-        hits_d[h_name]['domainname'] = Domaingroups.objects.get(domaingroupname=h_name).domain.domainname
+        hits_d[h_name]['domainname'] = domaingroup_for_hit.domain.domainname
         hits_d[h_name]['domains'] = []
         for d in h.domains:
             if d.pvalue > evalcutoff:
@@ -84,13 +92,22 @@ def motifScan(sequence, proteinlayout="", domain="", domaingroup="", domainsubgr
             motifname = split_alignment[0].split()[0] if split_alignment[0].split()[-1] not in ["RF", "SC"] else split_alignment[1].split()[0]
             dgs = Domaingroups.objects.filter(domaingroupname=motifname)
             for dg in dgs:
-                domain_obj = Domains.objects.get(domain_id=dg.domain_id).domainname
+                domain_row = Domains.objects.filter(domain_id=dg.domain_id).first()
+                if domain_row is None:
+                    logger.warning("motifScan: no Domains row for domain_id=%r (domaingroup=%r), skipping domain", dg.domain_id, dg.domaingroupname)
+                    continue
+                domain_obj = domain_row.domainname
                 if dg.domaingroupparent_id == None:
                     dg_parent = motifname
                 elif ";" in dg.domaingroupparent_id:
                     dg_parent = "/".join([x.domaingroupname for x in Domaingroups.objects.filter(domaingroup_id__in=dg.domaingroupparent_id.split(";"))])
                 else:
-                    dg_parent = Domaingroups.objects.get(domaingroup_id=dg.domaingroupparent_id).domaingroupname
+                    parent_domaingroup = Domaingroups.objects.filter(domaingroup_id=dg.domaingroupparent_id).first()
+                    if parent_domaingroup is None:
+                        logger.warning("motifScan: no Domaingroups row for domaingroup_id=%r (parent of %r), falling back to motifname", dg.domaingroupparent_id, motifname)
+                        dg_parent = motifname
+                    else:
+                        dg_parent = parent_domaingroup.domaingroupname
 
                 match = re.search(re.escape(d.alignment.target_sequence.strip().replace("-", "").upper()), sequence)
                 x = {'evalue': format(d.pvalue, '.1E'),

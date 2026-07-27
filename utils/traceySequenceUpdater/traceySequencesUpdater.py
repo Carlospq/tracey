@@ -533,11 +533,7 @@ def analyzeSequence(newSeq):
 		motif.alignment = hit['alignment']
 		motif.asciioutput = ascii
 
-		try:
-			method = Methods.objects.get(domaingroup_id=motif.domaingroup_id)
-		except Methods.DoesNotExist:
-			method = Methods(domaingroup_id=motif.domaingroup_id, type="pyhmmer:0.8.1")
-		method.save()
+		method, _ = Methods.objects.get_or_create(domaingroup_id=motif.domaingroup_id, type="pyhmmer:0.8.1")
 		motif.method = method
 		motif.save()
 
