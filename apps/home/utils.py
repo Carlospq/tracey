@@ -267,6 +267,7 @@ def md5(fname):
 
 
 def md5_from_seq(sequence):
+	os.makedirs('utils/tmp_files', exist_ok=True)
 	path = 'utils/tmp_files/seq_md5_%s.txt' % uuid.uuid4().hex
 	with open(path, 'w') as f:
 		f.write(sequence)

@@ -482,6 +482,7 @@ def QueryVerifyBlastView(request, db, query_id):
             raw_alignment_dict = {"Query_1": query_alignment['alignment']}
             raw_alignment_dict.update({key: alignments[key]['alignment'] for key in alignments})
 
+            os.makedirs('utils/tmp_files', exist_ok=True)
             tmp_path = 'utils/tmp_files/trim_alignment_%s.fasta' % uuid.uuid4().hex
             trimmed = {}
             try:

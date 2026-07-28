@@ -404,11 +404,15 @@ def load_queryverifysequences(request):
         speciesname = {seq.sequence_id: taxonomy_names.get(seq.taxonomy_id, '') for seq in seqs}
 
         motif_map = {}
-        for m in Motifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'motifname'):
-            motif_map.setdefault(m['sequence_id'], set()).add(m['motifname'])
-        for m in Verifymotifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'motifname'):
-            motif_map.setdefault(m['sequence_id'], set()).add(m['motifname'])
-        motifs = {sid: ", ".join(names) for sid, names in motif_map.items()}
+        for m in Motifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'domaingroup_id'):
+            motif_map.setdefault(m['sequence_id'], set()).add(m['domaingroup_id'])
+        for m in Verifymotifs.objects.filter(sequence_id__in=sequence_ids).values('sequence_id', 'domaingroup_id'):
+            motif_map.setdefault(m['sequence_id'], set()).add(m['domaingroup_id'])
+
+        all_domaingroup_ids = set().union(*motif_map.values()) if motif_map else set()
+        domaingroup_names = {d.domaingroup_id: d.domaingroupname for d in Domaingroups.objects.filter(domaingroup_id__in=all_domaingroup_ids)}
+
+        motifs = {sid: ", ".join(sorted(domaingroup_names.get(gid, '') for gid in gids)) for sid, gids in motif_map.items()}
 
         context['speciesname'] = speciesname
         context['motifs'] = motifs
