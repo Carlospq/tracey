@@ -395,27 +395,6 @@ class P2Dmapping(models.Model):
         unique_together = (('proteinlayoutgroup', 'position'),)
 
 
-class PollsChoice(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    choice_text = models.CharField(max_length=200)
-    votes = models.IntegerField()
-    question = models.ForeignKey('PollsQuestion', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'polls_choice'
-
-
-class PollsQuestion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    question_text = models.CharField(max_length=200)
-    pub_date = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'polls_question'
-
-
 class Proteinlayoutgroups(models.Model):
     proteinlayoutgroup_id = models.AutoField(db_column='proteinLayoutGroup_id', primary_key=True)  # Field name made lowercase.
     proteinlayoutgroupname = models.CharField(db_column='proteinLayoutGroupName', max_length=50)  # Field name made lowercase.

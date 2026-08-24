@@ -319,7 +319,7 @@ menu = {
 					'SNAP.c.SN25': {},
 					'SNAP.c.SN29': {}
 				},
-			}
+			},
 		},
 		'Habc': {
 			'Ha': {
@@ -390,7 +390,7 @@ menu = {
 						'Hc.III.c.Vam7': {}
 					}
 				}
-			}
+			},
 		},
 		'Longin':{
 			'Longin.I': {},

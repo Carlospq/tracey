@@ -386,30 +386,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='PollsChoice',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('choice_text', models.CharField(max_length=200)),
-                ('votes', models.IntegerField()),
-            ],
-            options={
-                'db_table': 'polls_choice',
-                'managed': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='PollsQuestion',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('question_text', models.CharField(max_length=200)),
-                ('pub_date', models.DateTimeField()),
-            ],
-            options={
-                'db_table': 'polls_question',
-                'managed': False,
-            },
-        ),
-        migrations.CreateModel(
             name='Proteinlayoutgroups',
             fields=[
                 ('proteinlayoutgroup_id', models.AutoField(db_column='proteinLayoutGroup_id', primary_key=True, serialize=False)),

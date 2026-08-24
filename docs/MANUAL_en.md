@@ -18,7 +18,7 @@ the whole codebase from scratch.
 4. [Frontend: templates, JS, includes and menus](#4-frontend-templates-js-includes-and-menus)
 5. [Maintenance commands (`manage.py`)](#5-maintenance-commands-managepy)
 6. [Access control (staff permissions)](#6-access-control-staff-permissions)
-7. [Adding a new HMM model](#7-adding-a-new-hmm-model)
+7. [Adding a new HMM model and generating its Domaingroups](#7-adding-a-new-hmm-model-and-generating-its-domaingroups)
 8. [Notes and gotchas for the next developer](#8-notes-and-gotchas-for-the-next-developer)
 9. [Note on this document and exporting to PDF](#9-note-on-this-document-and-exporting-to-pdf)
 
@@ -63,6 +63,27 @@ The backend is MySQL (`core/settings.py`, `ENGINE: django.db.backends.mysql`), p
   modified directly (or via the `.sql` dumps in `utils/`), and the change then reflected by hand in
   `models.py`.
 - `apps/migrations/` only has `0001_initial.py` — there is no real migration history to maintain.
+
+**Backups:** the server keeps up to 30 daily backups of the database (one per day; once the cap
+is reached, the oldest backup is deleted as each new one is created). To work on a local copy,
+download the most recent backup from the server and restore it into a local MySQL instance:
+
+1. Copy the latest backup file from the server (SCP/SSH):
+   ```bash
+   scp <user>@<server>:/path/to/backups/<latest-backup>.sql ./utils/
+   ```
+2. Create a local database and import the dump:
+   ```bash
+   mysql -u <local_user> -p -e "CREATE DATABASE tracey_local CHARACTER SET utf8mb4"
+   mysql -u <local_user> -p tracey_local < utils/<latest-backup>.sql
+   ```
+3. Point `.env` (repo root) at the local database — `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
+   `DB_HOST=localhost`, `DB_PORT` (see `core/settings.py`, `DATABASES`).
+4. Run the dev server as usual (see the top of this document) — Django will connect to the local
+   copy instead of the server's database.
+
+Downloaded dump files should **not** be committed — `.gitignore` already excludes
+`utils/*.backup.sql` and `utils/tracey_20180606_0400.dump2`.
 
 ### 1.4 Routing (`core/urls.py` → `apps/home/urls.py`)
 
@@ -254,7 +275,6 @@ refresh the "last updated" timestamps.
 ```
 layouts/
   base.html              main layout (sidebar + content + footer)
-  base-fullscreen.html   sidebar-less variant (appears UNUSED currently, see section 8)
   sequenceForm.html       large insert/verify-sequence form (an include, not a base)
 includes/
   sidebar.html           navigation menu (hardcoded, see 4.3)
@@ -336,6 +356,20 @@ Defined in `apps/management/commands/`. Each one has an equivalent feature in `f
 | `ReScanMotifs` | Re-scans HMMs over existing sequences. Requires `--hmm` or `--family` |
 | `plotTaxonomy` | Diagnostic command: draws the taxonomy tree/network for a given scientific name (not part of the data pipeline) |
 
+Additionally, `utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py` is a standalone
+maintenance script — not a `manage.py` command — run via:
+
+```
+python manage.py shell < utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py
+```
+
+It syncs new HMM files under `utils/hmmModels/` into the rest of the system: adds any missing
+entries to the `query_sequences_full.py` menu, creates the corresponding `Domaingroups` rows in
+the database, and rebuilds `utils/hmmModels/MOTIFS.hmmDb` (concatenates every `.hmm` file and
+re-indexes with `hmmpress -f`, via `rebuildMotifsHmmDb.py`) so `motifScan(proteinlayout="ALL")`
+picks up the new profiles. It does **not** touch the public `query_sequences.py` menu — that
+still has to be edited by hand (see 7).
+
 ---
 
 ## 6. Access control (staff permissions)
@@ -357,22 +391,63 @@ Django's standard `auth.User` model (the one `/admin` manages). There's also a l
 table in `apps/home/models.py` (`managed = False`), which is a pre-Django authentication table
 unrelated to the current access control — that's not the one to touch to grant permissions.
 
-## 7. Adding a new HMM model
+## 7. Adding a new HMM model and generating its Domaingroups
 
-To add a new HMM profile to TRACEY:
+Adding a new HMM profile touches three things that all have to stay in sync: the `.hmm` file
+itself, the `Domaingroups` row in the database, and the domain menu dicts that drive the
+cascading dropdowns on Query/Insert/Verify/Features. Most of this is automated by
+`utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py` (see 5) — this section explains what
+it does step by step so a new HMM can be added correctly.
 
-1. Add the `.hmm` file to `utils/hmmModels/`, inside the folder for the corresponding protein
-   family (e.g. `RAS`, `C2`, `HABC`, `LONGIN`, `ARF`, `PROPPIN`, `RHOMBOID`,
-   `MUN.D1`/`MUN.D2`, `NSR.CD`/`NSR.MD`/`NSR.ND`, `AAA.AAA`/`AAA.ND`), or create a new folder if
-   the HMM belongs to a family that doesn't exist yet.
-2. Create the corresponding `Domaingroups` row in the database for that HMM (linked to its
-   parent `Domains`) — motif scanning (`motifScan()`, `apps/home/views_motifs.py`) resolves each
-   HMM hit against a `Domaingroups` record, so a `.hmm` file with no matching `Domaingroups` row
-   can't be classified/displayed correctly.
-3. Manually add the new domain/domaingroup to the domain menu structures —
-   `apps/templates/menus/query_sequences.py` and `query_sequences_full.py` (see 4.3) — so it
-   shows up in the cascading dropdowns on Query/Insert/Verify/Features. This step is manual:
-   there's no automatic sync between the `Domaingroups` table and these menu dicts.
+### 7.1 Drop the `.hmm` file in the right place
+
+Add the file to `utils/hmmModels/<FOLDER>/`, where `<FOLDER>` is the family folder already
+mapped in `DOMAIN_CONFIG` at the top of `updateDomainGroupsWithHMMs.py` — e.g. `SNARE`, `HABC`,
+`LONGIN`, `LGL`, `C2`, `AAA.AAA`, `AAA.ND`, `RAS`, `ARF`, `MUN.D1`/`MUN.D2`,
+`NSR.CD`/`NSR.MD`/`NSR.ND`, `PROPPIN`, `RHOMBOID`, `RINT`, `SM.D1`/`SM.D2A`/`SM.D2B`/`SM.D3`,
+`SNAP`, `ZW10`. If the HMM belongs to a brand-new family with no existing folder, create the
+folder and add a new entry to `DOMAIN_CONFIG` (`folder → (domain_name_in_DB, menu_path_list)`)
+before running the script — otherwise it will be skipped.
+
+The file's basename (without `.hmm`) becomes both the `Domaingroups.domaingroupname` and the
+menu key, so naming matters:
+
+- If the name matches (case-insensitive) a menu key that already exists, or a per-folder alias
+  defined in `DOMAIN_CONFIG` (e.g. `SNAP` maps `aSnap`/`cSnap` → `aSNAP`/`cSNAP`), it's treated
+  as already present and nothing new is added.
+- If the name is listed in `HMM_BLACKLIST`, it's skipped entirely — use this for general HMMs
+  that shouldn't get their own menu entry (e.g. the SM `Vps33`/`Vps45` base HMMs, superseded by
+  the `Vps33a`/`Vps33b` variants already in the menu).
+- Dot notation infers hierarchy: `Longin.V` is nested as a child of `Longin` in the menu if a
+  `Longin` key already exists there; otherwise it's added at the top of the family subtree.
+
+### 7.2 Run the sync script
+
+```
+python manage.py shell < utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py
+```
+
+This does everything else automatically:
+
+1. **Menu sync** — `sync_menu_with_hmms()` scans `utils/hmmModels/` and adds any `.hmm` not
+   already represented (per the rules in 7.1) to the **staff** menu,
+   `apps/templates/menus/query_sequences_full.py` (see 4.3).
+2. **Database** — `updateDomainGroups()` walks the (updated) menu and, for every key without a
+   matching `Domaingroups` row, creates one linked to its parent `Domains`/`Domaingroups`,
+   reading `domaingrouplength` from the `LENG` field of the corresponding `.hmm` file. Motif
+   scanning (`motifScan()`, `apps/home/views_motifs.py`) resolves each HMM hit against a
+   `Domaingroups` record, so a `.hmm` with no matching row can't be classified/displayed
+   correctly.
+3. **`MOTIFS.hmmDb` rebuild** — `rebuild_motifs_hmmdb()` (`rebuildMotifsHmmDb.py`) concatenates
+   every `.hmm` under `utils/hmmModels/` into `utils/hmmModels/MOTIFS.hmmDb` and re-indexes it
+   with `hmmpress -f`, so the new profile is picked up by `motifScan(proteinlayout="ALL")`
+   scans, not just family-scoped ones.
+
+### 7.3 What's still manual
+
+`apps/templates/menus/query_sequences.py` — the **public** (non-staff) menu — is **not** touched
+by the script. If the new domaingroup should be visible to non-staff users, add it there by hand
+(see 4.3, and 6 for the staff/public distinction).
 
 ---
 
@@ -381,16 +456,6 @@ To add a new HMM profile to TRACEY:
 - **Database schema changes are NOT done with `makemigrations`/`migrate`** — all models are
   `managed = False` over a pre-existing MySQL database (see 1.3).
 - `HomeConfig` (`apps/home/apps.py`) is not in `INSTALLED_APPS` — appears to be dead code.
-- `layouts/base-fullscreen.html` is not extended by any current template — verify whether it's
-  still needed before touching or removing it.
-- `jquery-3.3.1.min.js` and the `paginatedTable.js` script don't appear to be actively referenced
-  (the only `<script>` using `paginatedTable.js` is commented out in
-  `query-sequences-results.html`) — confirm before assuming they're in use.
-- The `PollsChoice`/`PollsQuestion` models in `models.py` are leftovers from the Django/AppSeed
-  tutorial boilerplate and don't appear related to TRACEY.
-- There are two full MySQL dumps inside `utils/` (`tracey_20180606_0400.dump2`,
-  `tracey_20251208.backup.sql`, ~1.6-1.7 GB each) checked into the repo — worth removing them from
-  version control (or using Git LFS) unless there's a deliberate reason to keep them there.
 - TRACEY has **two different 3D viewers** (NGL.js vs 3Dmol.js via CDN) depending on the page — see
   4.2.
 - Menu highlighting depends on every new view manually defining `segment` — there's no automatic

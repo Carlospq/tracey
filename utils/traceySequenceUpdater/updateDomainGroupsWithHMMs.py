@@ -10,6 +10,7 @@ if __name__ == "django.core.management.commands.shell":
 
 	from apps.home.models import *
 	from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
+	from utils.traceySequenceUpdater.rebuildMotifsHmmDb import rebuild_motifs_hmmdb
 
 	# Maps each HMM folder → (domain_name_in_DB, menu_path_list[, name_aliases_dict])
 	# name_aliases: HMM basename → menu key it corresponds to (avoids adding duplicates
@@ -205,3 +206,6 @@ if __name__ == "django.core.management.commands.shell":
 			continue
 		print(f'  Processing {domain_name} ...')
 		updateDomainGroups(subtree, domain=domain_name, dgparent=domain_name)
+
+	print('=== Rebuild MOTIFS.hmmDb ===')
+	rebuild_motifs_hmmdb()

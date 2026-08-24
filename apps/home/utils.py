@@ -105,7 +105,7 @@ def get_children(model, parent, parent_id, child_parent_id, children=None, searc
 	filter = variable_column + '__' + search_type
 	cs = model.objects.none()
 	for p in parent:
-		children.append(p) if p not in children and p.analysislevel >= 2 else None
+		children.append(p) if p not in children and int(p.analysislevel) >= 2 else None
 		if getattr(p, parent_id) == 1018 and isinstance(p, Domaingroups):
 			cs = cs.union(model.objects.filter(**{variable_column + "__icontains": ";4"}))
 		else:

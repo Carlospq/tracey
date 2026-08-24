@@ -209,7 +209,7 @@ CSP_SCRIPT_SRC = (
 CSP_STYLE_SRC = (
     "'self'",
     "'unsafe-inline'",              # Required: inline style= attributes throughout templates
-    "https://cdnjs.cloudflare.com", # Font Awesome in sequenceForm.html + base-fullscreen.html
+    "https://cdnjs.cloudflare.com", # Font Awesome in base.html + sequenceForm.html
     "https://fonts.googleapis.com", # Google Fonts CSS (Inter font)
     "https://ka-f.fontawesome.com", # Font Awesome Kit dynamic CSS
 )
