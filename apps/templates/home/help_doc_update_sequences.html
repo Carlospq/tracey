@@ -1,0 +1,22 @@
+<div style="padding: 15px;">
+
+<p><strong>What it does</strong> — For every TRACEY sequence that was originally imported from NCBI (i.e. it stores an NCBI ID), TRACEY re-fetches the current record from NCBI (<code>esummary</code>/<code>efetch</code>) and compares it against what is stored locally. Depending on what changed, it will:</p>
+<ul>
+	<li>Update the accession (<code>dbxref</code>) if NCBI issued a new version.</li>
+	<li>Update the sequence status (<em>live</em>, <em>replaced NCBI</em>, <em>suppressed</em>, <em>dead</em>, <em>crystal structure</em>, <em>ignore</em>, ...) to match NCBI.</li>
+	<li>Follow "replaced by" chains on NCBI and create the new replacement entry in TRACEY if it doesn't exist yet.</li>
+	<li>Re-scan for motifs (HMM domains) on sequences that are now <em>live</em> but don't have any yet.</li>
+	<li>Refresh the shortname and gene aliases when missing.</li>
+</ul>
+<p><em>'Live' sequences without an NCBI Id are manually curated entries and are never touched by this feature.</em></p>
+<br>
+
+<p><strong>All species / Shortname</strong> — By default the update runs against every eligible sequence in TRACEY ("All species"). Choosing "Shortname" restricts the run to a single taxon: type at least 2 characters in the box to search TRACEY taxonomies by shortname or scientific name, then click a suggestion to fill it in (e.g. <code>HoSa</code> for <em>Homo sapiens</em>). If the selected taxon is a strain, varietas, or has no formal rank, its parent species is included automatically. See the shortname help for the naming convention.</p>
+<br>
+
+<p><strong>Protein family</strong> — Limits the update to sequences that already carry a motif for that family in TRACEY (e.g. only sequences with a SNARE or Habc motif when "SNARE" is selected). This keeps the run focused and avoids querying NCBI for unrelated sequences.</p>
+<br>
+
+<p><strong>Duration</strong> — This queries NCBI once per sequence (and again for every near-identical sequence it finds in the same species, to decide which one stays "live"), so a full run can take from minutes to several hours depending on how many sequences match the filters. It runs in the background: you can navigate away and check progress and the full report later via "Check last update results".</p>
+
+</div>

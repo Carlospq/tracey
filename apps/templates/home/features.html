@@ -40,19 +40,18 @@
             }
             .feature-card {
               vertical-align: top;
-              display: inline-block;
-              *display: inline;
-              zoom: 1;
+              display: inline-flex;
+              flex-direction: column;
               width: 20%;
               min-width: 400px;
-              height: 600px;
+              height: 720px;
               border-radius: 10px 10px 0px 0px;
 			  margin: 1%;
               margin-bottom: 25px;
             }
             .feature-header {
-              height: 15%;
-              padding-top: 25px;
+              flex: 0 0 auto;
+              padding: 25px 15px 15px;
               font-size: 26px;
               color: white;
               text-align: center;
@@ -64,7 +63,11 @@
             }
             .feature-body {
               border: #1F2937 solid 2px;
-              height: 85%;
+              flex: 1 1 auto;
+              min-height: 0;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
               font-size: 18px;
               color: #1F2937;
               text-align: center;
@@ -73,18 +76,32 @@
               background: lightgrey;
               padding: 20px;
             }
+            /* Cards whose body is wrapped in a <form> need the form itself to
+               become the flex column so feature-body-main/footer inside it
+               can still flex — cards without a form skip this rule harmlessly. */
+            .feature-body form {
+              flex: 1 1 auto;
+              min-height: 0;
+              display: flex;
+              flex-direction: column;
+            }
             .feature-body .feature-body-main {
               display: block;
-              height: 380px;
+              flex: 1 1 auto;
+              min-height: 0;
+              overflow-y: auto;
               font-size: 19px;
             }
             .feature-body .feature-body-main p, .feature-body .feature-body-footer p {
               margin: 0;
             }
             .feature-body .feature-body-footer {
-              height: 60px;
+              flex: 0 0 auto;
               font-size: 14px;
               padding: 0;
+            }
+            .feature-body .progress-bar {
+              flex: 0 0 auto;
             }
             .feature-body #loader {
               height: 45px;
@@ -93,9 +110,32 @@
             a {
               color: blue;
             }
-            .feature-card.tall { height: auto; min-height: 650px; }
-            .feature-card.tall .feature-body { height: auto; }
-            .feature-card.tall .feature-body-main { height: auto; min-height: 380px; }
+            .help-link {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 15px; height: 15px;
+                border-radius: 50%;
+                background: #adb5bd;
+                color: #fff;
+                font-size: 10px;
+                font-weight: 700;
+                font-style: normal;
+                text-decoration: none;
+                cursor: help;
+                line-height: 1;
+                flex-shrink: 0;
+                vertical-align: middle;
+            }
+            .help-link:hover { background: #6c757d; color: #fff; text-decoration: none; }
+            .header-help-link {
+                background: rgba(255,255,255,0.85);
+                color: #1F2937;
+                margin-left: 6px;
+                font-size: 13px;
+                width: 17px; height: 17px;
+            }
+            .header-help-link:hover { background: #fff; }
     </style>
 </head>
 
@@ -148,13 +188,15 @@
 
 							<!-- Update Sequences -->
 							<div class="feature-card">
-                                <div class="feature-header">Update TRACEY Sequences</div>
+                                <div class="feature-header">Update TRACEY Sequences
+                                    <a href="help_doc_update_sequences.html" onclick="window.open('help_doc_update_sequences.html', 'newwindow', 'width=700,height=500'); return false;" target="popup" class="help-link header-help-link" title="Full explanation of the Update Sequences options.">?</a>
+                                </div>
                                 <div class="feature-body">
 									<form method='post' action='#' name="UpdateSequencesForm" id="UpdateSequencesForm">
 										{% csrf_token %}
 										<div class="feature-body-main">
-											<p style="margin-bottom: 15px;">Sequences from TRACEY containing NCBI Id will be updated according to NCBI data.</p>
-											<p style="margin-bottom: 15px;">'Live' sequences without NCBI Id will remain as they are.</p>
+											<p style="margin-bottom: 12px; font-size: 15px;">Sequences from TRACEY that were imported from NCBI (i.e. that store an NCBI ID) are checked against current NCBI data: accession, sequence status (live/replaced/suppressed/dead) and shortname are refreshed, and motifs are (re-)scanned when missing.</p>
+											<p style="margin-bottom: 12px; font-size: 15px;">'Live' sequences without an NCBI Id are manually curated and will remain untouched.</p>
 											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" alt="Update Sequences" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
 											{% if last_sequences_update_end != "Update in progress" %}
 												<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
@@ -173,6 +215,7 @@
 														<input type="radio" name="speciesMode" value="shortname" id="speciesModeShortname">
 														Shortname:
 													</label>
+													<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" class="help-link" title="Restrict the update to one species/taxon, identified by its shortname (e.g. HoSa) or scientific name. Type 2+ characters to search; click a suggestion to fill the box. Descendant taxa (subspecies/strains) are included automatically. Leave on 'All species' to update every NCBI-sourced sequence in TRACEY.">?</a>
 													<div id="shortname-update-wrapper" style="position:relative; display:none;">
 														<input type="text" id="shortNameText" name="shortNameText"
 															   placeholder="e.g. HoSa" autocomplete="off"
@@ -187,7 +230,7 @@
 
 												<!-- Row 2: protein family + submit -->
 												<div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
-													<select id="domain" name="domain">
+													<select id="domain" name="domain" title="Only sequences that already carry a motif of this protein family will be checked against NCBI. 'SNARE' also covers Habc-domain sequences.">
 														{% for domain in domains %}
 															<option value="{{ domain }}">{{ domain }}</option>
 														{% endfor %}
@@ -212,15 +255,19 @@
 							<!-- Re-scan Motifs -->
 							<div class="feature-card">
 
-								<div class="feature-header">Re-scan Motifs</div>
+								<div class="feature-header">Re-scan Motifs
+									<a href="help_doc_rescan_motifs.html" onclick="window.open('help_doc_rescan_motifs.html', 'newwindow', 'width=750,height=550'); return false;" target="popup" class="help-link header-help-link" title="Full explanation of the Re-scan Motifs options.">?</a>
+								</div>
 								<div class="feature-body">
 									<form method='post' action='#' name="ReScanMotifsForm" id="ReScanMotifsForm">
 										{% csrf_token %}
 										<div class="feature-body-main">
-											<p style="margin-bottom:10px;">Re-scan sequences against HMM profiles and update Motifs in TRACEY.</p>
+											<p style="margin-bottom:10px; font-size:15px;">Re-scan sequences against HMM profiles (HMMER/pyhmmer) and update their Motifs in TRACEY, without re-fetching anything from NCBI. Use it after adding/editing HMM profiles, or to re-classify sequences with the current models.</p>
 
 											<!-- Species filter -->
-											<p style="font-size:13px; font-weight:bold; margin-bottom:4px;">Species filter <span style="font-weight:normal;">(optional)</span></p>
+											<p style="font-size:13px; font-weight:bold; margin-bottom:4px;">Species filter <span style="font-weight:normal;">(optional)</span>
+												<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" class="help-link" title="Restrict the scan to one taxon (and all its descendant taxa) by shortname (e.g. HoSa) or scientific name. Leave both boxes empty to scan matching sequences from every species in TRACEY.">?</a>
+											</p>
 											<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
 												<div style="position:relative; flex:1; min-width:140px;">
 													<input type="text" id="rescanShortNameText" placeholder="Shortname (e.g. HoSa)" autocomplete="off"
@@ -243,11 +290,13 @@
 											</div>
 
 											<!-- HMM scope -->
-											<p style="font-size:13px; font-weight:bold; margin-bottom:4px;">HMM scope <span style="font-weight:normal;">(at least one required)</span></p>
+											<p style="font-size:13px; font-weight:bold; margin-bottom:4px;">HMM scope <span style="font-weight:normal;">(at least one required)</span>
+												<a href="help_doc_rescan_motifs.html" onclick="window.open('help_doc_rescan_motifs.html', 'newwindow', 'width=750,height=550'); return false;" target="popup" class="help-link" title="Choose what to scan sequences against: a whole protein family, one domain group inside that family, or a single specific HMM key. Only one of the three is used, in that priority: HMM key > Domain > Protein family.">?</a>
+											</p>
 											<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
 												<div>
 													<label style="font-size:11px; color:#555;">Protein family</label>
-													<select id="rescanFamily" style="width:100%; font-size:12px; padding:3px;">
+													<select id="rescanFamily" style="width:100%; font-size:12px; padding:3px;" title="Scans against every HMM belonging to this family (e.g. all SNARE profiles).">
 														<option value="">— select —</option>
 														{% for f in hmm_families %}
 														<option value="{{ f }}">{{ f }}</option>
@@ -256,7 +305,7 @@
 												</div>
 												<div>
 													<label style="font-size:11px; color:#555;">Domain <span style="font-weight:normal;">(optional)</span></label>
-													<select id="rescanDomain" style="width:100%; font-size:12px; padding:3px;" disabled>
+													<select id="rescanDomain" style="width:100%; font-size:12px; padding:3px;" disabled title="Narrows the scan to one domain group under the selected family (and everything nested below it in the HMM menu), instead of the whole family.">
 														<option value="">— select family first —</option>
 													</select>
 												</div>
@@ -264,7 +313,8 @@
 											<div style="position:relative; margin-bottom:10px;">
 												<label style="font-size:11px; color:#555;">Specific HMM key (optional, overrides above)</label>
 												<input type="text" id="rescanHmmKey" placeholder="e.g. Longin.I" autocomplete="off"
-													   style="width:100%; font-size:12px; box-sizing:border-box;">
+													   style="width:100%; font-size:12px; box-sizing:border-box;"
+													   title="Exact HMM menu key to scan against, including all of its children (e.g. 'Longin.I'). When filled in, this overrides the Protein family / Domain selection above.">
 												<div id="rescan-hmm-results"
 													 style="display:none; position:absolute; top:100%; left:0; z-index:200;
 															background:#fff; border:1px solid #ccc; border-radius:4px;
@@ -276,10 +326,11 @@
 											<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; align-items:center;">
 												<label style="font-size:12px;">E-value:
 													<input type="text" id="rescanEvalue" value="1e-10"
-														   style="width:80px; font-size:12px; margin-left:4px;">
+														   style="width:80px; font-size:12px; margin-left:4px;"
+														   title="Significance cutoff passed to hmmscan: only hits with an e-value below this threshold are considered. Lower = stricter/fewer hits.">
 												</label>
 												<label style="font-size:12px;">Motif filter:
-													<select id="rescanMotifFilter" style="font-size:12px; margin-left:4px;">
+													<select id="rescanMotifFilter" style="font-size:12px; margin-left:4px;" title="Performance shortcut: only scan sequences that already carry an existing motif of this domain in TRACEY, instead of every sequence matching the HMM scope. Leave as '— none —' to consider all sequences.">
 														<option value="">— none —</option>
 														{% for domain in domains %}
 														<option value="{{ domain }}">{{ domain }}</option>
@@ -288,8 +339,8 @@
 												</label>
 											</div>
 											<div style="display:flex; gap:16px; flex-wrap:wrap; font-size:12px;">
-												<label><input type="checkbox" id="rescanOnlyActive" style="margin-right:4px;">Only active sequences</label>
-												<label><input type="checkbox" id="rescanDryRun" style="margin-right:4px;">Dry run (no DB writes)</label>
+												<label title="Skip sequences whose sequencestatus is not 'live' (e.g. dead, replaced, ignored)."><input type="checkbox" id="rescanOnlyActive" style="margin-right:4px;">Only active sequences</label>
+												<label title="Preview the NEW/UPDATE/SKIP decisions for every matching sequence in a new tab, without saving anything to the database. Recommended before a real run."><input type="checkbox" id="rescanDryRun" style="margin-right:4px;">Dry run (no DB writes)</label>
 											</div>
 										</div>
 										<div class="feature-body-footer" style="height:auto; padding-top:10px;">

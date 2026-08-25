@@ -57,6 +57,8 @@ utils/traceySequenceUploader/upload.*.log
 *test.py
 *tmp.py
 utils/motifPredictortmp*
+tmp/*
+tmp*/*
 
 # Blast bin and databases
 utils/ncbi-blast-2.13.0+/bin

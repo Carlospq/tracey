@@ -1,0 +1,38 @@
+<div style="padding: 15px;">
+
+<p><strong>What it does</strong> — Re-runs the HMMER (pyhmmer) domain scan for the selected sequences against the chosen HMM profile(s), and updates the <em>Motifs</em> table in TRACEY accordingly. Unlike "Update TRACEY Sequences", this never contacts NCBI — it only re-classifies sequences that are already in TRACEY using the current HMM models. Use it after adding or editing HMM profiles, changing the e-value cutoff, or to fix motif calls without a full NCBI sync.</p>
+<br>
+
+<p><strong>How a hit is applied:</strong></p>
+<ul>
+	<li>A hit that doesn't overlap any existing motif on the sequence is added as new.</li>
+	<li>A hit that overlaps an existing motif of the <em>same</em> domain replaces it only if its e-value is better; the replaced motif is kept for reference in <em>Verifymotifs</em> rather than deleted.</li>
+	<li>A hit that overlaps a motif of a <em>different</em> domain is skipped, to avoid conflicting calls on the same region.</li>
+	<li>Hits shorter than the minimum expected length for that HMM are discarded.</li>
+	<li>Per-sequence limits are enforced automatically: at most 1 Habc and 1 Longin domain (and the two are mutually exclusive on the same sequence), at most 1 non-SNAP SNARE domain (Qa/Qb/Qc/R), and at most 2 SNAP domains.</li>
+</ul>
+<br>
+
+<p><strong>Species filter</strong> <em>(optional)</em> — Restrict scanning to one taxon by shortname (e.g. <code>HoSa</code>) or scientific name; all of its descendant taxa are included automatically (e.g. selecting a genus scans every species under it). Leave both boxes empty to consider matching sequences from every species in TRACEY.</p>
+<br>
+
+<p><strong>HMM scope</strong> <em>(required — pick one)</em>:</p>
+<ul>
+	<li><strong>Protein family</strong> — scans against every HMM belonging to that family (e.g. all SNARE profiles).</li>
+	<li><strong>Domain</strong> — becomes available once a family is chosen; narrows the scan to one domain group under that family (and everything nested below it).</li>
+	<li><strong>Specific HMM key</strong> — free-text box with autocomplete; type an exact key from the HMM menu (e.g. <code>Longin.I</code>) to scan against just that node and its children. When filled in, this overrides the Protein family / Domain selection.</li>
+</ul>
+<br>
+
+<p><strong>E-value</strong> — Significance cutoff passed to <code>hmmscan</code> (default shown: <code>1e-10</code>). Only hits below this threshold are kept; lower values are stricter and yield fewer, more confident hits.</p>
+<br>
+
+<p><strong>Motif filter</strong> <em>(optional)</em> — A performance shortcut: instead of scanning every sequence that falls under the chosen HMM scope, only scan sequences that <em>already</em> have a motif of the selected domain in TRACEY. Useful to avoid wasting time re-scanning sequences that were never candidates for that family in the first place.</p>
+<br>
+
+<p><strong>Only active sequences</strong> — Skip any sequence whose status is not "live" (e.g. dead, replaced, ignored).</p>
+<br>
+
+<p><strong>Dry run</strong> — Opens a new tab listing the planned action for every matching sequence (NEW / UPDATE / SKIP-CONFLICT / SKIP-LIMIT / SKIP-LEN / ...) without writing anything to the database. Recommended before running for real, especially on a broad family-wide scope.</p>
+
+</div>
