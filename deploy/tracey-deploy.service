@@ -1,0 +1,16 @@
+# traceyDB pull-based CD — one-shot poll unit.
+# Install to /etc/systemd/system/tracey-deploy.service (see docs/DEPLOY.md).
+# Reference copy, version-controlled; not applied automatically.
+
+[Unit]
+Description=Deploy traceyDB when a new deploy/* tag is pushed
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=cpulidoq
+# Adjust the path if the control clone lives elsewhere.
+ExecStart=/home/cpulidoq/tracey-deploy/deploy/poll-deploy.sh
+# Optional: email on failure (needs an OnFailure unit — see Module 5).
+# OnFailure=tracey-deploy-notify@%n.service

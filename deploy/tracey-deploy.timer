@@ -1,0 +1,16 @@
+# traceyDB pull-based CD — polling timer.
+# Install to /etc/systemd/system/tracey-deploy.timer, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now tracey-deploy.timer
+
+[Unit]
+Description=Poll for traceyDB deploy/* tags every couple of minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=30s
+Persistent=false
+
+[Install]
+WantedBy=timers.target
