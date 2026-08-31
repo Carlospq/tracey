@@ -31,9 +31,11 @@ jobs:
         run: ruff check --output-format=github .
 
   # ----------------------------------------------------------------------
-  # pre-commit: hygiene hooks (trailing whitespace, EOF, yaml, large files,
-  # private keys, merge markers) — but ONLY on the files a PR changes, so the
-  # legacy tree is grandfathered. ruff is skipped here; it has its own job.
+  # pre-commit: DETECTION-only hooks (yaml valid, no merge markers, no huge
+  # files, no private keys) on the files a PR changes. The reformatting hooks
+  # (ruff, end-of-file-fixer, trailing-whitespace) are skipped here — the
+  # legacy tree is CRLF + no-final-newline, so they'd flag every touched file.
+  # They still run for anyone who opts in with `pre-commit install` locally.
   # ----------------------------------------------------------------------
   pre-commit:
     if: github.event_name == 'pull_request'
@@ -48,7 +50,7 @@ jobs:
       - run: pip install pre-commit==3.8.0
       - name: pre-commit on changed files
         env:
-          SKIP: ruff
+          SKIP: ruff,end-of-file-fixer,trailing-whitespace
         run: |
           pre-commit run --show-diff-on-failure \
             --from-ref ${{ github.event.pull_request.base.sha }} \
