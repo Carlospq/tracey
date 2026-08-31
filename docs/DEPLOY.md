@@ -129,13 +129,21 @@ As `cpulidoq` on the server:
 # 1. control clone (from Module 2; skip if it exists)
 git clone --depth 1 https://github.com/Carlospq/tracey.git ~/tracey-deploy
 
-# 2. install the units (reference copies live in deploy/)
-sudo cp ~/tracey-deploy/deploy/tracey-deploy.service /etc/systemd/system/
-sudo cp ~/tracey-deploy/deploy/tracey-deploy.timer   /etc/systemd/system/
+# 2. render the service unit with THIS account's user + home, then install both.
+#    (cpulidoq's home here is /home/cpulidoq@ad.unil.ch, not /home/cpulidoq)
+sed -e "s|REPLACE_WITH_id_un|$(id -un)|" \
+    -e "s|REPLACE_WITH_HOME|$HOME|" \
+    ~/tracey-deploy/deploy/tracey-deploy.service | sudo tee /etc/systemd/system/tracey-deploy.service
+sudo cp ~/tracey-deploy/deploy/tracey-deploy.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now tracey-deploy.timer
 
-# 3. seed the marker so it does not deploy an old deploy/* tag on first tick
+# 3. confirm the rendered unit and check sudo works from a systemd context
+systemctl cat tracey-deploy.service | grep -E 'User=|ExecStart='
+sudo systemctl start tracey-deploy.service         # dry first tick
+journalctl -u tracey-deploy.service -n 20 --no-pager
+
+# 4. seed the marker so it does not deploy an old deploy/* tag on first real tick
 mkdir -p ~/.local/state/tracey-deploy
 git -C ~/tracey-deploy tag -l 'deploy/*' --sort=-creatordate | head -n1 \
   > ~/.local/state/tracey-deploy/last-tag
