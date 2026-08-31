@@ -3,14 +3,14 @@
 -r requirements.txt
 
 # Linting / formatting
-ruff==0.6.9
+ruff==0.16.5
 
 # Local git hooks
 pre-commit==3.8.0
 
 # Legacy autoformatter (kept for anyone still using it; ruff replaces it)
 autopep8==1.6.0
-pycodestyle==2.8.0
+pycodestyle==2.14.0
 toml==0.10.2
 
 # HTTPS dev server (manage.py runsslserver)
