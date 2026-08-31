@@ -16,7 +16,7 @@ mysqlclient==2.2.4
 django-allauth==0.51.0
 django-simple-captcha==0.5.17
 django-environ==0.8.1
-django-extensions==3.2.3
+django-extensions==4.1
 django-htmx==1.17.3
 tablib==3.6.1
 django-tables2==2.7.0
