@@ -1,0 +1,34 @@
+# traceyDB gunicorn service — REFERENCE COPY of what is installed on the server
+# at /etc/systemd/system/gunicorn.service (RHEL, Apache in front on :80/:443).
+#
+# This file is version-controlled for documentation and disaster recovery.
+# It is NOT applied automatically by deploy/deploy.sh. To change the running
+# service you must edit the file on the server and `sudo systemctl daemon-reload`.
+#
+# Suggested future improvements are marked "# TODO".
+
+[Unit]
+Description=gunicorn daemon
+After=network.target
+
+[Service]
+User=tracey
+Group=tracey
+RuntimeDirectory=gunicorn
+WorkingDirectory=/home/tracey/tracey
+PIDFile=/run/gunicorn/gunicorn.pid          # TODO server has a typo: "gunicron.pid"
+ExecStart=/home/tracey/tracey_prod/bin/gunicorn --config gunicorn-cfg.py core.wsgi \
+          --pid /run/gunicorn/gunicorn.pid
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+ExecStopPost=/bin/rm -rf /run/gunicorn/
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Environment="ASSETS_ROOT=/static/assets"
+# TODO: load the rest of the environment from the .env file instead of relying
+# on settings.py reading it, so `systemctl` and the app agree on config:
+# EnvironmentFile=/home/tracey/tracey/.env
+
+[Install]
+WantedBy=multi-user.target
