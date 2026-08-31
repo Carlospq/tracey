@@ -219,52 +219,48 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #############################################################
 
-# Content Security Policy (django-csp 3.8)
-CSP_REPORT_ONLY = False  # Enforced — set to True only for debugging
-
-CSP_DEFAULT_SRC = ("'self'",)
-
-CSP_SCRIPT_SRC = (
-    "'self'",
-    "'unsafe-inline'",              # Required: inline scripts and event handlers
-    "https://3dmol.org",
-    "https://unpkg.com",            # NGL.js 3D viewer in sequenceForm.html
-    "https://cdn.plot.ly",          # Plotly.js charts in details view
-    "https://kit.fontawesome.com",  # Font Awesome Kit loader
-)
-
-CSP_STYLE_SRC = (
-    "'self'",
-    "'unsafe-inline'",              # Required: inline style= attributes throughout templates
-    "https://cdnjs.cloudflare.com", # Font Awesome in base.html + sequenceForm.html
-    "https://fonts.googleapis.com", # Google Fonts CSS (Inter font)
-    "https://ka-f.fontawesome.com", # Font Awesome Kit dynamic CSS
-)
-
-CSP_FONT_SRC = (
-    "'self'",
-    "https://cdnjs.cloudflare.com", # Font Awesome webfonts (.woff2)
-    "https://fonts.gstatic.com",    # Google Fonts woff2 files (Inter font)
-    "https://ka-f.fontawesome.com", # Font Awesome Kit webfonts
-)
-
-CSP_IMG_SRC = (
-    "'self'",
-    "data:",                        # SVG/PNG plots served as data URIs in detail views
-    "https://upload.wikimedia.org", # Wikipedia species thumbnails
-)
-
-CSP_CONNECT_SRC = (
-    "'self'",
-    "https://ka-f.fontawesome.com", # Font Awesome Kit fetch
-    "https://alphafold.ebi.ac.uk",  # AlphaFold CIF structure files for 3D viewer
-)
-
-CSP_FRAME_ANCESTORS = ("'none'",)   # No page embeds this site via <iframe>
-
-CSP_OBJECT_SRC = ("'none'",)        # No Flash/plugins
-
-CSP_BASE_URI = ("'self'",)          # Prevents base-tag injection attacks
+# Content Security Policy (django-csp 4.x — the flat CSP_* settings were removed
+# in 4.0). CSP_REPORT_ONLY was False, so this is enforced; use
+# CONTENT_SECURITY_POLICY_REPORT_ONLY to trial changes without blocking.
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ["'self'"],
+        "script-src": [
+            "'self'",
+            "'unsafe-inline'",              # Required: inline scripts and event handlers
+            "https://3dmol.org",
+            "https://unpkg.com",            # NGL.js 3D viewer in sequenceForm.html
+            "https://cdn.plot.ly",          # Plotly.js charts in details view
+            "https://kit.fontawesome.com",  # Font Awesome Kit loader
+        ],
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",              # Required: inline style= attributes throughout templates
+            "https://cdnjs.cloudflare.com", # Font Awesome in base.html + sequenceForm.html
+            "https://fonts.googleapis.com", # Google Fonts CSS (Inter font)
+            "https://ka-f.fontawesome.com", # Font Awesome Kit dynamic CSS
+        ],
+        "font-src": [
+            "'self'",
+            "https://cdnjs.cloudflare.com", # Font Awesome webfonts (.woff2)
+            "https://fonts.gstatic.com",    # Google Fonts woff2 files (Inter font)
+            "https://ka-f.fontawesome.com", # Font Awesome Kit webfonts
+        ],
+        "img-src": [
+            "'self'",
+            "data:",                        # SVG/PNG plots served as data URIs in detail views
+            "https://upload.wikimedia.org", # Wikipedia species thumbnails
+        ],
+        "connect-src": [
+            "'self'",
+            "https://ka-f.fontawesome.com", # Font Awesome Kit fetch
+            "https://alphafold.ebi.ac.uk",  # AlphaFold CIF structure files for 3D viewer
+        ],
+        "frame-ancestors": ["'none'"],      # No page embeds this site via <iframe>
+        "object-src": ["'none'"],           # No Flash/plugins
+        "base-uri": ["'self'"],             # Prevents base-tag injection attacks
+    },
+}
 
 # Permissions Policy (django-permissions-policy 4.x)
 CACHES = {
