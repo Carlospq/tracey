@@ -1,16 +1,17 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates
 version: 2
 updates:
-  # Python deps — requirements.txt + requirements-dev.txt
+  # Python deps — requirements.txt + requirements-dev.txt.
+  # Monthly: on EOL Django 4.2 most version-updates fail CI (deps now need
+  # Django 5.x / Python 3.11+), so weekly was mostly noise. Back to weekly after
+  # the Django 5.x + Python 3.12 upgrade. Security updates are unaffected.
   - package-ecosystem: pip
     directory: "/"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Europe/Zurich
-    # Raised for the one-time initial catch-up; drop back to 5 once triaged.
-    open-pull-requests-limit: 15
+    open-pull-requests-limit: 5
     groups:
       # One PR/week for safe (minor + patch) bumps; majors get their own PR
       # so a risky Django/tables2/csp jump is reviewed on its own.
