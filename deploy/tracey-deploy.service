@@ -9,10 +9,11 @@
 Description=Deploy traceyDB when a new deploy/* tag is pushed
 After=network-online.target
 Wants=network-online.target
+# Fire the notifier if this unit fails. %n = "tracey-deploy.service", passed as
+# the template instance so the notifier knows which journal to quote.
+OnFailure=tracey-deploy-notify@%n.service
 
 [Service]
 Type=oneshot
 User=REPLACE_WITH_id_un
 ExecStart=REPLACE_WITH_HOME/tracey-deploy/deploy/poll-deploy.sh
-# Optional: email on failure (needs an OnFailure unit — see Module 5).
-# OnFailure=tracey-deploy-notify@%n.service
