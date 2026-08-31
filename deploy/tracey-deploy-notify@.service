@@ -1,0 +1,12 @@
+# traceyDB — failure notifier (TEMPLATE, runs as root to read the journal).
+# Triggered by OnFailure= on tracey-deploy.service. %i is the failed unit name.
+#
+# Install: render REPLACE_WITH_HOME (see docs/DEPLOY.md), copy to
+# /etc/systemd/system/tracey-deploy-notify@.service, daemon-reload.
+
+[Unit]
+Description=Notify that %i failed
+
+[Service]
+Type=oneshot
+ExecStart=REPLACE_WITH_HOME/tracey-deploy/deploy/notify-failure.sh %i
