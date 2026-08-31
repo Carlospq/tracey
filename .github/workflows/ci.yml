@@ -31,7 +31,31 @@ jobs:
         run: ruff check --output-format=github .
 
   # ----------------------------------------------------------------------
-  # Job 2: the real gate. A clean machine must be able to install every
+  # pre-commit: hygiene hooks (trailing whitespace, EOF, yaml, large files,
+  # private keys, merge markers) — but ONLY on the files a PR changes, so the
+  # legacy tree is grandfathered. ruff is skipped here; it has its own job.
+  # ----------------------------------------------------------------------
+  pre-commit:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install pre-commit==3.8.0
+      - name: pre-commit on changed files
+        env:
+          SKIP: ruff
+        run: |
+          pre-commit run --show-diff-on-failure \
+            --from-ref ${{ github.event.pull_request.base.sha }} \
+            --to-ref ${{ github.event.pull_request.head.sha }}
+
+  # ----------------------------------------------------------------------
+  # Job: the real gate. A clean machine must be able to install every
   # dependency, import the whole Django project, and build the static
   # files. This is what catches "works on my machine" breakage.
   # ----------------------------------------------------------------------

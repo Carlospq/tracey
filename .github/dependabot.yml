@@ -1,0 +1,26 @@
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates
+version: 2
+updates:
+  # Python deps — requirements.txt + requirements-dev.txt
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Zurich
+    open-pull-requests-limit: 5
+    groups:
+      # One PR/week for safe (minor + patch) bumps; majors get their own PR
+      # so a risky numpy/scipy/Django jump is reviewed on its own.
+      safe-updates:
+        update-types: ["minor", "patch"]
+    labels: ["dependencies"]
+
+  # Keep the GitHub Actions in .github/workflows/ up to date
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    labels: ["dependencies", "ci"]
