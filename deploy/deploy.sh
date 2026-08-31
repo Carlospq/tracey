@@ -42,7 +42,9 @@ as_app() { sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && $*"; }
 
 update_code() {
   local ref="$1"
-  as_app "git fetch --tags --prune origin"
+  # --force so a re-pointed tag on the remote doesn't abort the deploy; the
+  # server never authors tags, it must always mirror origin.
+  as_app "git fetch --tags --force --prune origin"
   as_app "git checkout -f main && git reset --hard '$ref'"
   as_app "$PIP install --no-input -q -r requirements.txt"
   if [ "$SKIP_MIGRATE" != "1" ]; then
@@ -55,10 +57,16 @@ restart_service() { sudo systemctl restart "$SERVICE"; }
 
 health_ok() {
   local i
-  for i in $(seq 1 10); do
-    if curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL"; then return 0; fi
+  for i in $(seq 1 15); do
+    # -s (silent): the first few attempts fail while gunicorn is still booting;
+    # that's expected, so don't print curl's "connection refused" each time.
+    if curl -fs -o /dev/null --max-time 5 "$HEALTH_URL"; then
+      [ "$i" -gt 1 ] && log "service came up after ~$((i * 2))s"
+      return 0
+    fi
     sleep 2
   done
+  err "no 2xx from $HEALTH_URL after ~30s"
   return 1
 }
 
