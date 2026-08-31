@@ -20,7 +20,7 @@ django-extensions==3.2.3
 django-htmx==1.17.3
 tablib==3.6.1
 django-tables2==2.7.0
-django-csp==3.8
+django-csp==4.0
 django-permissions-policy==4.22.0
 Unipath==1.1
 
