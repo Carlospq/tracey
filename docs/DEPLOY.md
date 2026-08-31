@@ -80,8 +80,67 @@ Rotating `SECRET_KEY` logs everyone out (invalidates sessions) — expected.
 
 ## CI/CD pipeline
 
-- **CI** (`.github/workflows/ci.yml`): runs on every PR and push. Installs deps
-  on a clean machine, imports the project, builds static, lints (informational).
-  `main` is branch-protected: green `django` + `lint` checks required to merge.
-- **CD**: added in a later module — a self-hosted runner (or a pull-based
-  systemd timer) invokes `deploy/deploy.sh` after a manual approval.
+### CI — `.github/workflows/ci.yml`
+
+Runs on every PR and push. Installs deps on a clean machine, imports the
+project, builds static, lints (informational). `main` is branch-protected:
+green `django` + `lint` checks required to merge.
+
+### CD — pull-based (`deploy/poll-deploy.sh` + `tracey-deploy.timer`)
+
+The repo is public and the server has passwordless sudo, so we do **not** run a
+GitHub self-hosted runner. Instead the server polls for a signed intent:
+
+```
+you:     merge PR to main  ->  CI green  ->  git tag -a deploy/<stamp> ; git push --tags
+server:  tracey-deploy.timer fires every 2 min
+         -> poll-deploy.sh: is there a deploy/* tag newer than the last deployed?
+         -> yes: DEPLOY_REF=<tag> deploy/deploy.sh   (health-check + auto-rollback)
+         -> record the tag as handled
+```
+
+Pushing the `deploy/*` tag is the approval. Nothing reaches production without it.
+
+**Trigger a deploy:**
+
+```bash
+git checkout main && git pull
+git tag -a deploy/$(date +%Y%m%d-%H%M) -m "Deploy: <what changed>"
+git push origin "deploy/$(date +%Y%m%d-%H%M)"     # use the same stamp
+```
+
+**Watch it:**
+
+```bash
+journalctl -u tracey-deploy.service -f       # deploy output, live
+systemctl list-timers tracey-deploy.timer    # when it next runs
+cat ~/.local/state/tracey-deploy/last-tag    # last handled tag
+```
+
+**A failed deploy** rolls back automatically (see deploy.sh), the timer unit
+shows `failed` for that run, and the tag is marked handled so it does not loop.
+Fix forward and push a new `deploy/*` tag.
+
+### Install the pull-based CD (one time)
+
+As `cpulidoq` on the server:
+
+```bash
+# 1. control clone (from Module 2; skip if it exists)
+git clone --depth 1 https://github.com/Carlospq/tracey.git ~/tracey-deploy
+
+# 2. install the units (reference copies live in deploy/)
+sudo cp ~/tracey-deploy/deploy/tracey-deploy.service /etc/systemd/system/
+sudo cp ~/tracey-deploy/deploy/tracey-deploy.timer   /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now tracey-deploy.timer
+
+# 3. seed the marker so it does not deploy an old deploy/* tag on first tick
+mkdir -p ~/.local/state/tracey-deploy
+git -C ~/tracey-deploy tag -l 'deploy/*' --sort=-creatordate | head -n1 \
+  > ~/.local/state/tracey-deploy/last-tag
+```
+
+Keep `~/tracey-deploy/deploy/*.sh` executable and up to date
+(`git -C ~/tracey-deploy pull` — the poll script does its own fetch, but a
+manual pull keeps the scripts themselves current).
