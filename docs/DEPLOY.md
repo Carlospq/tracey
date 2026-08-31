@@ -159,39 +159,42 @@ Keep `~/tracey-deploy/deploy/*.sh` executable and up to date
 (`git -C ~/tracey-deploy pull` — the poll script does its own fetch, but a
 manual pull keeps the scripts themselves current).
 
-### Failure alerts (Module 5.1)
+### Deploy notifications (Module 5.1)
 
-If a deploy fails, `deploy.sh` rolls back but the only record is the journal.
-`OnFailure=` on `tracey-deploy.service` runs `tracey-deploy-notify@.service`
-(as root, so it can read the journal), which calls `deploy/notify-failure.sh`.
-That script sends an email and/or a chat webhook, whichever is configured in
-`/etc/tracey-deploy/notify.env`.
+`deploy/notify.sh <ok|fail|crash> "<summary>" [unit]` posts to Slack (and/or
+email) using `/etc/tracey-deploy/notify.env` (`NOTIFY_WEBHOOK` / `NOTIFY_EMAIL`).
+
+- **ok / fail** — sent by `poll-deploy.sh` itself after every deploy it runs, so
+  you get a :white_check_mark: on success and a :rotating_light: + journal tail
+  on a rolled-back failure. `poll-deploy.sh` then returns 0.
+- **crash** — `OnFailure=` on `tracey-deploy.service` runs
+  `tracey-deploy-notify@.service` (as root, to read the journal). This only
+  fires when `poll-deploy.sh` exits non-zero *without* reporting, i.e. it died
+  before it could notify (git/network/tooling error).
 
 ```bash
-# 1. channel config (root-only — may hold a secret webhook URL)
+# 1. channel config (root-only — holds the secret webhook URL)
 sudo mkdir -p /etc/tracey-deploy
 sudo cp ~/tracey-deploy/deploy/notify.env.example /etc/tracey-deploy/notify.env
 sudo chmod 600 /etc/tracey-deploy/notify.env
-sudo "${EDITOR:-vi}" /etc/tracey-deploy/notify.env      # set NOTIFY_EMAIL and/or NOTIFY_WEBHOOK
+sudo "${EDITOR:-vi}" /etc/tracey-deploy/notify.env      # set NOTIFY_WEBHOOK (and/or NOTIFY_EMAIL)
 
-# 2. install the notifier unit (render the script path)
-sed "s|REPLACE_WITH_HOME|$HOME|" \
-    ~/tracey-deploy/deploy/tracey-deploy-notify@.service \
+# 2. render + install both units with this account's user/home
+sed "s|REPLACE_WITH_HOME|$HOME|" ~/tracey-deploy/deploy/tracey-deploy-notify@.service \
   | sudo tee /etc/systemd/system/tracey-deploy-notify@.service
-
-# 3. re-render tracey-deploy.service so it now carries OnFailure=
 sed -e "s|REPLACE_WITH_id_un|$(id -un)|" -e "s|REPLACE_WITH_HOME|$HOME|" \
     ~/tracey-deploy/deploy/tracey-deploy.service \
   | sudo tee /etc/systemd/system/tracey-deploy.service
 sudo systemctl daemon-reload
 
-# 4. test — run the notifier directly, then exercise the templated unit
-sudo ~/tracey-deploy/deploy/notify-failure.sh tracey-deploy.service
-sudo systemctl start tracey-deploy-notify@tracey-deploy.service
-sudo journalctl -u 'tracey-deploy-notify@*' -n 20 --no-pager
+# 3. smoke-test each message type
+sudo ~/tracey-deploy/deploy/notify.sh ok    "test: success message"
+sudo ~/tracey-deploy/deploy/notify.sh fail  "test: failure message" tracey-deploy.service
+sudo systemctl start tracey-deploy-notify@tracey-deploy.service   # exercises the crash path
 ```
 
-To verify the full chain end-to-end, push a deploy tag on a commit you know
-breaks boot (e.g. a bad import), let it deploy + auto-rollback, and confirm the
-alert arrives. Then push a good tag.
+To verify the full chain, push a `deploy/*` tag on a commit you know breaks boot
+(e.g. `echo 'raise RuntimeError("x")' >> core/wsgi.py` on a throwaway branch,
+tag it, push only the tag), watch it deploy + auto-rollback, and confirm the
+:rotating_light: arrives. Then delete the tag.
 
