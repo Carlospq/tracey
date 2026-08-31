@@ -3,3 +3,6 @@
 *.service       text eol=lf
 deploy/*        text eol=lf
 .env.example    text eol=lf
+
+# Keep these LF so Dependabot diffs stay clean (rest of the tree is still CRLF).
+requirements*.txt  text eol=lf
