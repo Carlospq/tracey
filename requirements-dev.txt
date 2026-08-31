@@ -2,6 +2,10 @@
 # (this file pulls in requirements.txt too)
 -r requirements.txt
 
+# Testing
+pytest==8.3.5
+pytest-django==4.9.0
+
 # Linting / formatting
 ruff==0.6.9
 

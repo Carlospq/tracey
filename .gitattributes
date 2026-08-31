@@ -6,3 +6,6 @@ deploy/*        text eol=lf
 
 # Keep these LF so Dependabot diffs stay clean (rest of the tree is still CRLF).
 requirements*.txt  text eol=lf
+
+# SQL fixtures load on Linux (CI MySQL) — keep them LF.
+*.sql              text eol=lf
