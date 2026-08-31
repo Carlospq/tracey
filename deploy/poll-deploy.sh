@@ -114,10 +114,18 @@ main() {
 
   if [ "$rc" -eq 0 ]; then
     echo "$(date -Is)  deploy OK: $target_tag"
+    bash "$CLONE/deploy/notify.sh" ok \
+      "Deployed $target_tag ($target_sha) to production." || true
   else
     echo "$(date -Is)  deploy FAILED (rc=$rc): $target_tag — deploy.sh rolled back; push a new tag to retry"
+    bash "$CLONE/deploy/notify.sh" fail \
+      "Deploy of $target_tag ($target_sha) failed — deploy.sh rolled production back. Push a new tag to retry." || true
   fi
-  return "$rc"
+
+  # We did our job (checked CI, deployed, reported the result). Return 0 so
+  # systemd does not ALSO fire OnFailure=; that path is reserved for this
+  # script crashing before it could notify.
+  return 0
 }
 
 main "$@"

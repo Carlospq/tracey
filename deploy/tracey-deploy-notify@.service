@@ -1,12 +1,17 @@
-# traceyDB — failure notifier (TEMPLATE, runs as root to read the journal).
-# Triggered by OnFailure= on tracey-deploy.service. %i is the failed unit name.
+# traceyDB — crash notifier (TEMPLATE, runs as root to read the journal).
 #
+# Triggered by OnFailure= on tracey-deploy.service. This only fires when the
+# poll job exits non-zero *without* reporting — i.e. it crashed before it could
+# send its own ok/fail notification (git/network/tooling error). Normal deploy
+# failures are reported by poll-deploy.sh itself, which then returns 0.
+#
+# %i is the failed unit name ("tracey-deploy.service").
 # Install: render REPLACE_WITH_HOME (see docs/DEPLOY.md), copy to
 # /etc/systemd/system/tracey-deploy-notify@.service, daemon-reload.
 
 [Unit]
-Description=Notify that %i failed
+Description=Notify that %i crashed
 
 [Service]
 Type=oneshot
-ExecStart=REPLACE_WITH_HOME/tracey-deploy/deploy/notify-failure.sh %i
+ExecStart=REPLACE_WITH_HOME/tracey-deploy/deploy/notify.sh crash "poll job exited unexpectedly (git/network/tooling error)" %i
