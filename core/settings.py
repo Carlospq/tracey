@@ -36,10 +36,25 @@ DEBUG = env('DEBUG')
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
+# Production hardening — only applied when DEBUG is off. Each flag is env-driven
+# so it can be rolled out gradually and rolled back without a code change.
+if not DEBUG:
+    # Safe defaults for an HTTPS-only site:
+    SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
+    CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
+    # Off by default: enable only after confirming Apache forwards
+    # "X-Forwarded-Proto: https" (otherwise this causes a redirect loop).
+    SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
+    # Start at 0. Raise to 3600, then 2592000, then 31536000 once you are
+    # sure every subdomain is HTTPS — HSTS is hard to undo in browsers.
+    SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=0)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False)
+    SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=False)
+
 # Assets Management
 ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')
 
-ALLOWED_HOSTS        = ['dcsrs-tracey.ad.unil.ch', 'tracey.unil.ch', 'localhost', 'localhost:85', '127.0.0.1', env('SERVER', default='127.0.0.1') ]
+ALLOWED_HOSTS        = ['dcsrs-tracey.ad.unil.ch', 'tracey.unil.ch', 'localhost', '127.0.0.1', env('SERVER', default='127.0.0.1') ]
 CSRF_TRUSTED_ORIGINS = ['http://localhost:85', 'http://127.0.0.1', 'https://' + env('SERVER', default='127.0.0.1') ]
 
 # Captcha options
@@ -77,6 +92,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serves collected static files directly from gunicorn (compressed, cached).
+    # Apache still handles /static/ in production if configured to; this is a
+    # safety net so static never depends on the web-server config being perfect.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -179,6 +198,14 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(CORE_DIR, 'apps/static'),
 )
+
+# WhiteNoise: compress collected static files and serve them with far-future
+# cache headers. CompressedStaticFilesStorage (no "Manifest") is used on purpose
+# — this template references some assets that would break manifest hashing.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 
 #############################################################
