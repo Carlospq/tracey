@@ -1,0 +1,23 @@
+# Ruff config — https://docs.astral.sh/ruff/
+# Deliberately lenient to start: only Pyflakes (real bugs), not style nits.
+# Tighten this over time (add "E", "I", "UP", "B" ...) once the codebase is clean.
+
+target-version = "py310"
+line-length = 120
+
+exclude = [
+    "**/migrations/**",
+    "apps/static/**",
+    "staticfiles/**",
+    "core/staticfiles/**",
+    "tmp/**",
+    "tmp_asgard/**",
+    "**/ncbi-blast-2.13.0+/**",
+]
+
+[lint]
+select = ["F"]      # Pyflakes: undefined names, unused imports, f-string bugs, ...
+ignore = [
+    "F403",         # `from module import *` — used heavily in this project's views
+    "F405",         # name may be undefined due to star imports
+]

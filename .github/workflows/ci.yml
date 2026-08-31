@@ -1,0 +1,80 @@
+name: CI
+
+# Runs on every push to these branches and on every pull request.
+# A red check here blocks merging once branch protection is enabled.
+on:
+  push:
+    branches: [main, ci-cd]
+  pull_request:
+
+# If you push twice quickly, cancel the older run — save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ----------------------------------------------------------------------
+  # Job 1: linting. Informational for now (continue-on-error) because the
+  # legacy code has ~120 Pyflakes findings. We will ratchet this to a hard
+  # failure in a later cleanup module.
+  # ----------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install ruff==0.6.9
+      - name: ruff (informational — does not fail the build yet)
+        continue-on-error: true
+        run: ruff check --output-format=github .
+
+  # ----------------------------------------------------------------------
+  # Job 2: the real gate. A clean machine must be able to install every
+  # dependency, import the whole Django project, and build the static
+  # files. This is what catches "works on my machine" breakage.
+  # ----------------------------------------------------------------------
+  django:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values: settings.py requires these to exist, but none of the
+      # steps below open a database connection.
+      SECRET_KEY: ci-not-a-real-secret
+      DEBUG: "False"
+      DB_NAME: ci
+      DB_USER: ci
+      DB_PASSWORD: ci
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install system build deps for mysqlclient
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config default-libmysqlclient-dev build-essential
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Byte-compile everything (fast syntax check)
+        run: python -m compileall -q apps core utils
+
+      - name: Import project (settings + all apps must load)
+        run: |
+          python -c "import os, django; \
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings'); \
+          django.setup(); \
+          print('settings + installed apps import OK')"
+
+      - name: Build static files
+        run: python manage.py collectstatic --noinput
