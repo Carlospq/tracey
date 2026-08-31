@@ -55,6 +55,9 @@ utils/traceySequenceUpdater/traceySequencesUpdater.*.log
 utils/traceySequenceUploader/incoming/*
 utils/traceySequenceUploader/upload.*.log
 *test.py
+!conftest.py
+!apps/**/test_*.py
+!tests/
 *tmp.py
 utils/motifPredictortmp*
 tmp/*
