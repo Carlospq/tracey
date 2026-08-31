@@ -94,12 +94,18 @@ GitHub self-hosted runner. Instead the server polls for a signed intent:
 ```
 you:     merge PR to main  ->  CI green  ->  git tag -a deploy/<stamp> ; git push --tags
 server:  tracey-deploy.timer fires every 2 min
-         -> poll-deploy.sh: is there a deploy/* tag newer than the last deployed?
+         -> poll-deploy.sh: deploy/* tag newer than the last deployed?
+         -> yes: are that commit's GitHub checks green? (else wait / skip)
          -> yes: DEPLOY_REF=<tag> deploy/deploy.sh   (health-check + auto-rollback)
          -> record the tag as handled
 ```
 
-Pushing the `deploy/*` tag is the approval. Nothing reaches production without it.
+Pushing the `deploy/*` tag is the approval. Nothing reaches production without
+it, and nothing reaches production with a red or still-running CI. The poll
+script queries `api.github.com/.../commits/<sha>/check-runs` unauthenticated
+(public repo); if CI is `pending`/`failed`/`unreachable` it logs once and
+retries on later ticks. `REQUIRE_CI=0` on the unit bypasses the gate; the manual
+`deploy/deploy.sh` path never checks CI.
 
 **Trigger a deploy:**
 
