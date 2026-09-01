@@ -14,7 +14,7 @@ whitenoise==6.12.0
 mysqlclient==2.2.8
 
 # --- Django apps / middleware ---
-django-allauth==0.51.0
+django-allauth==65.19.1
 django-simple-captcha==0.5.17
 django-environ==0.8.1
 django-extensions==4.1
