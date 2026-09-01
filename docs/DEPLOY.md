@@ -12,8 +12,9 @@
 | Code | `/home/tracey/tracey` (git checkout of `main`) |
 | venv | `/home/tracey/tracey_prod` → `bin/python3`, `bin/gunicorn` (use `python3` — the box has several pythons) |
 | Secrets | `/home/tracey/tracey/.env` — untracked, edited by hand, **never** touched by deploys |
-| DB | External MySQL, pre-existing schema, models are `managed = False` |
+| DB | MySQL, **same box** (`localhost:3306`), pre-existing schema, models are `managed = False` |
 | Health check | `curl http://127.0.0.1:5005/` → 200 |
+| Monitoring | Grafana Cloud (Alloy agent, `alloy.service`) — see Module 6 |
 
 ## How a deploy works
 
@@ -197,4 +198,103 @@ To verify the full chain, push a `deploy/*` tag on a commit you know breaks boot
 (e.g. `echo 'raise RuntimeError("x")' >> core/wsgi.py` on a throwaway branch,
 tag it, push only the tag), watch it deploy + auto-rollback, and confirm the
 :rotating_light: arrives. Then delete the tag.
+
+### Monitoring — Grafana Cloud (Module 6)
+
+Prompted by a real ~13min outage (2026-09-01, `gunicorn.service` failed with
+`203/EXEC` after a venv rename left `bin/gunicorn`'s shebang pointing nowhere) that
+went undetected until someone happened to `curl` the site. There was no metrics or
+uptime alerting at all before this module.
+
+**What it is:** [Grafana Alloy](https://grafana.com/docs/alloy/latest/) (one
+collector binary, not separate `node_exporter`/`mysqld_exporter`/`blackbox_exporter`
+processes — Alloy embeds equivalents of all three as components, and something in
+that family is needed anyway to `remote_write` to Grafana Cloud) shipping to
+**Grafana Cloud's free tier** (managed Prometheus + Grafana; Loki/logs came bundled
+with the onboarding wizard for free, not originally planned, kept anyway):
+
+- System metrics (CPU/RAM/disk) — `prometheus.exporter.unix`.
+- MySQL metrics — `prometheus.exporter.mysql`, using a dedicated read-only-ish
+  `alloy_exporter` MySQL user (`PROCESS`, `REPLICATION CLIENT`,
+  `SELECT ON performance_schema.*` — deliberately no access to app tables).
+- **Site availability — two independent probes**, `prometheus.exporter.blackbox`:
+  `tracey_public` (`https://tracey.unil.ch/`, through Apache) and
+  `tracey_gunicorn_local` (`http://127.0.0.1:5005/`, straight to gunicorn — the one
+  that would have caught the 203/EXEC outage instantly). These must be **two
+  separate `prometheus.exporter.blackbox` component instances**, not two `target{}`
+  blocks in one component — Alloy doesn't disambiguate multiple targets within one
+  component in the exported labels, so one silently overwrote the other's samples
+  the first time this was set up.
+- An alert rule (`probe_success < 1`, 1-2min `for`) on both blackbox targets, to a
+  dedicated Slack contact point (a separate webhook from `deploy/notify.sh`'s — kept
+  deploy notifications and monitoring alerts in different channels on purpose).
+
+**Reference files** (`deploy/monitoring/`, NOT applied automatically — same
+convention as `gunicorn.service`):
+- `alloy-config.alloy` — reference copy of `/etc/alloy/config.alloy`.
+- `mysql-secret.example` — template for `/var/lib/alloy/mysql-secret` (the MySQL
+  DSN, chmod 600, owned by the `alloy` system user).
+
+**Install (one-time), on `tracey.unil.ch` as `cpulidoq`:**
+
+1. In the Grafana Cloud UI (**Connections**), run the **"Linux Server"** integration
+   wizard — it gives an install command (installs the `alloy` RPM, writes
+   `/etc/alloy/config.alloy`) and starts `alloy.service`.
+2. **Lock down the config file** — the wizard's install command writes it
+   world-readable (`644 root:root`) even though it embeds a Grafana Cloud API token
+   in plain text:
+   ```bash
+   sudo chown root:alloy /etc/alloy/config.alloy
+   sudo chmod 640 /etc/alloy/config.alloy
+   ```
+3. Create the MySQL monitoring user (adjust the host/CIDR — `localhost` here since
+   the DB is on the same box):
+   ```sql
+   CREATE USER 'alloy_exporter'@'localhost'
+     IDENTIFIED BY '<STRONG_PASSWORD>'
+     WITH MAX_USER_CONNECTIONS 3;
+   GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'alloy_exporter'@'localhost';
+   GRANT SELECT ON performance_schema.* TO 'alloy_exporter'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+4. Run the Grafana Cloud **"MySQL"** integration wizard (pick the classic
+   instance-metrics one, not "Database Observability" — that's a separate billed
+   product). It gives a config snippet expecting a DSN in a `local.file` secret:
+   ```bash
+   printf 'alloy_exporter:<PASSWORD>@tcp(127.0.0.1:3306)/' | sudo tee /var/lib/alloy/mysql-secret > /dev/null
+   sudo chmod 600 /var/lib/alloy/mysql-secret
+   sudo chown alloy /var/lib/alloy/mysql-secret
+   ```
+   **No trailing newline** in that file — a plain `echo` instead of `printf` breaks
+   the exporter with `Error 1102: Incorrect database name '\n'`.
+5. Append (`sudo tee -a /etc/alloy/config.alloy`, never overwrite — it already holds
+   the Linux Server block) the MySQL wizard's snippet, then the blackbox block from
+   `deploy/monitoring/alloy-config.alloy` (two components, per the note above).
+6. `sudo systemctl restart alloy`, `sudo journalctl -u alloy -n 50` — no errors
+   besides the expected root-only `/var/log/*` permission-denied lines from the
+   bundled log tailer (harmless, not fixed).
+7. In Grafana Cloud: **Alerting → Contact points**, add a Slack contact point with
+   its own Incoming Webhook. **Alerting → Alert rules**, new rule on
+   `probe_success{job="integrations/blackbox"} < 1`, eval `1m`, for `1-2m`, notify
+   the contact point above.
+
+**Verify:**
+
+```bash
+sudo systemctl status alloy
+sudo journalctl -u alloy -n 50 --no-pager
+```
+
+In Grafana Cloud → Explore, confirm recent data for `up{job="integrations/node_exporter"}`,
+`mysql_up`, and `probe_success` (both `instance` values). Then, like Module 5.1's
+notification test, break something on purpose and confirm the full alert lifecycle
+in Slack — not just "no data", the actual fire-and-resolve round trip:
+
+```bash
+sudo systemctl stop gunicorn    # both probes should go red within ~1-2min
+# ... confirm [FIRING:2] arrives in Slack for both tracey_public and tracey_gunicorn_local ...
+sudo systemctl start gunicorn
+curl -sI http://127.0.0.1:5005/
+# ... confirm [RESOLVED] arrives for both ...
+```
 
