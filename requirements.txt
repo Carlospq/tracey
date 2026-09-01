@@ -1,28 +1,25 @@
 # Runtime dependencies for traceyDB (production + dev share this file).
 # Dev-only tools (linters, test tooling) live in requirements-dev.txt.
 # Python 3.12 — keep versions pinned so CI and the server match.
-# NOTE: Django 4.2 is EOL. Most dependency updates are blocked until the
-# Django 5.x upgrade — Dependabot PRs for Django-coupled packages will fail CI.
 
 # --- Django core ---
-Django==4.2.30
-asgiref==3.8.1
-sqlparse==0.5.3
+Django==5.2.17
+asgiref==3.12.1
+sqlparse==0.6.0
 pytz==2026.3.post1
 gunicorn==26.2.0
 whitenoise==6.12.0
 mysqlclient==2.2.8
 
 # --- Django apps / middleware ---
-django-allauth==65.19.1
-django-simple-captcha==0.5.17
-django-environ==0.8.1
+django-simple-captcha==0.7.0
+django-environ==0.14.0
 django-extensions==4.1
-django-htmx==1.17.3
+django-htmx==1.29.0
 tablib==3.6.1
-django-tables2==2.7.0
+django-tables2==2.8.0
 django-csp==4.0
-django-permissions-policy==4.22.0
+django-permissions-policy==4.33.0
 Unipath==1.1
 
 # --- HTTP / scraping / graphs (used by management commands and plots.py) ---
