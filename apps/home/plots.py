@@ -22,13 +22,20 @@ logger = logging.getLogger(__name__)
 
 
 def get_motifsColors():
-    N = len(Domains.objects.all())
+    domains = list(Domains.objects.all())
+    N = len(domains)
     HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
     RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
     motifColors = {}
-    for domain, color in zip(Domains.objects.all(), RGB_tuples):
+    for domain, color in zip(domains, RGB_tuples):
         motifColors[domain.domainname] = color
     return motifColors
+
+
+def _rgb_css(color):
+    """(r, g, b) floats in [0, 1] -> a Plotly-compatible "rgb(r, g, b)" string with 0-255 ints."""
+    r, g, b = color
+    return f"rgb({int(r * 255)}, {int(g * 255)}, {int(b * 255)})"
 
 
 def build_domain_plot(protein_length, domains, eval=None):
@@ -60,7 +67,7 @@ def build_domain_plot(protein_length, domains, eval=None):
         label = dom.domaingroup.domain.domainname + " - " + dom.domaingroup.domaingroupname
         motifColors = get_motifsColors()
         domainname = dom.domaingroup.domain.domainname
-        color = 'rgb'+str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
+        color = _rgb_css(motifColors[domainname]) if domainname in motifColors else "#cccccc"
         text = (f"{label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>E-value: {domEval}" if domEval else
                 f"{label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa")
 
@@ -149,7 +156,7 @@ def build_domain_plot_from_PyHammer(protein_length, hit, evalcutoff=0):
             logger.warning("build_domain_plot_from_PyHammer: no Domaingroups row for domaingroupname=%r, skipping domain", label)
             continue
         domainname = domaingroup_for_label.domain.domainname
-        color = 'rgb' + str(motifColors[domainname]) if domainname in motifColors else "#cccccc"
+        color = _rgb_css(motifColors[domainname]) if domainname in motifColors else "#cccccc"
 
         label += " (%s)" % (domEval) if domEval else ""
         text = (f"{domainname} -  {label}<br>Start: {start}<br>End: {end}<br>Length: {end - start + 1} aa<br>E-value: {domEval}" if domEval else
