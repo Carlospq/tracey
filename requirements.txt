@@ -36,7 +36,7 @@ pyhmmer==0.10.15
 biopython==1.83
 dna-features-viewer==3.1.5
 matplotlib==3.8.3
-pandas==2.2.0
+pandas==3.0.5
 numpy==1.26.4
 scikit-learn==1.2.2  # loads pickled lm_*.sav models — must match the version that created them
 xmltodict==1.0.4
