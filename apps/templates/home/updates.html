@@ -42,6 +42,26 @@
                         </div>
 
 						<div class="row update-card">
+                            <p class="update-header">Infrastructure, monitoring & automated deployment</p><hr>
+                            <p class="update-date"><i>Date: 01/09/2026</i></p>
+
+                            <p><b>Major updates:</b></p>
+                            <ul class="update-list">
+                                <li>Automated CI/CD pipeline (GitHub Actions): every change is linted, checked and tested automatically, and tagged releases deploy to the production server without manual steps</li>
+                                <li>Continuous monitoring with Grafana Cloud: server health (CPU, memory, disk), MySQL database activity (queries, connections, traffic, slow queries) and website availability</li>
+                                <li>Automated uptime alerting: the team is notified on Slack within ~1 minute if the site or the application server goes down</li>
+                                <li>Platform upgraded to Django 5 and Python 3.12 for long-term security support and performance</li>
+                            </ul>
+
+                            <p style="margin-top: 20px;"><b>Minor updates:</b></p>
+                            <ul class="update-list">
+                                <li>Two independent availability probes (public site through the web server, and the application server directly) for faster fault isolation</li>
+                                <li>Centralized server and database logs for troubleshooting</li>
+                                <li>Deployment and monitoring runbooks documented for maintainers</li>
+                            </ul>
+                        </div>
+
+						<div class="row update-card">
                             <p class="update-header">Sequences search menu and Features</p><hr>
                             <p class="update-date"><i>Date: 29/06/2026</i></p>
 
