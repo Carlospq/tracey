@@ -250,7 +250,7 @@ for the next level.
 *Template: `apps/templates/home/features.html`. View: `features()` in
 `apps/home/views_admin.py`. Staff-only.*
 
-This is TRACEY's data-maintenance panel: six cards, each with its own form + ajax call + inline
+This is TRACEY's data-maintenance panel: eight cards, each with its own form + ajax call + inline
 script at the bottom of the file.
 
 | Feature | What it does | Ajax endpoint | Script/command behind it |
@@ -261,10 +261,15 @@ script at the bottom of the file.
 | **Upload new sequences** | Uploads a FASTA of new sequences; TRACEY analyzes them against the HMMs and auto-assigns the best-hit motif. | `ajax_upload_sequences` → `views.upload_sequences` | Required FASTA header format documented in `home/help_doc_upload_sequences.html` |
 | **HMM Models (download)** | Downloads TRACEY's HMM profiles (one family or the full database) for external use with `hmmsearch`/`hmmscan`. | `download_hmm_zip` (direct navigation, not ajax) | Catalogs `.hmm` files in `utils/hmmModels/` via `get_hmm_catalog()` |
 | **Build Phylogenetic Tree** | Rebuilds the tree of life for all taxonomies currently in TRACEY, following current NCBI phylogeny. Provides download links for the tree in Newick and PDF form. | `ajax_update_tree` → `views.update_tree` | `utils/ncbi_taxonomy/TreeUpdater.py`, same engine as `manage.py UpdateTraceyTree` |
+| **Update Domaingroups** | Syncs newly added `.hmm` files under `utils/hmmModels/<FAMILY>/` into the system: adds missing entries to the staff family menu, creates the matching `Domaingroups` rows, and rebuilds `MOTIFS.hmmDb`. Detached run; a report opens in a new tab when done. Help: `home/help_doc_update_domaingroups.html`. | `ajax_update_domaingroups` → `views.update_domaingroups` (+ `ajax_update_domaingroups_results` polled for the report) | `utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py`, same engine as `manage.py UpdateDomainGroups` |
+| **Upload HMM Model** | Uploads a new HMMER3 `.hmm` profile into a chosen protein family (the `DOMAIN_CONFIG` families). Validates it (HMMER3 header, `LENG` line, `NAME` line = file name, single profile, ≤5 MB, name unique across families), saves it to `utils/hmmModels/<FAMILY>/`, then chains **Update Domaingroups** so the profile is wired into the menu + `Domaingroups` + `MOTIFS.hmmDb`. "Replace existing profile" allows overwrite. Help: `home/help_doc_upload_hmm_model.html`. | `ajax_upload_hmm` → `views.upload_hmm_model` (report polled via `ajax_update_domaingroups_results`) | saves the file, then `manage.py UpdateDomainGroups` |
 
-Common pattern across all six: a CSRF token in each form, a spinner + status message, and a shared
-flag (`reloadOnAjaxStop`) that reloads the page once any of these long ajax calls finishes, to
-refresh the "last updated" timestamps.
+Common pattern across most cards: a CSRF token in each form, a spinner + status message, and a
+shared flag (`reloadOnAjaxStop`) that reloads the page once any of these long ajax calls finishes,
+to refresh the "last updated" timestamps. **Upload new sequences** and **Update Domaingroups**
+instead POST and then poll a `*_results` endpoint until the per-run log file ends with a
+`DONE_MARKER`, and open the finished HTML report in a new tab (no page reload — their "last run"
+line refreshes on the next visit).
 
 ---
 
@@ -345,8 +350,9 @@ in the template itself rather than in a separate file.
 
 ## 5. Maintenance commands (`manage.py`)
 
-Defined in `apps/management/commands/`. Each one has an equivalent feature in `features.html`
-(section 3) that triggers the same logic from the UI:
+Defined in `apps/management/commands/`. Each one (except `plotTaxonomy`) has an equivalent feature
+in `features.html` (section 3) that triggers the same logic from the UI — `UpdateDomainGroups` is
+reused by two of them (*Update Domaingroups* and *Upload HMM Model*):
 
 | Command | What it does |
 |---|---|
@@ -354,21 +360,21 @@ Defined in `apps/management/commands/`. Each one has an equivalent feature in `f
 | `UpdateTraceyTaxonomies` | Refreshes taxonomies from NCBI. Flag `--taxa` (default `superkingdom`) |
 | `UpdateTraceyTree` | Rebuilds the phylogenetic tree |
 | `ReScanMotifs` | Re-scans HMMs over existing sequences. Requires `--hmm` or `--family` |
+| `UpdateDomainGroups` | Syncs new `.hmm` files under `utils/hmmModels/` into the system (see below). Optional `--log-file` (used by the *Update Domaingroups* feature to write its report). |
 | `plotTaxonomy` | Diagnostic command: draws the taxonomy tree/network for a given scientific name (not part of the data pipeline) |
 
-Additionally, `utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py` is a standalone
-maintenance script — not a `manage.py` command — run via:
+`UpdateDomainGroups` (core logic in `utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py`,
+`update_domaingroups_with_hmms()`) syncs new HMM files under `utils/hmmModels/` into the rest of
+the system: adds any missing entries to the staff `query_sequences_full.py` menu, creates the
+corresponding `Domaingroups` rows in the database, and rebuilds `utils/hmmModels/MOTIFS.hmmDb`
+(concatenates every `.hmm` file and re-indexes with `hmmpress -f`, via `rebuildMotifsHmmDb.py`) so
+`motifScan(proteinlayout="ALL")` picks up the new profiles. It does **not** touch the public
+`query_sequences.py` menu — that still has to be edited by hand (see 7). The equivalent
+*Update Domaingroups* card in `features.html` runs the same command.
 
 ```
-python manage.py shell < utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py
+python manage.py UpdateDomainGroups
 ```
-
-It syncs new HMM files under `utils/hmmModels/` into the rest of the system: adds any missing
-entries to the `query_sequences_full.py` menu, creates the corresponding `Domaingroups` rows in
-the database, and rebuilds `utils/hmmModels/MOTIFS.hmmDb` (concatenates every `.hmm` file and
-re-indexes with `hmmpress -f`, via `rebuildMotifsHmmDb.py`) so `motifScan(proteinlayout="ALL")`
-picks up the new profiles. It does **not** touch the public `query_sequences.py` menu — that
-still has to be edited by hand (see 7).
 
 ---
 
@@ -393,61 +399,82 @@ unrelated to the current access control — that's not the one to touch to grant
 
 ## 7. Adding a new HMM model and generating its Domaingroups
 
-Adding a new HMM profile touches three things that all have to stay in sync: the `.hmm` file
-itself, the `Domaingroups` row in the database, and the domain menu dicts that drive the
-cascading dropdowns on Query/Insert/Verify/Features. Most of this is automated by
-`utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py` (see 5) — this section explains what
-it does step by step so a new HMM can be added correctly.
+A new HMM profile has to keep three things in sync: the `.hmm` file under
+`utils/hmmModels/<FAMILY>/`, its `Domaingroups` row in the database, and the **staff** domain menu
+(`apps/templates/menus/query_sequences_full.py`) that drives the cascading dropdowns on
+Query/Insert/Verify/Features. Two staff-only cards in `features.html` cover this (section 3):
 
-### 7.1 Drop the `.hmm` file in the right place
+- **Upload HMM Model** — upload one `.hmm` into a chosen family; it is validated, filed, and the
+  sync below runs automatically.
+- **Update Domaingroups** — run the sync on its own, after `.hmm` files reached
+  `utils/hmmModels/` by other means (a manual copy, a bulk `scp`, a new family folder).
 
-Add the file to `utils/hmmModels/<FOLDER>/`, where `<FOLDER>` is the family folder already
-mapped in `DOMAIN_CONFIG` at the top of `updateDomainGroupsWithHMMs.py` — e.g. `SNARE`, `HABC`,
+Both use the engine
+`utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py:update_domaingroups_with_hmms()`, also
+runnable directly as `python manage.py UpdateDomainGroups` (section 5).
+
+### 7.1 Naming rules
+
+The file's basename (without `.hmm`) becomes **both** the `Domaingroups.domaingroupname` and the
+staff menu key, and it must equal the profile's `NAME` field (line 2 of the `.hmm`) — motif
+scanning resolves a hit to its domaingroup by that `NAME` (`motifScan()`,
+`apps/home/views_motifs.py`), so a mismatch means the hits are silently dropped.
+
+- A case-insensitive match against an existing menu key, or a per-family alias in `DOMAIN_CONFIG`
+  (e.g. `SNAP` maps `aSnap`/`cSnap` → `aSNAP`/`cSNAP`) → treated as already present, nothing added.
+- Listed in `HMM_BLACKLIST` → skipped entirely (general HMMs superseded by named variants, e.g.
+  the SM `Vps33`/`Vps45` base profiles).
+- Dot notation infers menu hierarchy: `Longin.V` nests under an existing `Longin` key, otherwise
+  it is added at the top of the family subtree.
+- The name must be unique across all family folders.
+
+`DOMAIN_CONFIG` (top of `updateDomainGroupsWithHMMs.py`) maps each family **folder** →
+`(domain_name_in_DB, menu_path[, aliases])`. Families it currently knows: `SNARE`, `HABC`,
 `LONGIN`, `LGL`, `C2`, `AAA.AAA`, `AAA.ND`, `RAS`, `ARF`, `MUN.D1`/`MUN.D2`,
 `NSR.CD`/`NSR.MD`/`NSR.ND`, `PROPPIN`, `RHOMBOID`, `RINT`, `SM.D1`/`SM.D2A`/`SM.D2B`/`SM.D3`,
-`SNAP`, `ZW10`. If the HMM belongs to a brand-new family with no existing folder, create the
-folder and add a new entry to `DOMAIN_CONFIG` (`folder → (domain_name_in_DB, menu_path_list)`)
-before running the script — otherwise it will be skipped.
+`SNAP`, `ZW10`. Folders with no `DOMAIN_CONFIG` entry (`ROD`, `SEC39`) are only picked up for the
+`MOTIFS.hmmDb` rebuild — no menu entry, no `Domaingroups` row — until an entry is added.
 
-The file's basename (without `.hmm`) becomes both the `Domaingroups.domaingroupname` and the
-menu key, so naming matters:
+### 7.2 Option A — the *Upload HMM Model* card (one profile)
 
-- If the name matches (case-insensitive) a menu key that already exists, or a per-folder alias
-  defined in `DOMAIN_CONFIG` (e.g. `SNAP` maps `aSnap`/`cSnap` → `aSNAP`/`cSNAP`), it's treated
-  as already present and nothing new is added.
-- If the name is listed in `HMM_BLACKLIST`, it's skipped entirely — use this for general HMMs
-  that shouldn't get their own menu entry (e.g. the SM `Vps33`/`Vps45` base HMMs, superseded by
-  the `Vps33a`/`Vps33b` variants already in the menu).
-- Dot notation infers hierarchy: `Longin.V` is nested as a child of `Longin` in the menu if a
-  `Longin` key already exists there; otherwise it's added at the top of the family subtree.
+Pick the family, choose/drop the `.hmm`, submit. `upload_hmm_model()`
+(`apps/home/views_admin.py`) rejects the upload unless: it is a HMMER3 profile with a `LENG` line,
+a single profile, ≤ 5 MB, filename `^[A-Za-z0-9][\w.\-]*\.hmm$`, `NAME` == filename, the family is
+in `DOMAIN_CONFIG`, and the name is not already used in another family (tick *Replace existing
+profile* to overwrite one in the **selected** family). It then saves the file into
+`utils/hmmModels/<FAMILY>/` and runs the sync detached; the report opens in a new tab.
 
-### 7.2 Run the sync script
+### 7.3 Option B — copy files + *Update Domaingroups* (bulk / new family)
 
-```
-python manage.py shell < utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py
-```
+For several profiles at once, or a brand-new family:
 
-This does everything else automatically:
+1. If the family folder is new, add a `DOMAIN_CONFIG` entry
+   (`folder → (domain_name_in_DB, menu_path_list)`).
+2. Copy the `.hmm` file(s) into `utils/hmmModels/<FAMILY>/` (names per 7.1).
+3. Run `python manage.py UpdateDomainGroups`, or click **Update Domaingroups** in `features.html`
+   (staff only; detached, report opens in a new tab).
 
-1. **Menu sync** — `sync_menu_with_hmms()` scans `utils/hmmModels/` and adds any `.hmm` not
-   already represented (per the rules in 7.1) to the **staff** menu,
-   `apps/templates/menus/query_sequences_full.py` (see 4.3).
-2. **Database** — `updateDomainGroups()` walks the (updated) menu and, for every key without a
-   matching `Domaingroups` row, creates one linked to its parent `Domains`/`Domaingroups`,
-   reading `domaingrouplength` from the `LENG` field of the corresponding `.hmm` file. Motif
-   scanning (`motifScan()`, `apps/home/views_motifs.py`) resolves each HMM hit against a
-   `Domaingroups` record, so a `.hmm` with no matching row can't be classified/displayed
-   correctly.
+### 7.4 What the sync does
+
+1. **Menu sync** — `sync_menu_with_hmms()` adds any not-yet-represented `.hmm` (per 7.1) to the
+   **staff** menu `apps/templates/menus/query_sequences_full.py`, rewriting that file in place
+   (see 4.3).
+2. **Database** — `updateDomainGroups()` walks the updated menu and creates a `Domaingroups` row
+   for every key that lacks one, linked to its parent `Domains`/`Domaingroups`, with
+   `domaingrouplength` read from the `.hmm` `LENG` field.
 3. **`MOTIFS.hmmDb` rebuild** — `rebuild_motifs_hmmdb()` (`rebuildMotifsHmmDb.py`) concatenates
    every `.hmm` under `utils/hmmModels/` into `utils/hmmModels/MOTIFS.hmmDb` and re-indexes it
-   with `hmmpress -f`, so the new profile is picked up by `motifScan(proteinlayout="ALL")`
-   scans, not just family-scoped ones.
+   with `hmmpress -f` (needs `hmmpress` on `PATH`), so `motifScan(proteinlayout="ALL")` sees the
+   new profile, not just family-scoped scans.
 
-### 7.3 What's still manual
+### 7.5 What's still manual
 
-`apps/templates/menus/query_sequences.py` — the **public** (non-staff) menu — is **not** touched
-by the script. If the new domaingroup should be visible to non-staff users, add it there by hand
-(see 4.3, and 6 for the staff/public distinction).
+- **Public menu** — `apps/templates/menus/query_sequences.py` (non-staff) is **not** touched. Add
+  the new domaingroup there by hand if non-staff users should see it (see 4.3 and 6).
+- **Commit** — the new `.hmm` file(s) and the rewritten `query_sequences_full.py` are both tracked;
+  commit them so the change survives the next deployment.
+- **New families** — need the `DOMAIN_CONFIG` code change (7.1) before either option can wire them
+  into the menu and the database.
 
 ---
 

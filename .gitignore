@@ -52,6 +52,7 @@ apps/static/assets/img/images/TRACEY_phylogeneticTree.png
 apps/static/assets/img/tmpTrees/*
 taxonomyGraph.pdf
 utils/traceySequenceUpdater/traceySequencesUpdater.*.log
+utils/traceySequenceUpdater/domaingroups_logs/*
 utils/traceySequenceUploader/incoming/*
 utils/traceySequenceUploader/upload.*.log
 *test.py

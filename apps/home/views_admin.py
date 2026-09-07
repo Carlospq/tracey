@@ -1,6 +1,8 @@
 import os
 import re
 import json
+import shutil
+import tempfile
 import subprocess
 import datetime
 import mimetypes
@@ -16,6 +18,14 @@ from .models import *
 from .views_verify import staff_login_required, hmm_download_required
 from apps.templates.menus.query_sequences_full import menu, get_keys_recursively
 from utils.traceySequenceUploader.uploadSequences import DONE_MARKER
+from utils.traceySequenceUpdater.updateDomainGroupsWithHMMs import (
+    DONE_MARKER as DOMAINGROUPS_DONE_MARKER,
+    DOMAIN_CONFIG as HMM_DOMAIN_CONFIG,
+)
+
+# Own subdirectory so these logs don't collide with the traceySequencesUpdater.*.log
+# files that features() / read_update_sequences_results scan for in the parent dir.
+DOMAINGROUPS_DIR = os.path.join('utils', 'traceySequenceUpdater', 'domaingroups_logs')
 
 
 @login_required(login_url="/noPermits.html")
@@ -78,12 +88,31 @@ def features(request):
     else:
         last_tree_update = 'Last update not found'
 
+    dgPsLine = [x for x in str(runout.stdout.decode("utf-8")).strip().split("\n") if "UpdateDomainGroups" in x]
+    dgStatus = dgPsLine[0].split()[7] if dgPsLine else ''
+    if "R" in dgStatus or "S" in dgStatus:
+        last_domaingroups_update = "Update in progress"
+    else:
+        try:
+            dg_logs = sorted(f for f in os.listdir(DOMAINGROUPS_DIR)
+                             if f.startswith('domaingroups.') and f.endswith('.log'))
+        except FileNotFoundError:
+            dg_logs = []
+        if dg_logs:
+            dg_mtime = os.stat(os.path.join(DOMAINGROUPS_DIR, dg_logs[-1])).st_mtime
+            dg_date = str(datetime.datetime.fromtimestamp(dg_mtime)).split(" ")[0]
+            last_domaingroups_update = 'Today' if dg_date == str(datetime.datetime.now().date()) else dg_date
+        else:
+            last_domaingroups_update = 'Last update not found'
+
     segment = request.path.split('/')[-1]
     context = {"segment": segment,
                "last_taxonomy_update": last_taxonomy_update,
                "last_sequences_update": last_sequences_update,
                "last_sequences_update_end": last_sequences_update_end,
                "last_tree_update": last_tree_update,
+               "last_domaingroups_update": last_domaingroups_update,
+               "hmm_upload_families": sorted(HMM_DOMAIN_CONFIG.keys()),
                "domains": [d.domainname for d in Domains.objects.all()],
                "hmm_catalog": get_hmm_catalog(),
                "hmm_families": list(menu.keys()),
@@ -367,3 +396,169 @@ def read_upload_sequences_results(request):
 
     html = content.split(DONE_MARKER)[0]
     return JsonResponse({'done': True, 'html': html})
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def update_domaingroups(request):
+
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+
+    os.makedirs(DOMAINGROUPS_DIR, exist_ok=True)
+    stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    log_name = f'domaingroups.{stamp}.log'
+    log_path = os.path.join(DOMAINGROUPS_DIR, log_name)
+
+    cmd = ['python3', 'manage.py', 'UpdateDomainGroups', '--log-file', log_path]
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    return JsonResponse({'log_file': log_name})
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def read_update_domaingroups_results(request):
+    log_file = request.GET.get('log_file', '')
+    if not re.match(r'^[\w\-\.]+$', log_file) or log_file.startswith('.'):
+        return HttpResponse(status=400)
+
+    log_path = os.path.join(DOMAINGROUPS_DIR, log_file)
+    try:
+        with open(log_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except FileNotFoundError:
+        return JsonResponse({'done': False})
+
+    if DOMAINGROUPS_DONE_MARKER not in content:
+        return JsonResponse({'done': False})
+
+    html = content.split(DOMAINGROUPS_DONE_MARKER)[0]
+    return JsonResponse({'done': True, 'html': html})
+
+
+HMM_MODELS_DIR = os.path.join('utils', 'hmmModels')
+
+
+@login_required(login_url="/noPermits.html")
+@staff_login_required
+def upload_hmm_model(request):
+    """
+    Save an uploaded HMM profile into utils/hmmModels/<FAMILY>/ and then run the
+    UpdateDomainGroups sync (menu + Domaingroups + MOTIFS.hmmDb) detached, exactly
+    like update_domaingroups. The client polls ajax_update_domaingroups_results.
+    """
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+
+    family = request.POST.get('family', '')
+    if not family:
+        return HttpResponse('Please select a protein family.', status=400)
+    if family not in HMM_DOMAIN_CONFIG:
+        return HttpResponse('Unknown protein family "%s".' % family, status=400)
+
+    if 'hmm_file' not in request.FILES:
+        return HttpResponse('No file received.', status=400)
+
+    uploaded = request.FILES['hmm_file']
+    replace = request.POST.get('replace', '') == 'true'
+
+    name = os.path.basename(uploaded.name or '')
+    if not re.match(r'^[A-Za-z0-9][\w.\-]*\.hmm$', name):
+        return HttpResponse('Invalid file name: use only letters, digits, "._-" and a .hmm '
+                            'extension (no spaces). The name without ".hmm" becomes the menu key.',
+                            status=400)
+
+    if uploaded.size > 5 * 1024 * 1024:
+        return HttpResponse('File too large for a single HMM profile (limit 5 MB).', status=400)
+
+    # ── content validation on a temp copy ────────────────────────────────────
+    fd, tmp_path = tempfile.mkstemp(suffix='.hmm')
+    try:
+        with os.fdopen(fd, 'wb') as tmp:
+            for chunk in uploaded.chunks():
+                tmp.write(chunk)
+
+        try:
+            with open(tmp_path, 'r', encoding='utf-8', errors='replace') as fh:
+                head = [next(fh, '') for _ in range(3)]
+                rest = fh.read()
+        except OSError:
+            return HttpResponse('Could not read the uploaded file.', status=400)
+
+        if not head[0].startswith('HMMER3/'):
+            return HttpResponse('Not a HMMER3 profile file (expected a "HMMER3/..." first line).',
+                                status=400)
+        if not any(l.startswith('LENG ') for l in head + rest.splitlines()):
+            return HttpResponse('Malformed HMM file: no "LENG" line found.', status=400)
+
+        try:
+            import pyhmmer
+            with pyhmmer.plan7.HMMFile(tmp_path) as hf:
+                parsed = hf.read()
+                if parsed is None:
+                    raise ValueError('no complete HMM profile found')
+                extra = hf.read()  # a single-profile file must have exactly one
+            if extra is not None:
+                return HttpResponse('File contains more than one HMM profile — upload one at a time.',
+                                    status=400)
+        except Exception as e:
+            return HttpResponse('Unreadable / corrupt HMM file: %s' % e, status=400)
+
+        # The profile's NAME field (line 2) is what motif scanning resolves a hit to
+        # (views_motifs.py: Domaingroups.objects.filter(domaingroupname=hit.name)), while
+        # the Domaingroups row is created from the file name — the two must be identical.
+        stem = name[:-4]
+        hmm_name = (parsed.name or b'').decode('utf-8', 'replace')
+        if hmm_name != stem:
+            return HttpResponse(
+                'The profile\'s NAME line is "%s" but the file is "%s". They must match: rename the '
+                'file to "%s.hmm", or edit the NAME line in the .hmm file to "%s".'
+                % (hmm_name, name, hmm_name, stem), status=400)
+
+        # ── collision checks ────────────────────────────────────────────────
+        base_dir = os.path.realpath(HMM_MODELS_DIR)
+        family_dir = os.path.realpath(os.path.join(base_dir, family))
+        if not family_dir.startswith(base_dir + os.sep) or not os.path.isdir(family_dir):
+            return HttpResponse('Family folder not found.', status=400)
+
+        target = os.path.join(family_dir, name)
+        if os.path.exists(target) and not replace:
+            return HttpResponse('Profile "%s" already exists in family %s — tick "Replace existing '
+                                'profile" to overwrite it.' % (name, family), status=409)
+
+        lname = name.lower()
+        for other in HMM_DOMAIN_CONFIG:
+            if other == family:
+                continue
+            other_dir = os.path.join(base_dir, other)
+            if not os.path.isdir(other_dir):
+                continue
+            if any(f.lower() == lname for f in os.listdir(other_dir)):
+                return HttpResponse(
+                    'HMM profile names must be unique across families, and "%s" already exists in '
+                    'family %s (you selected %s). To update that profile, select %s above and tick '
+                    '"Replace existing profile". To add a different profile to %s, rename the file '
+                    'first.' % (name, other, family, other, family),
+                    status=409)
+
+        shutil.move(tmp_path, target)
+        tmp_path = None
+        try:
+            os.chmod(target, 0o644)  # mkstemp created it 0600; match sibling .hmm files
+        except OSError:
+            pass
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    # ── chain the sync (detached), same as update_domaingroups ───────────────
+    os.makedirs(DOMAINGROUPS_DIR, exist_ok=True)
+    stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    log_name = f'domaingroups.{stamp}.log'
+    log_path = os.path.join(DOMAINGROUPS_DIR, log_name)
+
+    cmd = ['python3', 'manage.py', 'UpdateDomainGroups', '--log-file', log_path]
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    return JsonResponse({'log_file': log_name, 'saved': f'{family}/{name}'})
