@@ -1,0 +1,58 @@
+<div style="padding: 15px;">
+
+	<p><b>What this feature does</b></p>
+	<p>It brings newly added HMM profiles into the rest of TRACEY, in three steps:</p>
+	<ol>
+		<li><b>Menu sync</b> &mdash; scans <code>utils/hmmModels/&lt;FAMILY&gt;/</code> and adds any
+			<code>.hmm</code> file that is not already represented to the <b>staff</b> protein-family
+			menu (<code>apps/templates/menus/query_sequences_full.py</code>), which drives the
+			cascading dropdowns on Query / Insert / Verify / Features.</li>
+		<li><b>Database</b> &mdash; walks the updated menu and, for every key without a matching
+			<code>Domaingroups</code> row, creates one linked to its parent
+			<code>Domains</code> / <code>Domaingroups</code>, reading <code>domaingrouplength</code>
+			from the <code>LENG</code> field of the corresponding <code>.hmm</code> file.</li>
+		<li><b>MOTIFS.hmmDb rebuild</b> &mdash; concatenates every <code>.hmm</code> under
+			<code>utils/hmmModels/</code> into <code>utils/hmmModels/MOTIFS.hmmDb</code> and
+			re-indexes it with <code>hmmpress -f</code>, so the new profile is picked up by
+			full-database motif scans, not just family-scoped ones.</li>
+	</ol>
+
+	<p style="margin-top: 15px;"><b>When to use it</b></p>
+	<p>Run it after dropping one or more <code>.hmm</code> files into an existing family folder
+		under <code>utils/hmmModels/</code> (<code>SNARE</code>, <code>C2</code>, <code>RAS</code>,
+		<code>SM.D1</code>, <code>SNAP</code>, &hellip;). A brand-new family needs a new folder and a
+		new entry in <code>DOMAIN_CONFIG</code> at the top of
+		<code>utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py</code> first, otherwise it is
+		skipped.</p>
+
+	<p style="margin-top: 15px;"><b>How a profile name is handled</b></p>
+	<p>The file basename (without <code>.hmm</code>) becomes both the
+		<code>Domaingroups.domaingroupname</code> and the menu key:</p>
+	<ul>
+		<li>If it matches (case-insensitively) an existing menu key, or a per-folder alias defined
+			in <code>DOMAIN_CONFIG</code> (e.g. <code>aSnap</code>/<code>cSnap</code> &rarr;
+			<code>aSNAP</code>/<code>cSNAP</code>), it is treated as already present.</li>
+		<li>If it is listed in <code>HMM_BLACKLIST</code> it is skipped entirely (for general HMMs
+			that should not get their own menu entry).</li>
+		<li>Dot notation infers hierarchy: <code>Longin.V</code> is nested under an existing
+			<code>Longin</code> key, otherwise added at the top of the family subtree.</li>
+	</ul>
+
+	<p style="margin-top: 15px;"><b>Notes</b></p>
+	<ul>
+		<li>The <b>public</b> menu (<code>apps/templates/menus/query_sequences.py</code>) is
+			<b>not</b> touched &mdash; if the new domaingroup should be visible to non-staff users,
+			add it there by hand.</li>
+		<li>This feature rewrites the tracked file
+			<code>apps/templates/menus/query_sequences_full.py</code>; that change must be committed
+			to keep it after the next deployment.</li>
+		<li>Requires HMMER3 (<code>hmmpress</code>) on the server's <code>PATH</code>.</li>
+		<li>The same logic is available on the command line as
+			<code>python manage.py UpdateDomainGroups</code>.</li>
+	</ul>
+
+	<p style="margin-top: 15px;">When the run finishes, a report listing the added menu keys, the
+		created <code>Domaingroups</code> rows and the <code>MOTIFS.hmmDb</code> rebuild opens in a
+		new tab.</p>
+
+</div>

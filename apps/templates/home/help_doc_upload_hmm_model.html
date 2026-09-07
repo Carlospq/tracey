@@ -1,0 +1,58 @@
+<div style="padding: 15px;">
+
+	<p><b>What this feature does</b></p>
+	<p>Uploads a new HMMER3 profile (<code>.hmm</code>) into a protein family and immediately wires
+		it into the site:</p>
+	<ol>
+		<li>The file is validated (must be a real HMMER3 profile, with a <code>LENG</code> line, at
+			most 5&nbsp;MB) and saved into <code>utils/hmmModels/&lt;FAMILY&gt;/</code>.</li>
+		<li>The <b>Update Domaingroups</b> sync then runs automatically: the profile is added to the
+			staff protein-family menu, a matching <code>Domaingroups</code> row is created, and the
+			combined <code>MOTIFS.hmmDb</code> database is rebuilt.</li>
+	</ol>
+	<p>The sync report opens in a new tab when it finishes.</p>
+
+	<p style="margin-top: 15px;"><b>Naming matters</b></p>
+	<p>The file name <b>without</b> the <code>.hmm</code> extension becomes both the menu key and the
+		<code>Domaingroups.domaingroupname</code>. Use only letters, digits and <code>. _ -</code>
+		(no spaces).</p>
+	<ul>
+		<li>Match the family's existing convention, e.g. <code>Longin.VII.hmm</code> &mdash; dot
+			notation nests <code>Longin.VII</code> under <code>Longin</code> in the menu.</li>
+		<li>The <code>NAME</code> line (line&nbsp;2) inside the <code>.hmm</code> file must be
+			identical to the file name without <code>.hmm</code> &mdash; motif scanning matches a
+			hit to its domaingroup by that <code>NAME</code>. The upload is rejected if they differ.</li>
+		<li>If the name already matches (case-insensitively) an existing menu key, or a per-family
+			alias, it is treated as already present and no new menu entry / row is created (the
+			file is still saved and included in <code>MOTIFS.hmmDb</code>).</li>
+		<li>A profile name must be unique across all families (motif scanning resolves a hit to a
+			single profile file by name). If the name already exists in <b>another</b> family the
+			upload is rejected with a message telling you which family owns it &mdash; to update
+			that profile, pick its family above and tick <i>Replace existing profile</i>; to add a
+			genuinely different profile here, rename the file first.</li>
+	</ul>
+	<p>See <a href="help_doc_update_domaingroups.html" target="_blank" style="text-decoration: underline; color: blue">the Update Domaingroups help</a>
+		for the full set of naming rules (blacklist, aliases, dot-hierarchy).</p>
+
+	<p style="margin-top: 15px;"><b>Protein family list</b></p>
+	<p>Only families that the sync knows how to wire in are listed (the folders configured in
+		<code>DOMAIN_CONFIG</code>). A brand-new family needs a small code change
+		(<code>utils/traceySequenceUpdater/updateDomainGroupsWithHMMs.py</code>) before its profiles
+		can be uploaded here.</p>
+
+	<p style="margin-top: 15px;"><b>Replace existing profile</b></p>
+	<p>By default an upload whose file name already exists in the chosen family is rejected. Tick
+		<i>Replace existing profile</i> to overwrite it (use this to update a profile with a newer
+		build).</p>
+
+	<p style="margin-top: 15px;"><b>Notes</b></p>
+	<ul>
+		<li>The uploaded <code>.hmm</code> file and the rewritten
+			<code>apps/templates/menus/query_sequences_full.py</code> must be committed to the
+			repository to survive the next deployment.</li>
+		<li>The <b>public</b> menu (<code>apps/templates/menus/query_sequences.py</code>) is not
+			touched &mdash; add the new domaingroup there by hand if non-staff users should see it.</li>
+		<li>Requires HMMER3 (<code>hmmpress</code>) on the server's <code>PATH</code>.</li>
+	</ul>
+
+</div>

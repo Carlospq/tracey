@@ -158,98 +158,104 @@
 
                         <div class="features-container">
 
-							<!-- Update Taxonomies -->
-                            <div class="feature-card">
-                                <div class="feature-header">Update Taxonomies</div>
+							<!-- Upload HMM Model -->
+							<div class="feature-card">
+                                <div class="feature-header">Upload HMM Model
+                                    <a href="help_doc_upload_hmm_model.html" onclick="window.open('help_doc_upload_hmm_model.html', 'newwindow', 'width=750,height=550'); return false;" target="popup" class="help-link header-help-link" title="Full explanation of the Upload HMM Model feature.">?</a>
+                                </div>
                                 <div class="feature-body">
-                                    <form method='post' action='#' name="UpdateTaxonomyForm" id="UpdateTaxonomyForm">
+                                    <form method='post' action='#' name="UploadHmmModelForm" id="UploadHmmModelForm" enctype="multipart/form-data">
                                     {% csrf_token %}
                                     <div class="feature-body-main">
-                                        <p style="margin-bottom: 15px;">TRACEY taxonomies will be updated with current NCBI information.</p>
-                                        <p style="margin-bottom: 15px;">The most recent NCBI taxonomy data will be downloaded and compared against Tracey Taxonomies. New NCBI taxonomies will be created in TRACEY if neceessary.</p>
-                                        <img src="{{ASSETS_ROOT}}/img/images/UpdateTaxonomy.png" alt="Update Taxonomy" style="margin: auto; margin-top: 10px; width: 300px; height: 150px; border-radius: 10px 10px 10px 10px;">
-                                        <p style="font-size: 13px;"> Check last update results <a href="update_taxonomy_results" target="_blank">here</a></p>
+                                        <p style="margin-bottom: 15px;">Upload a new HMMER3 profile (<code>.hmm</code>) into a protein family.</p>
+                                        <p style="margin-bottom: 15px;">The file is validated and saved into <code>utils/hmmModels/&lt;FAMILY&gt;/</code>, then <b>Update Domaingroups</b> runs automatically to wire it into the family menu, the <b>Domaingroups</b> table and <code>MOTIFS.hmmDb</code>. The sync report opens in a new tab.</p>
+                                        <p style="margin-bottom: 15px; font-size: 13px;">The file name without <code>.hmm</code> becomes the menu key and the domaingroup name &mdash; see the <a href="help_doc_upload_hmm_model.html" target="_blank" style="text-decoration: underline; color: blue">naming rules</a>.</p>
+
+                                        <div style="margin-top: 20px;">
+                                            <label for="hmm_upload_family" style="display: block; margin-bottom: 6px; font-size: 14px;">Protein family:</label>
+                                            <select id="hmm_upload_family" name="family" style="width: 100%; font-size: 15px; padding: 4px;">
+                                                <option value="" selected>&mdash; select a family &mdash;</option>
+                                                {% for f in hmm_upload_families %}
+                                                <option value="{{ f }}">{{ f }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <label id="hmm_drop_zone" for="hmm_upload_file" style="display:block; margin-top:14px; padding:18px 10px; border:2px dashed #1F2937; border-radius:8px; cursor:pointer; font-size:13px; background:#fff;">
+                                            <span id="hmm_drop_label">Click to choose a <code>.hmm</code> file, or drop it here</span>
+                                            <input type="file" id="hmm_upload_file" name="hmm_file" accept=".hmm" style="display:none;">
+                                        </label>
+
+                                        <label style="display:block; margin-top:12px; font-size:12px;">
+                                            <input type="checkbox" id="hmm_upload_replace" style="margin-right:4px;">Replace existing profile
+                                        </label>
                                     </div>
                                     <div class="feature-body-footer">
-                                        {% if last_taxonomy_update != "Update in progress" %}
-											<input type="submit" value="Update Taxonomy" name='update_taxonomy' id='update_taxonomy'>
-										{% endif %}
-                                        <i><p class="p-footer" id='taxonomy_last_update'>Last update on: {{last_taxonomy_update}}</p></i>
+                                        <input type="submit" value="Upload HMM Model" id="upload_hmm_btn">
                                     </div>
                                     <div class="progress-bar" style="background: transparent;">
-                                        <div id="loader_taxonomy" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                        <div id="loader_upload_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
                                             <div class="loader"></div>
                                         </div>
-                                        <div id="loader_msg_taxonomy" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                        <div id="loader_msg_upload_hmm" style="text-align: left; padding: 0 4px 20px; margin: auto; display: none; max-width: 100%; font-size: 13px; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"></div>
                                     </div>
                                     </form>
                                 </div>
                             </div>
 
-							<!-- Update Sequences -->
+							<!-- Update Domaingroups -->
 							<div class="feature-card">
-                                <div class="feature-header">Update TRACEY Sequences
-                                    <a href="help_doc_update_sequences.html" onclick="window.open('help_doc_update_sequences.html', 'newwindow', 'width=700,height=500'); return false;" target="popup" class="help-link header-help-link" title="Full explanation of the Update Sequences options.">?</a>
+                                <div class="feature-header">Update Domaingroups
+                                    <a href="help_doc_update_domaingroups.html" onclick="window.open('help_doc_update_domaingroups.html', 'newwindow', 'width=750,height=550'); return false;" target="popup" class="help-link header-help-link" title="Full explanation of the Update Domaingroups feature.">?</a>
                                 </div>
                                 <div class="feature-body">
-									<form method='post' action='#' name="UpdateSequencesForm" id="UpdateSequencesForm">
-										{% csrf_token %}
-										<div class="feature-body-main">
-											<p style="margin-bottom: 12px; font-size: 15px;">Sequences from TRACEY that were imported from NCBI (i.e. that store an NCBI ID) are checked against current NCBI data: accession, sequence status (live/replaced/suppressed/dead) and shortname are refreshed, and motifs are (re-)scanned when missing.</p>
-											<p style="margin-bottom: 12px; font-size: 15px;">'Live' sequences without an NCBI Id are manually curated and will remain untouched.</p>
-											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" alt="Update Sequences" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
-											{% if last_sequences_update_end != "Update in progress" %}
-												<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
-											{% endif %}
-										</div>
-										<div class="feature-body-footer">
-											{% if last_sequences_update_end != "Update in progress" %}
+                                    <form method='post' action='#' name="UpdateDomainGroupsForm" id="UpdateDomainGroupsForm">
+                                    {% csrf_token %}
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Sync newly added HMM profiles into the rest of TRACEY.</p>
+                                        <p style="margin-bottom: 15px;">Scans <code>utils/hmmModels/&lt;FAMILY&gt;/</code>, adds any new <code>.hmm</code> to the staff protein-family menu, creates the matching <b>Domaingroups</b> rows in the database, and rebuilds the concatenated <code>MOTIFS.hmmDb</code> profile database.</p>
+                                        <p style="margin-bottom: 15px;">Run this after dropping new <code>.hmm</code> files into an existing family folder.</p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        {% if last_domaingroups_update != "Update in progress" %}
+											<input type="submit" value="Update Domaingroups" name='update_domaingroups' id='update_domaingroups_btn'>
+										{% endif %}
+                                        <i><p class="p-footer" id='domaingroups_last_update'>Last run on: {{last_domaingroups_update}}</p></i>
+                                    </div>
+                                    <div class="progress-bar" style="background: transparent;">
+                                        <div id="loader_domaingroups" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                            <div class="loader"></div>
+                                        </div>
+                                        <div id="loader_msg_domaingroups" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                    </div>
+                                    </form>
+                                </div>
+                            </div>
 
-												<!-- Row 1: species selection -->
-												<div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
-													<label style="font-size:12px;">
-														<input type="radio" name="speciesMode" value="All" id="speciesModeAll" checked>
-														All species
-													</label>
-													<label style="font-size:12px;">
-														<input type="radio" name="speciesMode" value="shortname" id="speciesModeShortname">
-														Shortname:
-													</label>
-													<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" class="help-link" title="Restrict the update to one species/taxon, identified by its shortname (e.g. HoSa) or scientific name. Type 2+ characters to search; click a suggestion to fill the box. Descendant taxa (subspecies/strains) are included automatically. Leave on 'All species' to update every NCBI-sourced sequence in TRACEY.">?</a>
-													<div id="shortname-update-wrapper" style="position:relative; display:none;">
-														<input type="text" id="shortNameText" name="shortNameText"
-															   placeholder="e.g. HoSa" autocomplete="off"
-															   style="width:110px; font-size:12px;">
-														<div id="shortname-update-results"
-															 style="display:none; position:absolute; top:100%; left:0; z-index:200;
-																	background:#fff; border:1px solid #ccc; border-radius:4px;
-																	min-width:220px; max-height:180px; overflow-y:auto; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15);">
-														</div>
-													</div>
-												</div>
-
-												<!-- Row 2: protein family + submit -->
-												<div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
-													<select id="domain" name="domain" title="Only sequences that already carry a motif of this protein family will be checked against NCBI. 'SNARE' also covers Habc-domain sequences.">
-														{% for domain in domains %}
-															<option value="{{ domain }}">{{ domain }}</option>
-														{% endfor %}
-													</select>
-													<input class="mt-1" type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
-												</div>
-											{% endif %}
-											<i><p class="p-footer" id='sequences_last_update'>Last update on: {{last_sequences_update}}</p></i>
-											<i><p id='last_sequences_update_end'><b>{{ last_sequences_update_end }}</b></p></i>
-										</div>
-										<div class="progress-bar" style="background: transparent;">
-											<div id="loader_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
-												<div class="loader"></div>
-											</div>
-											<div id="loader_msg_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
-										</div>
-
-									</form>
-								</div>
+							<!-- Download HMM Models -->
+                            <div class="feature-card">
+                                <div class="feature-header">Download HMM Models</div>
+                                <div class="feature-body">
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">Download TRACEY HMM profile models for use with HMMER3 (<code>hmmsearch</code>, <code>hmmscan</code>).</p>
+                                        <p style="margin-bottom: 10px;">Select a protein family or the full TRACEY database:</p>
+                                        <select id="hmm_selection" style="width: 100%; font-size: 15px; padding: 4px;">
+                                            <option value="TRACEY_db">TRACEY db (full database)</option>
+                                            {% for family, files in hmm_catalog.families.items %}
+                                            <option value="{{ family }}">{{ family }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p id="hmm_hint" style="font-size: 12px; margin-top: 10px; color: #555;">
+                                            TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)
+                                        </p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        <input type="button" id="download_hmm_btn" value="Download .zip">
+                                    </div>
+                                    <div id="loader_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                        <div class="loader"></div>
+                                    </div>
+                                </div>
                             </div>
 
 							<!-- Re-scan Motifs -->
@@ -357,6 +363,100 @@
 
 							</div>
 
+							<!-- Update Taxonomies -->
+                            <div class="feature-card">
+                                <div class="feature-header">Update Taxonomies</div>
+                                <div class="feature-body">
+                                    <form method='post' action='#' name="UpdateTaxonomyForm" id="UpdateTaxonomyForm">
+                                    {% csrf_token %}
+                                    <div class="feature-body-main">
+                                        <p style="margin-bottom: 15px;">TRACEY taxonomies will be updated with current NCBI information.</p>
+                                        <p style="margin-bottom: 15px;">The most recent NCBI taxonomy data will be downloaded and compared against Tracey Taxonomies. New NCBI taxonomies will be created in TRACEY if neceessary.</p>
+                                        <img src="{{ASSETS_ROOT}}/img/images/UpdateTaxonomy.png" alt="Update Taxonomy" style="margin: auto; margin-top: 10px; width: 300px; height: 150px; border-radius: 10px 10px 10px 10px;">
+                                        <p style="font-size: 13px;"> Check last update results <a href="update_taxonomy_results" target="_blank">here</a></p>
+                                    </div>
+                                    <div class="feature-body-footer">
+                                        {% if last_taxonomy_update != "Update in progress" %}
+											<input type="submit" value="Update Taxonomy" name='update_taxonomy' id='update_taxonomy'>
+										{% endif %}
+                                        <i><p class="p-footer" id='taxonomy_last_update'>Last update on: {{last_taxonomy_update}}</p></i>
+                                    </div>
+                                    <div class="progress-bar" style="background: transparent;">
+                                        <div id="loader_taxonomy" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+                                            <div class="loader"></div>
+                                        </div>
+                                        <div id="loader_msg_taxonomy" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+                                    </div>
+                                    </form>
+                                </div>
+                            </div>
+
+							<!-- Update Sequences -->
+							<div class="feature-card">
+                                <div class="feature-header">Update TRACEY Sequences
+                                    <a href="help_doc_update_sequences.html" onclick="window.open('help_doc_update_sequences.html', 'newwindow', 'width=700,height=500'); return false;" target="popup" class="help-link header-help-link" title="Full explanation of the Update Sequences options.">?</a>
+                                </div>
+                                <div class="feature-body">
+									<form method='post' action='#' name="UpdateSequencesForm" id="UpdateSequencesForm">
+										{% csrf_token %}
+										<div class="feature-body-main">
+											<p style="margin-bottom: 12px; font-size: 15px;">Sequences from TRACEY that were imported from NCBI (i.e. that store an NCBI ID) are checked against current NCBI data: accession, sequence status (live/replaced/suppressed/dead) and shortname are refreshed, and motifs are (re-)scanned when missing.</p>
+											<p style="margin-bottom: 12px; font-size: 15px;">'Live' sequences without an NCBI Id are manually curated and will remain untouched.</p>
+											<img src="{{ASSETS_ROOT}}/img/images/UpdateSequences.png" alt="Update Sequences" style="margin: auto; margin-top: 10px; width: 150px; height: auto; border-radius: 10px 10px 10px 10px;">
+											{% if last_sequences_update_end != "Update in progress" %}
+												<p style="font-size: 13px;"> Check last update results <a href="update_sequences_results" target="_blank">here</a></p>
+											{% endif %}
+										</div>
+										<div class="feature-body-footer">
+											{% if last_sequences_update_end != "Update in progress" %}
+
+												<!-- Row 1: species selection -->
+												<div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
+													<label style="font-size:12px;">
+														<input type="radio" name="speciesMode" value="All" id="speciesModeAll" checked>
+														All species
+													</label>
+													<label style="font-size:12px;">
+														<input type="radio" name="speciesMode" value="shortname" id="speciesModeShortname">
+														Shortname:
+													</label>
+													<a href="help_doc_shortname.html" onclick="window.open('help_doc_shortname.html', 'newwindow', 'width=700,height=450'); return false;" target="popup" class="help-link" title="Restrict the update to one species/taxon, identified by its shortname (e.g. HoSa) or scientific name. Type 2+ characters to search; click a suggestion to fill the box. Descendant taxa (subspecies/strains) are included automatically. Leave on 'All species' to update every NCBI-sourced sequence in TRACEY.">?</a>
+													<div id="shortname-update-wrapper" style="position:relative; display:none;">
+														<input type="text" id="shortNameText" name="shortNameText"
+															   placeholder="e.g. HoSa" autocomplete="off"
+															   style="width:110px; font-size:12px;">
+														<div id="shortname-update-results"
+															 style="display:none; position:absolute; top:100%; left:0; z-index:200;
+																	background:#fff; border:1px solid #ccc; border-radius:4px;
+																	min-width:220px; max-height:180px; overflow-y:auto; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15);">
+														</div>
+													</div>
+												</div>
+
+												<!-- Row 2: protein family + submit -->
+												<div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
+													<select id="domain" name="domain" title="Only sequences that already carry a motif of this protein family will be checked against NCBI. 'SNARE' also covers Habc-domain sequences.">
+														{% for domain in domains %}
+															<option value="{{ domain }}">{{ domain }}</option>
+														{% endfor %}
+													</select>
+													<input class="mt-1" type="submit" value="Update Sequences" name='update_sequences' id='update_sequences'>
+												</div>
+											{% endif %}
+											<i><p class="p-footer" id='sequences_last_update'>Last update on: {{last_sequences_update}}</p></i>
+											<i><p id='last_sequences_update_end'><b>{{ last_sequences_update_end }}</b></p></i>
+										</div>
+										<div class="progress-bar" style="background: transparent;">
+											<div id="loader_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
+												<div class="loader"></div>
+											</div>
+											<div id="loader_msg_sequences" style="text-align: center; padding-bottom: 20px; margin: auto; display: none; word-wrap: break-word; word-break: break-word;"></div>
+										</div>
+
+									</form>
+								</div>
+                            </div>
+
 							<!-- Upload new sequences -->
 							<div class="feature-card">
 
@@ -397,32 +497,6 @@
 
                                 </div>
 							</div>
-
-							<!-- HMM Models -->
-                            <div class="feature-card">
-                                <div class="feature-header">HMM Models</div>
-                                <div class="feature-body">
-                                    <div class="feature-body-main">
-                                        <p style="margin-bottom: 15px;">Download TRACEY HMM profile models for use with HMMER3 (<code>hmmsearch</code>, <code>hmmscan</code>).</p>
-                                        <p style="margin-bottom: 10px;">Select a protein family or the full TRACEY database:</p>
-                                        <select id="hmm_selection" style="width: 100%; font-size: 15px; padding: 4px;">
-                                            <option value="TRACEY_db">TRACEY db (full database)</option>
-                                            {% for family, files in hmm_catalog.families.items %}
-                                            <option value="{{ family }}">{{ family }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <p id="hmm_hint" style="font-size: 12px; margin-top: 10px; color: #555;">
-                                            TRACEY db: MOTIFS.hmmDb + HMMER3 index files (.h3f .h3i .h3m .h3p)
-                                        </p>
-                                    </div>
-                                    <div class="feature-body-footer">
-                                        <input type="button" id="download_hmm_btn" value="Download .zip">
-                                    </div>
-                                    <div id="loader_hmm" style="text-align: center; padding-bottom: 20px; margin: auto; display: none;">
-                                        <div class="loader"></div>
-                                    </div>
-                                </div>
-                            </div>
 
 							<!-- Build Phylogenetic Tree -->
                             <div class="feature-card">
@@ -861,6 +935,155 @@
             });
         };
         reader.readAsText(file);
+    });
+
+    $(document).on('submit', '#UpdateDomainGroupsForm', function(e) {
+        e.preventDefault();
+
+        var loader = document.getElementById('loader_domaingroups');
+        var msg    = document.getElementById('loader_msg_domaingroups');
+        var btn    = document.getElementById('update_domaingroups_btn');
+        if (btn) btn.style.display = 'none';
+        loader.style.display = 'flex';
+        msg.innerHTML = 'Syncing HMM profiles, updating Domaingroups and rebuilding MOTIFS.hmmDb…';
+        msg.style.display = 'block';
+
+        function finishDomaingroups(htmlContent) {
+            loader.style.display = 'none';
+            msg.style.display = 'none';
+            if (btn) btn.style.display = '';
+            window.open(URL.createObjectURL(new Blob([htmlContent], {type: 'text/html'})), '_blank');
+        }
+
+        function pollDomaingroupsResults(logFile) {
+            $.ajax({
+                url: "{% url 'ajax_update_domaingroups_results' %}",
+                type: 'GET',
+                data: {log_file: logFile},
+                dataType: 'json',
+                success: function(data) {
+                    if (data.done) {
+                        finishDomaingroups(data.html);
+                    } else {
+                        setTimeout(function() { pollDomaingroupsResults(logFile); }, 3000);
+                    }
+                },
+                error: function(xhr) {
+                    finishDomaingroups(xhr.responseText || 'Unknown error while checking status.');
+                }
+            });
+        }
+
+        var formData = new FormData(document.getElementById('UpdateDomainGroupsForm'));
+        $.ajax({
+            url: "{% url 'ajax_update_domaingroups' %}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(data) {
+                pollDomaingroupsResults(data.log_file);
+            },
+            error: function(xhr) {
+                finishDomaingroups(xhr.responseText || 'Unknown error');
+            }
+        });
+    });
+
+    // ── Upload HMM Model ────────────────────────────────────────────────────────
+    (function() {
+        var zone  = document.getElementById('hmm_drop_zone');
+        var input = document.getElementById('hmm_upload_file');
+        var label = document.getElementById('hmm_drop_label');
+        if (!zone || !input) return;
+
+        function showName() {
+            label.textContent = input.files.length
+                ? 'Selected: ' + input.files[0].name
+                : 'Click to choose a .hmm file, or drop it here';
+        }
+        input.addEventListener('change', showName);
+        ['dragenter', 'dragover'].forEach(function(ev) {
+            zone.addEventListener(ev, function(e) { e.preventDefault(); e.stopPropagation(); zone.style.background = '#e8eef5'; });
+        });
+        ['dragleave', 'drop'].forEach(function(ev) {
+            zone.addEventListener(ev, function(e) { e.preventDefault(); e.stopPropagation(); zone.style.background = '#fff'; });
+        });
+        zone.addEventListener('drop', function(e) {
+            if (e.dataTransfer && e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                showName();
+            }
+        });
+    })();
+
+    $(document).on('submit', '#UploadHmmModelForm', function(e) {
+        e.preventDefault();
+        var input = document.getElementById('hmm_upload_file');
+        if (!document.getElementById('hmm_upload_family').value) {
+            alert('Please select a protein family.');
+            return;
+        }
+        if (!input.files.length) {
+            alert('Please choose a .hmm file.');
+            return;
+        }
+
+        var loader = document.getElementById('loader_upload_hmm');
+        var msg    = document.getElementById('loader_msg_upload_hmm');
+        var btn    = document.getElementById('upload_hmm_btn');
+        btn.style.display = 'none';
+        loader.style.display = 'flex';
+        msg.innerHTML = 'Uploading profile and running the Domaingroups sync…';
+        msg.style.display = 'block';
+
+        function finishHmmUpload(htmlContent) {
+            loader.style.display = 'none';
+            msg.style.display = 'none';
+            btn.style.display = '';
+            window.open(URL.createObjectURL(new Blob([htmlContent], {type: 'text/html'})), '_blank');
+        }
+
+        function pollHmmUpload(logFile) {
+            $.ajax({
+                url: "{% url 'ajax_update_domaingroups_results' %}",
+                type: 'GET',
+                data: {log_file: logFile},
+                dataType: 'json',
+                success: function(data) {
+                    if (data.done) {
+                        finishHmmUpload(data.html);
+                    } else {
+                        setTimeout(function() { pollHmmUpload(logFile); }, 3000);
+                    }
+                },
+                error: function(xhr) {
+                    finishHmmUpload(xhr.responseText || 'Unknown error while checking status.');
+                }
+            });
+        }
+
+        var formData = new FormData(document.getElementById('UploadHmmModelForm'));
+        formData.set('replace', document.getElementById('hmm_upload_replace').checked ? 'true' : '');
+        $.ajax({
+            url: "{% url 'ajax_upload_hmm' %}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(data) {
+                msg.innerHTML = 'Saved ' + data.saved + '. Running the Domaingroups sync…';
+                pollHmmUpload(data.log_file);
+            },
+            error: function(xhr) {
+                loader.style.display = 'none';
+                btn.style.display = '';
+                msg.innerHTML = 'Error: ' + (xhr.responseText || 'upload failed');
+                msg.style.display = 'block';
+            }
+        });
     });
 
     $(document).ajaxStop(function(){

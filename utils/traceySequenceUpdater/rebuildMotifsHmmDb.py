@@ -2,9 +2,9 @@
 # database used by motifScan() when proteinlayout == "ALL") from the individual
 # .hmm files under utils/hmmModels/<FAMILY>/.
 #
-# Run standalone:
-#   /home/cpulidoq/anaconda3/envs/django/bin/python utils/traceySequenceUpdater/rebuildMotifsHmmDb.py
-# Or import rebuild_motifs_hmmdb() from another script/shell session.
+# Run standalone from the project root:
+#   python utils/traceySequenceUpdater/rebuildMotifsHmmDb.py
+# Or import rebuild_motifs_hmmdb() from another script/command (see UpdateDomainGroups).
 
 import os
 import subprocess
