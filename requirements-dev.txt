@@ -3,14 +3,14 @@
 -r requirements.txt
 
 # Testing
-pytest==9.1.1
+pytest==9.2.0
 pytest-django==4.14.0
 
 # Linting / formatting
-ruff==0.16.5
+ruff==0.17.3
 
 # Local git hooks
-pre-commit==4.6.2
+pre-commit==4.7.0
 
 # HTTPS dev server (manage.py runsslserver)
 django-sslserver==0.22
