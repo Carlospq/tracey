@@ -3,7 +3,7 @@
 # Python 3.12 — keep versions pinned so CI and the server match.
 
 # --- Django core ---
-Django==5.2.17
+Django==6.1.1
 asgiref==3.12.1
 sqlparse==0.6.0
 pytz==2026.3.post1
