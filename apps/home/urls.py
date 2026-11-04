@@ -30,6 +30,10 @@ urlpatterns = [
     path('query-sequences/<int:sequence_id>/details/', views.QuerySequencesDetails, name='query-sequences-details'),
     path('details/fastaFormat/<int:sequence_id>/', views.DetailsSequencesFastaFormat, name='details-sequences-fasta'),
 
+    # SNARE sets
+    path('snare-sets', views.SnareSets, name='snare-sets'),
+    path('snare-sets/table', views.SnareSetsTable, name='snare-sets-table'),
+
     # Trees
     path('trees', views.TreesView, name='trees'),
 

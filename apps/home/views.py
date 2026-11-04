@@ -69,6 +69,11 @@ from apps.home.views_verify import (
     autocompleteModel,
 )
 
+from apps.home.views_snaresets import (
+    SnareSets,
+    SnareSetsTable,
+)
+
 from apps.home.views_trees import (
     TreesView,
     plotTrees,
